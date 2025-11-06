@@ -43,7 +43,7 @@
     {
       "groupId": "installation",
       "groupName": "Installation",
-      "icon": "rocket",
+      "icon": "activity",
       "timeSaved": 50,
       "roiContribution": 95,
       "roiLabel": "Very High",

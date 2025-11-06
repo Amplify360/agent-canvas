@@ -155,7 +155,7 @@
     {
       "id": "installation",
       "name": "Phase 4: Installation",
-      "icon": "rocket",
+      "icon": "activity",
       "color": "#3a9fb3",
       "phase": "Phase 4",
       "phaseTag": "Lighthouse & Rollout",
