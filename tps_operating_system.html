@@ -838,33 +838,20 @@
             <p>19 AI Agents Supporting The Proudfoot System</p>
         </div>
 
-        <div class="tps-phases">
-            <div class="phase-indicator phase-1">1. ASPIRATION<br>Executive Alignment</div>
-            <div class="phase-indicator phase-2">2. VALUE ANALYSIS<br>Aerial Mapping</div>
-            <div class="phase-indicator phase-3">3. NEW WAYS OF WORKING<br>MOS & Perfect Day</div>
-            <div class="phase-indicator phase-4">4. INSTALLATION<br>Lighthouse & Rollout</div>
-            <div class="phase-indicator phase-5">5. SUSTAIN<br>Continuous Improvement</div>
-        </div>
-
-        <!-- Control Toggles -->
-        <div class="connections-toggle">
-            <button onclick="toggleConnections()" class="toggle-connections-btn">
-                <span id="connectionsIcon">🔗</span> Show Connections
-            </button>
-            <button onclick="toggleUsageMetrics()" class="toggle-connections-btn" style="margin-left: 15px;">
-                <span id="usageIcon">📊</span> Show Usage Stats
-            </button>
-        </div>
-
         <!-- Flow Diagram Section -->
         <div class="flow-diagram-container">
             <div class="flow-header">
                 <h2>🔄 Agent Workflow & Dependencies</h2>
-                <button class="toggle-flow-btn" onclick="toggleFlowDiagram()">
-                    <span class="toggle-icon">▼</span> Show Flow Diagram
-                </button>
+                <div style="display: flex; gap: 15px;">
+                    <button onclick="toggleUsageMetrics()" class="toggle-flow-btn">
+                        <span id="usageIcon">📊</span> Show Usage Stats
+                    </button>
+                    <button class="toggle-flow-btn" onclick="toggleFlowDiagram()">
+                        <span class="toggle-icon">▲</span> Hide Flow Diagram
+                    </button>
+                </div>
             </div>
-            <div class="flow-diagram" id="flowDiagram" style="display: none;">
+            <div class="flow-diagram" id="flowDiagram" style="display: block;">
                 <div class="flow-content">
                     <div class="flow-box" style="background: #e74c3c;" data-group="sales">
                         💼<br>Sales
@@ -1730,16 +1717,13 @@
         // Flow Diagram Toggle
         function toggleFlowDiagram() {
             const diagram = document.getElementById('flowDiagram');
-            const btn = document.querySelector('.toggle-flow-btn');
-            const icon = document.querySelector('.toggle-icon');
+            const btn = event.target.closest('button');
 
-            if (diagram.style.display === 'none') {
+            if (diagram.style.display === 'none' || diagram.style.display === '') {
                 diagram.style.display = 'block';
-                icon.textContent = '▲';
                 btn.innerHTML = '<span class="toggle-icon">▲</span> Hide Flow Diagram';
             } else {
                 diagram.style.display = 'none';
-                icon.textContent = '▼';
                 btn.innerHTML = '<span class="toggle-icon">▼</span> Show Flow Diagram';
             }
         }
@@ -1884,60 +1868,6 @@
                 btn.innerHTML = '<span id="usageIcon">📊</span> Hide Usage Stats';
             } else {
                 btn.innerHTML = '<span id="usageIcon">📊</span> Show Usage Stats';
-            }
-        }
-
-        // Connection Lines Feature
-        let connectionsVisible = false;
-
-        function toggleConnections() {
-            const btn = document.querySelector('.toggle-connections-btn');
-            const icon = document.getElementById('connectionsIcon');
-            const agentGroups = document.querySelectorAll('.agent-group');
-
-            connectionsVisible = !connectionsVisible;
-
-            if (connectionsVisible) {
-                // Add visual connection indicators
-                agentGroups.forEach((group, index) => {
-                    if (index < agentGroups.length - 1) {
-                        group.style.borderRight = '4px solid #17a2b8';
-                        group.style.position = 'relative';
-                    }
-                });
-                btn.innerHTML = '<span id="connectionsIcon">🔗</span> Hide Connections';
-
-                // Add connecting arrows between groups
-                const style = document.createElement('style');
-                style.id = 'connection-arrows';
-                style.innerHTML = `
-                    .agent-group::after {
-                        content: '→';
-                        position: absolute;
-                        right: -30px;
-                        top: 50%;
-                        transform: translateY(-50%);
-                        font-size: 3em;
-                        color: #17a2b8;
-                        font-weight: bold;
-                        animation: pulse 2s infinite;
-                    }
-                    .agent-group:last-of-type::after,
-                    .support-group::after {
-                        display: none;
-                    }
-                `;
-                document.head.appendChild(style);
-            } else {
-                // Remove visual connection indicators
-                agentGroups.forEach(group => {
-                    group.style.borderRight = 'none';
-                });
-                btn.innerHTML = '<span id="connectionsIcon">🔗</span> Show Connections';
-
-                // Remove connecting arrows
-                const style = document.getElementById('connection-arrows');
-                if (style) style.remove();
             }
         }
 
