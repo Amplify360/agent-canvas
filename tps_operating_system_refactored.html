@@ -385,9 +385,6 @@
             background: linear-gradient(90deg, #17a2b8, #20c9e0);
         }
 
-        .metrics-tooltip .progress-fill.adoption-complexity {
-            background: linear-gradient(90deg, #e67e22, #f39c12);
-        }
 
         .metrics-tooltip .metric-value {
             font-size: 0.9em;
@@ -683,8 +680,6 @@
             const timeSavedNum = parseInt(agent.metrics.timeSaved);
             const roiValue = agent.metrics.roiContribution === 'Very High' ? 95 :
                             agent.metrics.roiContribution === 'High' ? 85 : 70;
-            const complexityValue = agent.metrics.adoptionComplexity === 'Low' ? 30 :
-                                   agent.metrics.adoptionComplexity === 'Medium' ? 60 : 85;
 
             return `
                 <div class="metrics-tooltip">
@@ -709,13 +704,6 @@
                                 <div class="progress-fill roi-contribution" style="width: ${roiValue}%;"></div>
                             </div>
                             <span class="metric-value">${agent.metrics.roiContribution}</span>
-                        </div>
-                        <div class="metric-row">
-                            <span class="metric-label">Adoption Complexity</span>
-                            <div class="progress-bar">
-                                <div class="progress-fill adoption-complexity" style="width: ${complexityValue}%;"></div>
-                            </div>
-                            <span class="metric-value">${agent.metrics.adoptionComplexity}</span>
                         </div>
                     </div>
                 </div>`;
