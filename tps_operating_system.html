@@ -149,6 +149,22 @@
             border-color: #17a2b8;
         }
 
+        /* Focus Mode Styles */
+        .focus-mode .agent-card {
+            opacity: 0.3;
+            filter: grayscale(80%);
+            transition: all 0.4s ease;
+        }
+
+        .focus-mode .agent-card:hover {
+            opacity: 1;
+            filter: grayscale(0%);
+            transform: translateY(-5px) scale(1.02);
+            box-shadow: 0 12px 24px rgba(23, 162, 184, 0.3);
+            border-color: #17a2b8;
+            z-index: 10;
+        }
+
         .agent-number {
             position: absolute;
             top: 15px;
@@ -865,6 +881,9 @@
             <div class="flow-header">
                 <h2>🔄 Agent Workflow & Dependencies</h2>
                 <div style="display: flex; gap: 15px;">
+                    <button onclick="toggleFocusMode()" class="toggle-flow-btn" id="focusModeBtn">
+                        <span id="focusIcon">👁️</span> Focus Mode
+                    </button>
                     <button onclick="toggleUsageMetrics()" class="toggle-flow-btn">
                         <span id="usageIcon">📊</span> Show Usage Stats
                     </button>
@@ -1747,6 +1766,20 @@
             } else {
                 diagram.style.display = 'none';
                 btn.innerHTML = '<span class="toggle-icon">▼</span> Show Flow Diagram';
+            }
+        }
+
+        // Focus Mode Toggle
+        function toggleFocusMode() {
+            const agentGroups = document.querySelector('.agent-groups');
+            const btn = event.target.closest('button');
+
+            if (agentGroups.classList.contains('focus-mode')) {
+                agentGroups.classList.remove('focus-mode');
+                btn.innerHTML = '<span id="focusIcon">👁️</span> Focus Mode';
+            } else {
+                agentGroups.classList.add('focus-mode');
+                btn.innerHTML = '<span id="focusIcon">✨</span> Exit Focus Mode';
             }
         }
 
