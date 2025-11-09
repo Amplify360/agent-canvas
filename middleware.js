@@ -1,3 +1,7 @@
+export const config = {
+  runtime: 'edge',
+};
+
 export default function middleware(request) {
   const basicAuth = request.headers.get('authorization');
 
