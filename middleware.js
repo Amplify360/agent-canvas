@@ -9,15 +9,15 @@ export default function middleware(request) {
 
       // Username can be anything, password must match
       if (pwd === 'alexthetpsoperatingsystem') {
-        return new Response(null, {
-          status: 200,
-        });
+        // Authentication successful, continue to the original request
+        return;
       }
     } catch (e) {
       // Invalid base64 or malformed header
     }
   }
 
+  // Authentication failed or not provided
   return new Response('Authentication required', {
     status: 401,
     headers: {
