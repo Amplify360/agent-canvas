@@ -1409,14 +1409,19 @@
         }
 
         function createAgentGroup(group, config, groupIndex) {
-            const agentsHTML = group.agents.map((agent, agentIndex) =>
-                createAgentCard(agent, group.phaseImage, config, groupIndex, agentIndex)
-            ).join('');
-            const phaseStyle = group.phaseTagColor ? `style="background: ${group.phaseTagColor};"` : `style="background: ${group.color};"`;
+            const phaseImage = getGroupFormatting(group, 'phaseImage');
+            const color = getGroupFormatting(group, 'color');
+            const phaseTagColor = getGroupFormatting(group, 'phaseTagColor');
+            const iconType = getGroupFormatting(group, 'iconType');
 
-            const groupIconOverlay = group.phaseImage ? `
+            const agentsHTML = group.agents.map((agent, agentIndex) =>
+                createAgentCard(agent, phaseImage, config, groupIndex, agentIndex)
+            ).join('');
+            const phaseStyle = phaseTagColor ? `style="background: ${phaseTagColor};"` : `style="background: ${color};"`;
+
+            const groupIconOverlay = phaseImage ? `
                 <div class="group-icon-overlay">
-                    <img src="${group.phaseImage}" alt="${group.groupName} Diagram">
+                    <img src="${phaseImage}" alt="${group.groupName} Diagram">
                 </div>
             ` : '';
 
@@ -1426,7 +1431,7 @@
                         <div class="group-header-edit">
                             <div style="display: flex; align-items: center;">
                                 <div class="group-icon">
-                                    <i data-lucide="${group.iconType}"></i>
+                                    <i data-lucide="${iconType}"></i>
                                     ${groupIconOverlay}
                                 </div>
                                 <div class="group-title">
