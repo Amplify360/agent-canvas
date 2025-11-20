@@ -208,10 +208,11 @@ async function createBlankDocument() {
 
     try {
         setDocumentStatusMessage(`Creating "${docName}"...`);
+        console.log('[documents] Creating blank document', { docName });
         await uploadDocumentFromContents(docName, BLANK_DOCUMENT_TEMPLATE);
         setDocumentStatusMessage(`Document "${docName}" created.`, 'success');
     } catch (error) {
-        console.error('Blank document creation failed:', error);
+        console.error('[documents] Blank document creation failed', { docName, error });
         setDocumentStatusMessage('Failed to create document.', 'error');
     }
 }
@@ -484,6 +485,11 @@ async function handleDocumentFileSelected(event) {
 }
 
 async function uploadDocumentFromContents(docName, yamlText) {
+    const payloadSize = typeof yamlText === 'string' ? yamlText.length : 0;
+    console.log(`[documents] Upload requested for ${docName} (${payloadSize} bytes)`);
+    if (!payloadSize) {
+        console.warn('[documents] Warning: upload payload is empty string');
+    }
     setDocumentStatusMessage(`Uploading "${docName}"...`);
 
     const response = await fetch(`/api/config?doc=${encodeURIComponent(docName)}`, {
@@ -496,7 +502,27 @@ async function uploadDocumentFromContents(docName, yamlText) {
     });
 
     if (!response.ok) {
-        throw new Error('Upload failed');
+        let errorDetail = '';
+        try {
+            const contentType = response.headers.get('content-type') || '';
+            if (contentType.includes('application/json')) {
+                const data = await response.json();
+                errorDetail = data?.error || JSON.stringify(data);
+            } else {
+                errorDetail = await response.text();
+            }
+        } catch (parseError) {
+            errorDetail = `Unable to parse error body: ${parseError.message}`;
+        }
+
+        console.error('[documents] Upload failed', {
+            docName,
+            status: response.status,
+            statusText: response.statusText,
+            errorDetail
+        });
+
+        throw new Error(errorDetail || `Upload failed with status ${response.status}`);
     }
 
     await refreshDocumentList(docName);

@@ -208,6 +208,11 @@ All storage operations in `api/config.js`:
 - `handlePost()` - Write to Blob
 - `handlePut()` - Rename/move documents
 - Uses `@vercel/blob` methods: `head()`, `list()`, `put()`, `del()`
+- **Disable the default body parser when you need raw request streams.** Vercel's dev runtime buffers POST bodies unless the route exports:
+  ```javascript
+  export const config = { api: { bodyParser: false } };
+  ```
+  When you need the raw YAML (e.g., to stream into Blob storage), read the request with classic `req.on('data')` listeners and concatenate buffers. Otherwise the handler will see `chunkCount = 0` and return "No content provided" even though the browser sent data.
 
 ### Adding Authentication Logic
 - Middleware in `middleware.js` enforces HTTP Basic Auth on all routes

@@ -1,7 +1,99 @@
-import { head, list, put, del } from '@vercel/blob';
+import { del, head, list, put } from '@vercel/blob';
 
 const DEFAULT_DOCUMENT = 'config.yaml';
 const YAML_CONTENT_TYPE = 'text/yaml';
+
+export const config = {
+  api: {
+    bodyParser: false,
+  },
+};
+
+function getReadableStreamDiagnostics(req) {
+  return {
+    hasPipe: typeof req.pipe === 'function',
+    hasOn: typeof req.on === 'function',
+    readable: req.readable,
+    hasBodyProp: Object.prototype.hasOwnProperty.call(req, 'body'),
+    typeofBody: typeof req.body,
+    hasRawBodyProp: Object.prototype.hasOwnProperty.call(req, 'rawBody'),
+    typeofRawBody: typeof req.rawBody,
+    reqConstructor: req.constructor?.name,
+    httpVersion: req.httpVersion,
+    headers: req.headers
+  };
+}
+
+async function readRequestBody(req) {
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+    let chunkCount = 0;
+    let totalBytes = 0;
+    const chunkDetails = [];
+
+    const cleanup = () => {
+      req.off?.('data', onData);
+      req.off?.('end', onEnd);
+      req.off?.('error', onError);
+    };
+
+    const onData = chunk => {
+      chunkCount += 1;
+      const isBuffer = typeof Buffer !== 'undefined' && Buffer.isBuffer?.(chunk);
+      let bufferChunk;
+      if (typeof chunk === 'string') {
+        bufferChunk = Buffer.from(chunk, 'utf8');
+      } else if (isBuffer) {
+        bufferChunk = chunk;
+      } else if (chunk instanceof Uint8Array) {
+        bufferChunk = Buffer.from(chunk);
+      } else if (chunk && typeof chunk === 'object' && typeof chunk.valueOf === 'function') {
+        bufferChunk = Buffer.from(String(chunk.valueOf()));
+      } else {
+        bufferChunk = Buffer.from('');
+      }
+
+      totalBytes += bufferChunk.length;
+      chunkDetails.push({
+        index: chunkCount,
+        originalType: typeof chunk,
+        isBuffer,
+        bufferLength: bufferChunk.length
+      });
+
+      chunks.push(bufferChunk);
+    };
+
+    const onEnd = () => {
+      cleanup();
+      resolve({
+        buffer: Buffer.concat(chunks),
+        chunkCount,
+        totalBytes,
+        chunkDetails
+      });
+    };
+
+    const onError = error => {
+      cleanup();
+      reject(error);
+    };
+
+    if (typeof req.on === 'function') {
+      req.on('data', onData);
+      req.on('end', onEnd);
+      req.on('error', onError);
+    } else {
+      resolve({
+        buffer: Buffer.alloc(0),
+        chunkCount: 0,
+        totalBytes: 0,
+        chunkDetails: [],
+        unsupported: true
+      });
+    }
+  });
+}
 
 /**
  * Get header value from Node.js request
@@ -170,12 +262,47 @@ async function handlePost(req, res) {
   if (!blobToken) return;
 
   try {
-    // Get YAML content from request body
-    let yamlText = '';
+    const reqDiagnostics = getReadableStreamDiagnostics(req);
+    console.log('[api/config POST] Request diagnostics', reqDiagnostics);
 
-    // Collect body data
-    for await (const chunk of req) {
-      yamlText += chunk;
+    const { buffer, chunkCount, totalBytes, chunkDetails, unsupported } = await readRequestBody(req);
+    let yamlText = buffer?.toString('utf8') || '';
+
+    if (!yamlText && !unsupported) {
+      console.warn('[api/config POST] Attempted upload with empty body', {
+        contentLength: req.headers['content-length'],
+        transferEncoding: req.headers['transfer-encoding'],
+        chunkCount,
+        totalBytes,
+        chunkDetails
+      });
+      res.status(400)
+        .setHeader('Content-Type', 'application/json')
+        .send(JSON.stringify({ error: 'No content provided' }));
+      return;
+    } else if (!yamlText && unsupported) {
+      console.warn('[api/config POST] Request stream unsupported, falling back to req.body');
+    }
+
+    if (!yamlText) {
+      const fallback = req.body ?? req.rawBody;
+      const fallbackType = fallback ? typeof fallback : 'undefined';
+      if (typeof fallback === 'string') {
+        yamlText = fallback;
+      } else if (fallback && typeof Buffer !== 'undefined' && Buffer.isBuffer?.(fallback)) {
+        yamlText = fallback.toString('utf8');
+      }
+      console.warn('[api/config POST] Fallback body inspection', {
+        hasReqBody: Boolean(req.body),
+        hasRawBody: Boolean(req.rawBody),
+        fallbackType,
+        derivedLength: yamlText.length,
+        contentLength: req.headers['content-length'],
+        transferEncoding: req.headers['transfer-encoding'],
+        chunkCount,
+        totalBytes,
+        chunkDetails
+      });
     }
 
     if (!yamlText) {
@@ -186,6 +313,15 @@ async function handlePost(req, res) {
     }
 
     const docName = getDocumentName(req);
+    console.log('[api/config POST] Upload request received', {
+      docName,
+      bytes: yamlText.length,
+      chunkCount,
+      totalBytes,
+      contentLength: req.headers['content-length'],
+      transferEncoding: req.headers['transfer-encoding'],
+      chunkDetails
+    });
 
     const blob = await put(docName, yamlText, {
       access: 'public',
@@ -204,7 +340,7 @@ async function handlePost(req, res) {
       }));
 
   } catch (error) {
-    console.error('Error saving config:', error);
+    console.error('[api/config POST] Error saving config', { error });
     res.status(500)
       .setHeader('Content-Type', 'application/json')
       .send(JSON.stringify({ error: 'Failed to save configuration' }));
