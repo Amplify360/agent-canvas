@@ -182,9 +182,9 @@ ENV/
 # Local development
 *.local
 
-# Package lock files (uncomment if you want to exclude them)
-# package-lock.json
-# yarn.lock
-# pnpm-lock.yaml
+# Package lock files
+package-lock.json
+yarn.lock
+# Keep pnpm-lock.yaml tracked for reproducible builds
 .vercel
 .env*.local
