@@ -773,7 +773,9 @@ function populateAgentFormFields(agent = {}) {
         });
     }
 
-    renderArrayInput('journeySteps', toArray(agent.journeySteps));
+    // Populate journey steps textarea (one per line)
+    const journeySteps = toArray(agent.journeySteps);
+    document.getElementById('journeySteps').value = journeySteps.join('\n');
 
     const metrics = getAgentMetrics(agent);
     document.getElementById('metricsUsage').value = metrics.usageThisWeek || '';
@@ -852,7 +854,13 @@ function buildAgentDraftFromForm() {
     draft.objective = document.getElementById('agentObjective').value;
     draft.description = document.getElementById('agentDescription').value;
     draft.tools = Array.from(document.querySelectorAll('#agentTools input:checked')).map(cb => cb.value);
-    draft.journeySteps = getArrayInputValues('journeySteps');
+
+    // Parse journey steps from textarea (one per line)
+    const journeyStepsText = document.getElementById('journeySteps').value;
+    draft.journeySteps = journeyStepsText
+        .split('\n')
+        .map(line => line.trim())
+        .filter(line => line.length > 0);
 
     const metrics = { ...(baseAgent.metrics || {}), ...getAgentMetrics(baseAgent) };
     metrics.usageThisWeek = document.getElementById('metricsUsage').value;
