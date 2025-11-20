@@ -69,6 +69,33 @@ body {
     gap: 10px;
 }
 
+/* Collapse All Button */
+.collapse-all-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    background: rgba(255, 255, 255, 0.15);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 6px;
+    font-size: 0.9em;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.collapse-all-btn:hover {
+    background: rgba(255, 255, 255, 0.25);
+    border-color: rgba(255, 255, 255, 0.5);
+    transform: translateY(-1px);
+}
+
+.collapse-all-btn svg {
+    width: 18px;
+    height: 18px;
+}
+
 .document-controls-compact {
     display: flex;
     align-items: center;
@@ -218,12 +245,20 @@ body {
 }
 
 .agent-group {
-    background: white;
+    background: #ffffff;
+    background-color: rgb(255, 255, 255);
     border-radius: 12px;
     padding: 30px;
     box-shadow: 0 8px 16px rgba(0,0,0,0.2);
     position: relative;
     overflow: visible;
+    opacity: 1 !important;
+}
+
+.agent-group.collapsed {
+    opacity: 1 !important;
+    background: #ffffff !important;
+    background-color: rgb(255, 255, 255) !important;
 }
 
 .group-header {
@@ -233,6 +268,160 @@ body {
     margin-top: 10px;
     padding-bottom: 15px;
     border-bottom: 3px solid;
+    cursor: pointer;
+    user-select: none;
+}
+
+/* Section collapse toggle */
+.section-collapse-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    margin-right: 10px;
+    color: #666;
+    transition: transform 0.3s ease, color 0.2s ease;
+}
+
+.section-collapse-toggle svg {
+    width: 24px;
+    height: 24px;
+}
+
+.group-header:hover .section-collapse-toggle {
+    color: #333;
+}
+
+.agent-group.collapsed .section-collapse-toggle {
+    transform: rotate(-90deg);
+}
+
+/* Agent count badge */
+.agent-count-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 24px;
+    height: 24px;
+    padding: 0 8px;
+    margin-left: 12px;
+    background: #e0e0e0;
+    color: #333;
+    font-size: 0.75em;
+    font-weight: 600;
+    border-radius: 12px;
+    transition: all 0.3s ease;
+}
+
+/* Enhanced badge when section is collapsed */
+.agent-group.collapsed .agent-count-badge {
+    min-width: 32px;
+    height: 32px;
+    padding: 0 12px;
+    background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+    color: white;
+    font-size: 0.9em;
+    font-weight: 700;
+    box-shadow: 0 2px 8px rgba(23, 162, 184, 0.3);
+}
+
+/* Agent Pills Container */
+.agent-pills-container {
+    display: none !important;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.agent-group.collapsed .agent-pills-container {
+    display: flex !important;
+}
+
+/* Individual Agent Name Pills */
+/* OPTION 2: Each pill different color (currently active) */
+.agent-pills-container .agent-name-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 12px;
+    font-size: 0.85em;
+    font-weight: 600;
+    border-radius: 16px;
+    white-space: nowrap;
+    transition: all 0.2s ease;
+}
+
+.agent-pills-container .agent-name-pill:nth-child(1):not(.more-pill) {
+    background: #17a2b8 !important;
+    border: 1px solid #17a2b8 !important;
+    color: white !important;
+}
+.agent-pills-container .agent-name-pill:nth-child(2):not(.more-pill) {
+    background: #28a745 !important;
+    border: 1px solid #28a745 !important;
+    color: white !important;
+}
+.agent-pills-container .agent-name-pill:nth-child(3):not(.more-pill) {
+    background: #ffc107 !important;
+    border: 1px solid #ffc107 !important;
+    color: #333 !important;
+}
+.agent-pills-container .agent-name-pill:nth-child(4):not(.more-pill) {
+    background: #dc3545 !important;
+    border: 1px solid #dc3545 !important;
+    color: white !important;
+}
+.agent-pills-container .agent-name-pill:nth-child(5):not(.more-pill) {
+    background: #6f42c1 !important;
+    border: 1px solid #6f42c1 !important;
+    color: white !important;
+}
+
+.agent-pills-container .agent-name-pill:nth-child(1):not(.more-pill):hover { background: #138496 !important; border-color: #138496 !important; }
+.agent-pills-container .agent-name-pill:nth-child(2):not(.more-pill):hover { background: #218838 !important; border-color: #218838 !important; }
+.agent-pills-container .agent-name-pill:nth-child(3):not(.more-pill):hover { background: #e0a800 !important; border-color: #e0a800 !important; }
+.agent-pills-container .agent-name-pill:nth-child(4):not(.more-pill):hover { background: #c82333 !important; border-color: #c82333 !important; }
+.agent-pills-container .agent-name-pill:nth-child(5):not(.more-pill):hover { background: #5a32a3 !important; border-color: #5a32a3 !important; }
+
+.agent-name-pill.more-pill {
+    background: #6c757d !important;
+    border-color: #6c757d !important;
+    color: white !important;
+    font-style: italic;
+}
+
+.agent-name-pill.more-pill:hover {
+    background: #5a6268 !important;
+    border-color: #5a6268 !important;
+}
+
+/* OPTION 1: All pills same solid color (comment out above, uncomment below)
+.agent-name-pill {
+    background: #17a2b8;
+    border: 1px solid #17a2b8;
+    color: white;
+}
+
+.agent-name-pill:hover {
+    background: #138496;
+    border-color: #138496;
+}
+*/
+
+/* Collapsible container */
+.agents-grid-container {
+    display: grid;
+    grid-template-rows: 1fr;
+    transition: grid-template-rows 0.3s ease;
+    overflow: hidden;
+}
+
+.agent-group.collapsed .agents-grid-container {
+    grid-template-rows: 0fr;
+}
+
+.agent-group.collapsed .agents-grid-container > * {
+    overflow: hidden;
 }
 
 .group-icon {
@@ -310,6 +499,11 @@ body {
 .group-title h2 {
     font-size: 1.8em;
     margin-bottom: 5px;
+}
+
+/* Hide phase tag always - we only show agent pills when collapsed */
+.phase-tag-wrapper {
+    display: none !important;
 }
 
 .group-title .phase-tag {

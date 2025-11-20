@@ -31,6 +31,10 @@
                     <p id="agent-count" class="agent-count-inline">Loading...</p>
                 </div>
                 <div class="header-actions">
+                    <button type="button" class="collapse-all-btn" id="collapseAllBtn" onclick="toggleCollapseAll()" title="Collapse/Expand All">
+                        <i id="collapseAllIcon" data-lucide="chevrons-down"></i>
+                        <span id="collapseAllText">Collapse All</span>
+                    </button>
                     <div class="document-controls-compact">
                         <select id="documentSelect" onchange="handleDocumentSelection(event)">
                             <option value="">Loading...</option>

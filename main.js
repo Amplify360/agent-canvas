@@ -9,9 +9,11 @@ let groupModalViewMode = 'form';
 let agentModalOriginal = null;
 let groupModalOriginal = null;
 let documentMenuBound = false;
+let collapsedSections = {}; // Track which sections are collapsed
 
 const DEFAULT_DOCUMENT_NAME = 'config.yaml';
 const DOCUMENT_STORAGE_KEY = 'tps-active-config-doc';
+const COLLAPSED_SECTIONS_KEY = 'tps-collapsed-sections';
 const BLANK_DOCUMENT_TEMPLATE = [
     '# TPS Agent Ecosystem configuration',
     'sectionDefaults:',
@@ -145,6 +147,112 @@ function persistDocumentPreference(name) {
         }
     } catch (error) {
         console.warn('Unable to persist document preference:', error);
+    }
+}
+
+function loadCollapsedState() {
+    try {
+        const stored = localStorage.getItem(COLLAPSED_SECTIONS_KEY);
+        if (stored) {
+            collapsedSections = JSON.parse(stored);
+        } else {
+            collapsedSections = {};
+        }
+    } catch (error) {
+        console.warn('Unable to read collapsed sections:', error);
+        collapsedSections = {};
+    }
+}
+
+function saveCollapsedState() {
+    try {
+        localStorage.setItem(COLLAPSED_SECTIONS_KEY, JSON.stringify(collapsedSections));
+    } catch (error) {
+        console.warn('Unable to save collapsed sections:', error);
+    }
+}
+
+function toggleSectionCollapse(groupId) {
+    collapsedSections[groupId] = !collapsedSections[groupId];
+    saveCollapsedState();
+
+    // Apply collapse state to DOM
+    const section = document.querySelector(`[data-group-id="${groupId}"]`);
+    if (section) {
+        if (collapsedSections[groupId]) {
+            section.classList.add('collapsed');
+        } else {
+            section.classList.remove('collapsed');
+        }
+    }
+    updateCollapseAllButton();
+}
+
+function collapseAll() {
+    if (!configData?.agentGroups) return;
+
+    configData.agentGroups.forEach(group => {
+        collapsedSections[group.groupId] = true;
+        const section = document.querySelector(`[data-group-id="${group.groupId}"]`);
+        if (section) {
+            section.classList.add('collapsed');
+        }
+    });
+
+    saveCollapsedState();
+    updateCollapseAllButton();
+}
+
+function expandAll() {
+    if (!configData?.agentGroups) return;
+
+    configData.agentGroups.forEach(group => {
+        collapsedSections[group.groupId] = false;
+        const section = document.querySelector(`[data-group-id="${group.groupId}"]`);
+        if (section) {
+            section.classList.remove('collapsed');
+        }
+    });
+
+    saveCollapsedState();
+    updateCollapseAllButton();
+}
+
+function toggleCollapseAll() {
+    if (!configData?.agentGroups) return;
+
+    // Check if all sections are collapsed using state variable
+    const allCollapsed = configData.agentGroups.every(group => collapsedSections[group.groupId] === true);
+
+    if (allCollapsed) {
+        expandAll();
+    } else {
+        collapseAll();
+    }
+}
+
+function updateCollapseAllButton() {
+    if (!configData?.agentGroups || configData.agentGroups.length === 0) return;
+
+    const btn = document.getElementById('collapseAllBtn');
+    const text = document.getElementById('collapseAllText');
+    const icon = document.getElementById('collapseAllIcon');
+
+    if (!btn || !text || !icon) return;
+
+    // Use state variable as single source of truth
+    const allCollapsed = configData.agentGroups.every(group => collapsedSections[group.groupId] === true);
+
+    if (allCollapsed) {
+        text.textContent = 'Expand All';
+        icon.setAttribute('data-lucide', 'chevrons-up');
+    } else {
+        text.textContent = 'Collapse All';
+        icon.setAttribute('data-lucide', 'chevrons-down');
+    }
+
+    if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
     }
 }
 
@@ -1271,7 +1379,7 @@ function createAgentGroup(group, config, groupIndex) {
         createAgentCard(agent, phaseImage, config, groupIndex, agentIndex)
     ).join('');
     const phaseStyle = phaseTagColor ? `style="background: ${phaseTagColor};"` : `style="background: ${color};"`;
-    const phaseTagHTML = group.phaseTag ? `<div><span class="phase-tag" ${phaseStyle}>${group.phaseTag}</span></div>` : '';
+    const phaseTagHTML = group.phaseTag ? `<div class="phase-tag-wrapper"><span class="phase-tag" ${phaseStyle}>${group.phaseTag}</span></div>` : '';
 
     const groupIconOverlay = phaseImage ? `
         <div class="group-icon-overlay">
@@ -1279,19 +1387,37 @@ function createAgentGroup(group, config, groupIndex) {
         </div>
     ` : '';
 
+    const isCollapsed = collapsedSections[group.groupId] || false;
+    const collapsedClass = isCollapsed ? 'collapsed' : '';
+
+    // Create agent name pills for collapsed view
+    const maxPills = 5;
+    const agentPills = group.agents
+        .slice(0, maxPills)
+        .filter(agent => agent && agent.name)
+        .map(agent => `<span class="agent-name-pill">${agent.name}</span>`)
+        .join('');
+    const morePill = group.agents.length > maxPills
+        ? `<span class="agent-name-pill more-pill">+${group.agents.length - maxPills} more</span>`
+        : '';
+    const agentPillsHTML = `<div class="agent-pills-container">${agentPills}${morePill}</div>`;
+
     return `
-        <div class="agent-group ${groupClass}" data-group-id="${group.groupId}" data-group-index="${groupIndex}">
-            <div class="group-header">
+        <div class="agent-group ${groupClass} ${collapsedClass}" data-group-id="${group.groupId}" data-group-index="${groupIndex}">
+            <div class="group-header" onclick="toggleSectionCollapse('${group.groupId}')">
                 <div class="group-header-edit">
-                    <div style="display: flex; align-items: center;">
+                    <div style="display: flex; align-items: center; width: 100%;">
+                        <div class="section-collapse-toggle">
+                            <i data-lucide="chevron-down"></i>
+                        </div>
                         <div class="group-icon">
                             <i data-lucide="${iconType}"></i>
                             ${groupIconOverlay}
                         </div>
-                        <div class="group-title" style="display: flex; align-items: center;">
-                            <div>
+                        <div class="group-title" style="display: flex; align-items: center; flex: 1; flex-wrap: wrap; gap: 12px;">
+                            <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 8px;">
                                 <h2 style="display: inline-block; margin: 0;">${group.groupName}</h2>
-                                <div class="context-menu-trigger" onclick="toggleContextMenu(event, 'section-menu-${groupIndex}')" title="Section options">
+                                <div class="context-menu-trigger" onclick="event.stopPropagation(); toggleContextMenu(event, 'section-menu-${groupIndex}')" title="Section options">
                                     <i data-lucide="more-vertical"></i>
                                     <div class="context-menu" id="section-menu-${groupIndex}">
                                         <button type="button" class="context-menu-item" onclick="openEditGroupModal(${groupIndex}); closeAllContextMenus();">
@@ -1311,14 +1437,14 @@ function createAgentGroup(group, config, groupIndex) {
                                 </div>
                                 ${phaseTagHTML}
                             </div>
+                            ${agentPillsHTML}
                         </div>
                     </div>
                 </div>
             </div>
-            <div class="agents-grid">${agentsHTML}</div>
-            <button class="add-agent-btn" onclick="openAddAgentModal(${groupIndex})">
-                <i data-lucide="plus"></i> Add Agent to ${group.groupName}
-            </button>
+            <div class="agents-grid-container">
+                <div class="agents-grid">${agentsHTML}</div>
+            </div>
         </div>`;
 }
 
@@ -1326,6 +1452,18 @@ function createAgentGroup(group, config, groupIndex) {
 // Render agent groups (can be called to re-render after edits)
 function renderAgentGroups() {
     if (!configData) return;
+
+    // Load collapsed state from localStorage
+    loadCollapsedState();
+
+    // Initialize all groups in collapsedSections if not present
+    if (configData.agentGroups) {
+        configData.agentGroups.forEach(group => {
+            if (collapsedSections[group.groupId] === undefined) {
+                collapsedSections[group.groupId] = false;
+            }
+        });
+    }
 
     // Update document title
     const title = configData.documentTitle || 'TPS Operating System';
@@ -1357,6 +1495,9 @@ function renderAgentGroups() {
 
     // Setup interactions
     setupTooltips();
+
+    // Update collapse all button state
+    updateCollapseAllButton();
 }
 
 // ----- Page interactions -----
