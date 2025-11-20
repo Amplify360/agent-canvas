@@ -9,6 +9,7 @@ let groupModalViewMode = 'form';
 let agentModalOriginal = null;
 let groupModalOriginal = null;
 let documentMenuBound = false;
+let workflowPhasesDraft = [];
 
 const DEFAULT_DOCUMENT_NAME = 'config.yaml';
 const DOCUMENT_STORAGE_KEY = 'tps-active-config-doc';
@@ -48,6 +49,16 @@ function getGroupFormatting(group, field) {
     };
 
     return group[field] !== undefined ? group[field] : defaults[field];
+}
+
+function getGroupClass(group) {
+    // Return explicit groupClass if set, otherwise auto-generate from groupId
+    if (group.groupClass) {
+        return group.groupClass;
+    }
+    // Auto-generate from groupId: e.g., "sales" -> "group-sales"
+    const groupId = group.groupId || slugifyIdentifier(group.groupName) || 'section';
+    return `group-${groupId}`;
 }
 
 function deepClone(value) {
@@ -713,10 +724,32 @@ function populateGroupFormFields(group = {}, options = {}) {
     const groupIndex = Number.isNaN(derivedIndex) ? -1 : derivedIndex;
 
     document.getElementById('groupName').value = group.groupName || '';
-    document.getElementById('groupClass').value = group.groupClass || '';
     document.getElementById('groupPhaseTag').value = group.phaseTag || '';
-    document.getElementById('groupFlowDisplayName').value = group.flowDisplayName || '';
+
+    // Populate workflow phase dropdown
+    populateWorkflowPhaseDropdown(group.workflowPhase || group.flowDisplayName || '');
+
     updateGroupIdPreview({ groupIndex, group });
+}
+
+function populateWorkflowPhaseDropdown(selectedPhase = '') {
+    const select = document.getElementById('groupWorkflowPhase');
+    if (!select) return;
+
+    const phases = getWorkflowPhases();
+
+    // Clear and rebuild
+    select.innerHTML = '<option value="">None</option>';
+
+    phases.forEach(phase => {
+        const option = document.createElement('option');
+        option.value = phase.id;
+        option.textContent = phase.name;
+        if (phase.id === selectedPhase) {
+            option.selected = true;
+        }
+        select.appendChild(option);
+    });
 }
 
 function updateGroupIdPreview(options = {}) {
@@ -798,9 +831,22 @@ function buildGroupDraftFromForm() {
         ? configData?.agentGroups?.length || 0
         : (baseGroup.groupNumber ?? configData.agentGroups[groupIndex].groupNumber);
     draft.groupName = document.getElementById('groupName').value;
-    draft.groupClass = document.getElementById('groupClass').value;
+    // groupClass is derived from groupId, not set from form - only preserve if explicitly in original
+    if (!baseGroup.groupClass) {
+        delete draft.groupClass;
+    }
     draft.phaseTag = document.getElementById('groupPhaseTag').value;
-    draft.flowDisplayName = document.getElementById('groupFlowDisplayName').value;
+
+    // Store workflow phase reference (replaces flowDisplayName)
+    const workflowPhaseValue = document.getElementById('groupWorkflowPhase').value;
+    if (workflowPhaseValue) {
+        draft.workflowPhase = workflowPhaseValue;
+    } else {
+        delete draft.workflowPhase;
+    }
+    // Remove old flowDisplayName if it exists (migration)
+    delete draft.flowDisplayName;
+
     ensureGroupHasId(draft, groupIndex);
 
     if (isNew) {
@@ -1027,9 +1073,10 @@ function generateDynamicCSS(config) {
     // Generate CSS for each group
     config.agentGroups.forEach(group => {
         const color = getGroupFormatting(group, 'color');
+        const groupClass = getGroupClass(group);
         css += `
-            .${group.groupClass} .group-header { border-color: ${color}; }
-            .${group.groupClass} .group-icon { background: ${color}; }
+            .${groupClass} .group-header { border-color: ${color}; }
+            .${groupClass} .group-icon { background: ${color}; }
         `;
     });
 
@@ -1041,6 +1088,24 @@ function generateDynamicCSS(config) {
     });
 
     dynamicStyleElement.textContent = css;
+}
+
+// Helper to get display name for flow diagram
+function getFlowDisplayName(group) {
+    // Use workflowPhase if available (new system)
+    if (group.workflowPhase) {
+        const phases = getWorkflowPhases();
+        const phase = phases.find(p => p.id === group.workflowPhase);
+        if (phase) {
+            return phase.name;
+        }
+    }
+    // Fallback to old flowDisplayName for backward compatibility
+    if (group.flowDisplayName) {
+        return group.flowDisplayName;
+    }
+    // Last resort: use group name
+    return group.groupName;
 }
 
 // Generate flow diagram dynamically
@@ -1064,10 +1129,11 @@ function generateFlowDiagram(config) {
 
         const color = getGroupFormatting(group, 'color');
         const iconType = getGroupFormatting(group, 'iconType');
+        const displayName = getFlowDisplayName(group);
 
         flowHTML += `
             <div class="flow-box" style="background: ${color};" data-group="${group.groupId}" data-group-index="${group.groupNumber}">
-                <i data-lucide="${iconType}" style="margin-bottom: 4px;"></i><br>${group.flowDisplayName}
+                <i data-lucide="${iconType}" style="margin-bottom: 4px;"></i><br>${displayName}
                 ${imageOverlay}
             </div>
         `;
@@ -1086,9 +1152,10 @@ function generateFlowDiagram(config) {
         supportGroups.forEach(group => {
             const color = getGroupFormatting(group, 'color');
             const iconType = getGroupFormatting(group, 'iconType');
+            const displayName = getFlowDisplayName(group);
             flowHTML += `
                 <div class="flow-support-box" style="background: ${color};" data-group="${group.groupId}" data-group-index="${group.groupNumber}">
-                    <i data-lucide="${iconType}"></i> ${group.flowDisplayName}
+                    <i data-lucide="${iconType}"></i> ${displayName}
                 </div>
             `;
         });
@@ -1221,11 +1288,13 @@ function createAgentGroup(group, config, groupIndex) {
     const color = getGroupFormatting(group, 'color');
     const phaseTagColor = getGroupFormatting(group, 'phaseTagColor');
     const iconType = getGroupFormatting(group, 'iconType');
+    const groupClass = getGroupClass(group);
 
     const agentsHTML = group.agents.map((agent, agentIndex) =>
         createAgentCard(agent, phaseImage, config, groupIndex, agentIndex)
     ).join('');
     const phaseStyle = phaseTagColor ? `style="background: ${phaseTagColor};"` : `style="background: ${color};"`;
+    const phaseTagHTML = group.phaseTag ? `<div><span class="phase-tag" ${phaseStyle}>${group.phaseTag}</span></div>` : '';
 
     const groupIconOverlay = phaseImage ? `
         <div class="group-icon-overlay">
@@ -1234,7 +1303,7 @@ function createAgentGroup(group, config, groupIndex) {
     ` : '';
 
     return `
-        <div class="agent-group ${group.groupClass}" data-group-id="${group.groupId}" data-group-index="${groupIndex}">
+        <div class="agent-group ${groupClass}" data-group-id="${group.groupId}" data-group-index="${groupIndex}">
             <div class="group-header">
                 <div class="group-header-edit">
                     <div style="display: flex; align-items: center;">
@@ -1248,7 +1317,7 @@ function createAgentGroup(group, config, groupIndex) {
                                 <div class="section-edit-icon" onclick="openEditGroupModal(${groupIndex})" title="Edit section">
                                     <i data-lucide="edit-3"></i>
                                 </div>
-                                <div><span class="phase-tag" ${phaseStyle}>${group.phaseTag}</span></div>
+                                ${phaseTagHTML}
                             </div>
                         </div>
                     </div>
@@ -1484,12 +1553,18 @@ function toggleEditMode() {
 
 // Show edit mode button after page loads (when authenticated)
 function showEditModeButton() {
-    const btn = document.getElementById('editModeBtn');
-    if (btn) {
-        btn.style.display = 'block';
-        if (typeof lucide !== 'undefined') {
-            lucide.createIcons();
-        }
+    const editBtn = document.getElementById('editModeBtn');
+    if (editBtn) {
+        editBtn.style.display = 'block';
+    }
+
+    const workflowBtn = document.getElementById('workflowPhasesBtn');
+    if (workflowBtn) {
+        workflowBtn.style.display = 'block';
+    }
+
+    if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
     }
 }
 
@@ -1616,14 +1691,11 @@ function openAddSectionModal() {
         groupNumber: configData.agentGroups.length,
         groupName: '',
         groupId: '',
-        groupClass: '',
-        color: '#17a2b8',
-        phaseImage: null,
-        showInFlow: true,
-        isSupport: false,
-        flowDisplayName: '',
         agents: []
     };
+    // All formatting fields (color, phaseImage, showInFlow, isSupport, groupClass)
+    // inherit from sectionDefaults unless explicitly overridden in YAML
+    // workflowPhase is optional and set via dropdown
 
     showGroupModal(newGroup, -1);
 }
@@ -1717,6 +1789,121 @@ function deleteGroup() {
             generateFlowDiagram(configData);
         }
     });
+}
+
+// ----- Workflow Phases Management -----
+function getWorkflowPhases() {
+    return configData?.workflowPhases || [];
+}
+
+function openWorkflowPhasesModal() {
+    const modal = document.getElementById('workflowPhasesModal');
+    workflowPhasesDraft = deepClone(getWorkflowPhases());
+    renderWorkflowPhasesList();
+    modal.classList.add('show');
+}
+
+function closeWorkflowPhasesModal() {
+    workflowPhasesDraft = [];
+    document.getElementById('workflowPhasesModal').classList.remove('show');
+}
+
+function renderWorkflowPhasesList() {
+    const container = document.getElementById('workflowPhasesList');
+    if (!container) return;
+
+    if (workflowPhasesDraft.length === 0) {
+        container.innerHTML = '<p style="color: #999; text-align: center; padding: 20px;">No workflow phases defined. Click "Add Phase" to create one.</p>';
+        return;
+    }
+
+    // Sort by order
+    const sorted = [...workflowPhasesDraft].sort((a, b) => (a.order || 0) - (b.order || 0));
+
+    const html = sorted.map((phase, index) => `
+        <div class="workflow-phase-item" data-index="${index}">
+            <div class="workflow-phase-handle">
+                <i data-lucide="grip-vertical"></i>
+            </div>
+            <div class="workflow-phase-fields">
+                <input type="text"
+                       placeholder="Phase ID (e.g., sales)"
+                       value="${phase.id || ''}"
+                       onchange="updateWorkflowPhase(${index}, 'id', this.value)"
+                       class="workflow-phase-id">
+                <input type="text"
+                       placeholder="Display Name (e.g., Sales)"
+                       value="${phase.name || ''}"
+                       onchange="updateWorkflowPhase(${index}, 'name', this.value)"
+                       class="workflow-phase-name">
+                <input type="number"
+                       placeholder="Order"
+                       value="${phase.order !== undefined ? phase.order : index}"
+                       onchange="updateWorkflowPhase(${index}, 'order', parseInt(this.value))"
+                       class="workflow-phase-order"
+                       style="width: 80px;">
+            </div>
+            <button type="button" class="btn btn-danger" onclick="removeWorkflowPhase(${index})" title="Delete phase">
+                <i data-lucide="trash-2"></i>
+            </button>
+        </div>
+    `).join('');
+
+    container.innerHTML = html;
+
+    if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+    }
+}
+
+function addWorkflowPhase() {
+    const newPhase = {
+        id: '',
+        name: '',
+        order: workflowPhasesDraft.length
+    };
+    workflowPhasesDraft.push(newPhase);
+    renderWorkflowPhasesList();
+}
+
+function removeWorkflowPhase(index) {
+    if (!confirm('Are you sure you want to remove this workflow phase? Sections referencing it will lose the reference.')) {
+        return;
+    }
+    workflowPhasesDraft.splice(index, 1);
+    renderWorkflowPhasesList();
+}
+
+function updateWorkflowPhase(index, field, value) {
+    if (workflowPhasesDraft[index]) {
+        workflowPhasesDraft[index][field] = value;
+    }
+}
+
+async function saveWorkflowPhases() {
+    // Validate: all phases must have id and name
+    const invalid = workflowPhasesDraft.filter(p => !p.id || !p.name);
+    if (invalid.length > 0) {
+        alert('All workflow phases must have both an ID and a name.');
+        return;
+    }
+
+    // Check for duplicate IDs
+    const ids = workflowPhasesDraft.map(p => p.id);
+    const duplicates = ids.filter((id, index) => ids.indexOf(id) !== index);
+    if (duplicates.length > 0) {
+        alert(`Duplicate phase IDs found: ${duplicates.join(', ')}. Each phase must have a unique ID.`);
+        return;
+    }
+
+    // Update config
+    configData.workflowPhases = deepClone(workflowPhasesDraft);
+
+    const success = await saveConfig();
+    if (success) {
+        closeWorkflowPhasesModal();
+        alert('Workflow phases saved successfully.');
+    }
 }
 
 // ----- Reusable form helpers -----

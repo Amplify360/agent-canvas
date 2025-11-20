@@ -1307,3 +1307,96 @@ body {
         transform: rotate(90deg);
     }
 }
+
+/* Workflow Phases Management */
+.workflow-phases-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin: 20px 0;
+}
+
+.workflow-phase-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    transition: all 0.2s;
+}
+
+.workflow-phase-item:hover {
+    background: #e9ecef;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.workflow-phase-handle {
+    color: #6c757d;
+    cursor: grab;
+    display: flex;
+    align-items: center;
+}
+
+.workflow-phase-handle:active {
+    cursor: grabbing;
+}
+
+.workflow-phase-fields {
+    display: flex;
+    gap: 10px;
+    flex: 1;
+    align-items: center;
+}
+
+.workflow-phase-id,
+.workflow-phase-name,
+.workflow-phase-order {
+    padding: 8px 12px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    font-size: 14px;
+    transition: border-color 0.2s;
+}
+
+.workflow-phase-id {
+    width: 180px;
+    font-family: 'Courier New', monospace;
+    background: #fff3cd;
+}
+
+.workflow-phase-name {
+    flex: 1;
+    min-width: 200px;
+}
+
+.workflow-phase-order {
+    width: 80px;
+    text-align: center;
+}
+
+.workflow-phase-id:focus,
+.workflow-phase-name:focus,
+.workflow-phase-order:focus {
+    outline: none;
+    border-color: #17a2b8;
+    box-shadow: 0 0 0 3px rgba(23, 162, 184, 0.1);
+}
+
+.modal-body {
+    padding: 20px;
+}
+
+@media (max-width: 768px) {
+    .workflow-phase-fields {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .workflow-phase-id,
+    .workflow-phase-name {
+        width: 100%;
+        min-width: unset;
+    }
+}
