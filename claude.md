@@ -67,7 +67,6 @@ vercel env ls
 ├── data/
 │   ├── config.yaml     # Default TPS configuration (15KB)
 │   └── tps-config.yaml # Alternative configuration (16KB)
-├── img/                # Phase images and assets
 └── .vercel/            # Vercel deployment config
 ```
 

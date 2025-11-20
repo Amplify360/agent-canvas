@@ -43,10 +43,14 @@ body {
 }
 
 .agent-count-inline {
-    font-size: 0.9em;
-    opacity: 0.8;
+    font-size: 0.85em;
+    font-weight: 500;
+    background: rgba(255, 255, 255, 0.15);
+    padding: 6px 14px;
+    border-radius: 20px;
     margin: 0;
     white-space: nowrap;
+    backdrop-filter: blur(10px);
 }
 
 .title-section .context-menu-trigger {
@@ -449,49 +453,6 @@ body {
     stroke-width: 2.5;
 }
 
-.group-icon-overlay {
-    position: absolute;
-    top: -220px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 280px;
-    height: 200px;
-    background-color: white;
-    border-radius: 12px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-    padding: 10px;
-    opacity: 0;
-    visibility: hidden;
-    transition: opacity 0.3s ease, visibility 0.3s ease;
-    z-index: 10000;
-    pointer-events: none;
-}
-
-.group-icon:hover .group-icon-overlay {
-    opacity: 1;
-    visibility: visible;
-}
-
-.group-icon-overlay img {
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-    border-radius: 8px;
-}
-
-.group-icon-overlay::after {
-    content: '';
-    position: absolute;
-    bottom: -10px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 0;
-    height: 0;
-    border-left: 10px solid transparent;
-    border-right: 10px solid transparent;
-    border-top: 10px solid white;
-}
-
 .group-title {
     flex: 1;
 }
@@ -649,49 +610,6 @@ body {
     width: 18px;
     height: 18px;
     stroke-width: 2;
-}
-
-.icon-image-overlay {
-    position: absolute;
-    bottom: 50px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 250px;
-    height: 180px;
-    background-color: white;
-    border-radius: 10px;
-    box-shadow: 0 8px 25px rgba(0,0,0,0.25);
-    padding: 8px;
-    opacity: 0;
-    visibility: hidden;
-    transition: opacity 0.3s ease, visibility 0.3s ease;
-    z-index: 10000;
-    pointer-events: none;
-}
-
-.icon-panel-item:hover .icon-image-overlay {
-    opacity: 1;
-    visibility: visible;
-}
-
-.icon-image-overlay img {
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-    border-radius: 6px;
-}
-
-.icon-image-overlay::after {
-    content: '';
-    position: absolute;
-    top: 100%;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 0;
-    height: 0;
-    border-left: 8px solid transparent;
-    border-right: 8px solid transparent;
-    border-top: 8px solid white;
 }
 
 .journey-tooltip {

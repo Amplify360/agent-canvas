@@ -44,7 +44,6 @@ function getGroupFormatting(group, field) {
         color: '#1a5f73',
         iconType: 'target',
         phaseTagColor: null,
-        phaseImage: null,
         showInFlow: true,
         isSupport: false
     };
@@ -1025,7 +1024,7 @@ function syncGroupStateFromForm() {
 function updateAgentYamlEditor() {
     const textarea = document.getElementById('agentYamlInput');
     if (!textarea) return;
-    textarea.value = jsyaml.dump(agentModalOriginal || {});
+    textarea.value = window.jsyaml.dump(agentModalOriginal || {});
     setElementText('agentYamlError', '');
     setElementText('agentYamlStatus', '');
 }
@@ -1033,7 +1032,7 @@ function updateAgentYamlEditor() {
 function updateGroupYamlEditor() {
     const textarea = document.getElementById('groupYamlInput');
     if (!textarea) return;
-    textarea.value = jsyaml.dump(groupModalOriginal || {});
+    textarea.value = window.jsyaml.dump(groupModalOriginal || {});
     setElementText('groupYamlError', '');
     setElementText('groupYamlStatus', '');
 }
@@ -1042,7 +1041,7 @@ function applyAgentYamlToForm() {
     const textarea = document.getElementById('agentYamlInput');
     if (!textarea) return false;
     try {
-        const parsed = jsyaml.load(textarea.value) || {};
+        const parsed = window.jsyaml.load(textarea.value) || {};
         if (typeof parsed !== 'object' || Array.isArray(parsed)) {
             throw new Error('Agent YAML must describe an object.');
         }
@@ -1060,7 +1059,7 @@ function applyGroupYamlToForm() {
     const textarea = document.getElementById('groupYamlInput');
     if (!textarea) return false;
     try {
-        const parsed = jsyaml.load(textarea.value) || {};
+        const parsed = window.jsyaml.load(textarea.value) || {};
         if (typeof parsed !== 'object' || Array.isArray(parsed)) {
             throw new Error('Section YAML must describe an object.');
         }
@@ -1164,13 +1163,11 @@ async function loadConfig(docName = currentDocumentName || DEFAULT_DOCUMENT_NAME
             throw new Error(`Config request failed: ${response.status}`);
         }
         const yamlText = await response.text();
-        configData = jsyaml.load(yamlText);
+        configData = window.jsyaml.load(yamlText);
         const resolvedDoc = response.headers.get('X-Config-Document');
         if (resolvedDoc) {
             setActiveDocumentName(resolvedDoc);
         }
-        const configSource = response.headers.get('X-Config-Source') || 'unknown';
-        console.log('Config loaded from:', configSource, configData);
         return configData;
     } catch (error) {
         console.error('Error loading config:', error);
@@ -1182,7 +1179,7 @@ async function loadConfig(docName = currentDocumentName || DEFAULT_DOCUMENT_NAME
 
 async function saveConfig() {
     try {
-        const yamlText = jsyaml.dump(configData);
+        const yamlText = window.jsyaml.dump(configData);
         const docName = currentDocumentName || DEFAULT_DOCUMENT_NAME;
         const response = await fetch(`/api/config?doc=${encodeURIComponent(docName)}`, {
             method: 'POST',
@@ -1307,7 +1304,7 @@ function createMetricsTooltip(agent) {
         </div>`;
 }
 
-function createAgentCard(agent, phaseImage, config, groupIndex, agentIndex) {
+function createAgentCard(agent, config, groupIndex, agentIndex) {
     const tools = toArray(agent.tools);
     const journeySteps = toArray(agent.journeySteps);
     const metrics = getAgentMetrics(agent);
@@ -1318,12 +1315,6 @@ function createAgentCard(agent, phaseImage, config, groupIndex, agentIndex) {
     const linkTarget = agent.demoLink ? 'target="_blank"' : '';
     const linkTitle = agent.demoLink ? 'Try Demo' : 'Go to agent';
     const handoverBadge = agent.badge ? `<span class="handover-badge">${agent.badge}</span>` : '';
-
-    const imageOverlayHTML = phaseImage ? `
-        <div class="icon-image-overlay">
-            <img src="${phaseImage}" alt="Phase Diagram">
-        </div>
-    ` : '';
 
     return `
         <div class="agent-card">
@@ -1352,7 +1343,6 @@ function createAgentCard(agent, phaseImage, config, groupIndex, agentIndex) {
                 <div class="icon-panel-item journey-icon">
                     <i data-lucide="map"></i>
                     ${journeyHTML}
-                    ${imageOverlayHTML}
                 </div>
                 <a href="${linkUrl}" ${linkTarget} class="icon-panel-item agent-link-icon" title="${linkTitle}">
                     <i data-lucide="external-link"></i>
@@ -1369,23 +1359,16 @@ function createAgentCard(agent, phaseImage, config, groupIndex, agentIndex) {
 }
 
 function createAgentGroup(group, config, groupIndex) {
-    const phaseImage = getGroupFormatting(group, 'phaseImage');
     const color = getGroupFormatting(group, 'color');
     const phaseTagColor = getGroupFormatting(group, 'phaseTagColor');
     const iconType = getGroupFormatting(group, 'iconType');
     const groupClass = getGroupClass(group);
 
     const agentsHTML = group.agents.map((agent, agentIndex) =>
-        createAgentCard(agent, phaseImage, config, groupIndex, agentIndex)
+        createAgentCard(agent, config, groupIndex, agentIndex)
     ).join('');
     const phaseStyle = phaseTagColor ? `style="background: ${phaseTagColor};"` : `style="background: ${color};"`;
     const phaseTagHTML = group.phaseTag ? `<div class="phase-tag-wrapper"><span class="phase-tag" ${phaseStyle}>${group.phaseTag}</span></div>` : '';
-
-    const groupIconOverlay = phaseImage ? `
-        <div class="group-icon-overlay">
-            <img src="${phaseImage}" alt="${group.groupName} Diagram">
-        </div>
-    ` : '';
 
     const isCollapsed = collapsedSections[group.groupId] || false;
     const collapsedClass = isCollapsed ? 'collapsed' : '';
@@ -1412,7 +1395,6 @@ function createAgentGroup(group, config, groupIndex) {
                         </div>
                         <div class="group-icon">
                             <i data-lucide="${iconType}"></i>
-                            ${groupIconOverlay}
                         </div>
                         <div class="group-title" style="display: flex; align-items: center; flex: 1; flex-wrap: wrap; gap: 12px;">
                             <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 8px;">
@@ -1472,7 +1454,7 @@ function renderAgentGroups() {
     // Update agent count
     const totalAgents = configData.agentGroups.reduce((sum, group) => sum + group.agents.length, 0);
     document.getElementById('agent-count').textContent =
-        `${totalAgents} AI Agents Supporting The Proudfoot System`;
+        `${totalAgents} AI Agents`;
 
     // Render all agent groups
     const container = document.getElementById('agentGroupsContainer');
@@ -1480,13 +1462,7 @@ function renderAgentGroups() {
         createAgentGroup(group, configData, index)
     ).join('');
 
-    const addSectionButton = `
-        <button class="add-agent-btn add-section-btn" onclick="openAddSectionModal()">
-            <i data-lucide="plus"></i> Add New Section
-        </button>
-    `;
-
-    container.innerHTML = groupsHTML + addSectionButton;
+    container.innerHTML = groupsHTML;
 
     // Initialize Lucide icons
     if (typeof lucide !== 'undefined') {
@@ -1713,7 +1689,7 @@ function openAddSectionModal() {
         groupId: '',
         agents: []
     };
-    // All formatting fields (color, phaseImage, showInFlow, isSupport, groupClass)
+    // All formatting fields (color, showInFlow, isSupport, groupClass)
     // inherit from sectionDefaults unless explicitly overridden in YAML
 
     showGroupModal(newGroup, -1);
