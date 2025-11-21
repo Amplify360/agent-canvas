@@ -1283,11 +1283,6 @@ function bindStaticEventHandlers() {
     document.getElementById('titleModalSave')?.addEventListener('click', saveTitleEdit);
 
     agentGroupsContainer?.addEventListener('click', event => {
-        const collapseTarget = event.target.closest('[data-collapse-target]')?.dataset.collapseTarget;
-        if (collapseTarget) {
-            toggleSectionCollapse(collapseTarget);
-            return;
-        }
         const menuTrigger = event.target.closest('[data-menu-trigger]');
         if (menuTrigger) {
             const menuId = menuTrigger.dataset.menuTrigger;
@@ -1296,6 +1291,7 @@ function bindStaticEventHandlers() {
             toggleContextMenu(event, menuId);
             return;
         }
+
         const actionBtn = event.target.closest('[data-action-type]');
         if (actionBtn) {
             event.preventDefault();
@@ -1322,6 +1318,12 @@ function bindStaticEventHandlers() {
                 default:
                     break;
             }
+            return;
+        }
+
+        const collapseTarget = event.target.closest('[data-collapse-target]')?.dataset.collapseTarget;
+        if (collapseTarget) {
+            toggleSectionCollapse(collapseTarget);
         }
     });
 
