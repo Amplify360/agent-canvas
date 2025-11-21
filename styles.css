@@ -274,6 +274,11 @@ body {
     background: var(--overlay-dark-strong);
 }
 
+.document-controls-compact select:disabled {
+    opacity: 0.6;
+    cursor: wait;
+}
+
 .menu-panel {
     border-radius: 12px;
     box-shadow: 0 12px 30px var(--overlay-darker);
@@ -382,6 +387,10 @@ body {
     margin: 0;
     font-size: 0.85em;
     color: var(--text-glass-muted);
+}
+
+.document-status[data-state="info"] {
+    color: var(--brand-primary);
 }
 
 .document-status[data-state="error"] {
@@ -1190,6 +1199,25 @@ body {
     color: var(--text-inverse);
     border-color: var(--brand-primary);
     box-shadow: 0 4px 10px var(--brand-primary-glow);
+}
+
+/* Button loading state */
+.btn-loading {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.btn-loading i[data-lucide="loader-2"] {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 /* Animated Transitions */

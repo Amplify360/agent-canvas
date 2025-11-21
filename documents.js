@@ -389,9 +389,21 @@ export async function handleDocumentSelection(event) {
         return;
     }
 
-    setActiveDocumentName(selectedDoc);
-    setDocumentStatusMessage(`Loaded document "${selectedDoc}".`, 'success');
-    await loadAgentsCallback(selectedDoc);
+    // Show loading state
+    const docSelect = event.target;
+    docSelect.disabled = true;
+    setDocumentStatusMessage(`Loading "${selectedDoc}"...`, 'info');
+
+    try {
+        setActiveDocumentName(selectedDoc);
+        await loadAgentsCallback(selectedDoc);
+        setDocumentStatusMessage(`Loaded "${selectedDoc}".`, 'success');
+    } catch (error) {
+        console.error('Error loading document:', error);
+        setDocumentStatusMessage(`Failed to load "${selectedDoc}".`, 'error');
+    } finally {
+        docSelect.disabled = false;
+    }
 }
 
 export function triggerDocumentUpload() {

@@ -877,6 +877,15 @@ function genericSaveModal(type) {
         return;
     }
 
+    // Disable save button and show loading state
+    const saveBtn = document.getElementById(type === 'agent' ? 'agentSaveBtn' : 'groupSaveBtn');
+    if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<i data-lucide="loader-2"></i> Saving...';
+        saveBtn.classList.add('btn-loading');
+        refreshIcons();
+    }
+
     const item = deepClone(state[def.stateKey] || {});
 
     // Handle numbering
@@ -902,6 +911,14 @@ function genericSaveModal(type) {
     }
 
     saveConfig().then(success => {
+        // Re-enable button
+        if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = '<i data-lucide="save"></i> Save';
+            saveBtn.classList.remove('btn-loading');
+            refreshIcons();
+        }
+
         if (success) {
             def.setMode('form');
             state[def.stateKey] = null;
@@ -1076,6 +1093,15 @@ function saveTitleEdit() {
         return;
     }
 
+    // Disable save button and show loading state
+    const saveBtn = document.getElementById('titleModalSave');
+    if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<i data-lucide="loader-2"></i> Saving...';
+        saveBtn.classList.add('btn-loading');
+        refreshIcons();
+    }
+
     // Update config
     state.configData.documentTitle = newTitle;
 
@@ -1084,6 +1110,14 @@ function saveTitleEdit() {
 
     // Save config
     saveConfig().then(success => {
+        // Re-enable button
+        if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = '<i data-lucide="save"></i> Save';
+            saveBtn.classList.remove('btn-loading');
+            refreshIcons();
+        }
+
         if (success) {
             closeTitleModal();
         }
