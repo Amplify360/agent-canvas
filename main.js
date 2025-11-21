@@ -1283,6 +1283,12 @@ function bindStaticEventHandlers() {
     document.getElementById('titleModalSave')?.addEventListener('click', saveTitleEdit);
 
     agentGroupsContainer?.addEventListener('click', event => {
+        const openMenuBtn = event.target.closest('[data-open-menu]');
+        if (openMenuBtn) {
+            toggleContextMenu(event, openMenuBtn.dataset.openMenu);
+            return;
+        }
+
         const menuTrigger = event.target.closest('[data-menu-trigger]');
         if (menuTrigger) {
             const menuId = menuTrigger.dataset.menuTrigger;
@@ -1350,6 +1356,39 @@ function bindStaticEventHandlers() {
         const stopProp = trigger.dataset.stopProp === 'true';
         if (stopProp) event.stopPropagation();
         toggleContextMenu(event, menuId);
+    });
+
+    document.addEventListener('click', event => {
+        const actionBtn = event.target.closest('[data-action-type]');
+        if (!actionBtn) return;
+        event.preventDefault();
+        closeAllContextMenus();
+        const type = actionBtn.dataset.actionType;
+        const g = actionBtn.dataset.groupIndex !== undefined
+            ? parseInt(actionBtn.dataset.groupIndex, 10)
+            : null;
+        const a = actionBtn.dataset.agentIndex !== undefined
+            ? parseInt(actionBtn.dataset.agentIndex, 10)
+            : null;
+        switch (type) {
+            case 'agent-edit':
+                if (g !== null && a !== null) openEditAgentModal(g, a);
+                break;
+            case 'agent-delete':
+                if (g !== null && a !== null) deleteAgent(g, a);
+                break;
+            case 'agent-add':
+                if (g !== null) openAddAgentModal(g);
+                break;
+            case 'group-edit':
+                if (g !== null) openEditGroupModal(g);
+                break;
+            case 'group-delete':
+                if (g !== null) deleteGroup(g);
+                break;
+            default:
+                break;
+        }
     });
 }
 
