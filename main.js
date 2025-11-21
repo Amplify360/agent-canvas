@@ -1,250 +1,67 @@
+import {
+    state,
+    DEFAULT_DOCUMENT_NAME,
+    getAgentMetrics,
+    toArray,
+    getGroupFormatting,
+    getGroupClass,
+    deepClone,
+    getCollapsedPillClass,
+    refreshIcons,
+    generateGroupIdFromName,
+    ensureGroupHasId,
+    loadCollapsedState,
+    saveCollapsedState
+} from './state.js';
+import {
+    setElementText,
+    copyTextToClipboard
+} from './modal-utils.js';
+import {
+    setActiveDocumentName,
+    refreshDocumentList,
+    initializeDocumentControls,
+    handleDocumentSelection,
+    registerLoadAgents
+} from './documents.js';
+
 // ----- State and utility helpers -----
-let configData = null;
-let dynamicStyleElement = null;
-let currentDocumentName = null;
-let availableDocuments = [];
-let documentListLoaded = false;
-let agentModalViewMode = 'form';
-let groupModalViewMode = 'form';
-let agentModalOriginal = null;
-let groupModalOriginal = null;
-let documentMenuBound = false;
-let collapsedSections = {}; // Track which sections are collapsed
-
-const DEFAULT_DOCUMENT_NAME = 'config.yaml';
-const DOCUMENT_STORAGE_KEY = 'tps-active-config-doc';
-const COLLAPSED_SECTIONS_KEY = 'tps-collapsed-sections';
-const BLANK_DOCUMENT_TEMPLATE = [
-    '# TPS Agent Ecosystem configuration',
-    'sectionDefaults:',
-    '  color: "#1a5f73"',
-    '  iconType: target',
-    '  showInFlow: true',
-    '  isSupport: false',
-    'toolsConfig: {}',
-    'agentGroups: []',
-    ''
-].join('\n');
-const defaultAgentMetrics = {
-    usageThisWeek: '0',
-    timeSaved: '0',
-    roiContribution: 'Medium'
-};
-
-const COLLAPSED_PILL_CLASSES = [
-    'pill-palette-0',
-    'pill-palette-1',
-    'pill-palette-2',
-    'pill-palette-3',
-    'pill-palette-4'
-];
-
-function getAgentMetrics(agent = {}) {
-    return { ...defaultAgentMetrics, ...(agent.metrics || {}) };
-}
-
-function toArray(value) {
-    return Array.isArray(value) ? value : [];
-}
-
-function getGroupFormatting(group, field) {
-    const defaults = configData.sectionDefaults || {
-        color: '#1a5f73',
-        iconType: 'target',
-        showInFlow: true,
-        isSupport: false
-    };
-
-    return group[field] !== undefined ? group[field] : defaults[field];
-}
-
-function getGroupClass(group) {
-    // Return explicit groupClass if set, otherwise auto-generate from groupId
-    if (group.groupClass) {
-        return group.groupClass;
-    }
-    // Auto-generate from groupId: e.g., "sales" -> "group-sales"
-    const groupId = group.groupId || slugifyIdentifier(group.groupName) || 'section';
-    return `group-${groupId}`;
-}
-
-function deepClone(value) {
-    if (value === null || value === undefined) {
-        return value;
-    }
-    try {
-        return structuredClone(value);
-    } catch {
-        return JSON.parse(JSON.stringify(value));
-    }
-}
-
-function slugifyIdentifier(value) {
-    if (value === null || value === undefined) {
-        return '';
-    }
-    return value
-        .toString()
-        .trim()
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/-{2,}/g, '-')
-        .replace(/^-+|-+$/g, '');
-}
-
-function getCollapsedPillClass(index) {
-    return COLLAPSED_PILL_CLASSES[index % COLLAPSED_PILL_CLASSES.length];
-}
-
-function refreshIcons() {
-    if (typeof lucide === 'undefined') {
-        return;
-    }
-    try {
-        lucide.createIcons();
-    } catch (error) {
-        console.warn('Lucide icon refresh failed:', error);
-    }
-}
-
-function getExistingGroupIdSet(excludeIndex = -1) {
-    if (!Array.isArray(configData?.agentGroups)) {
-        return new Set();
-    }
-
-    return new Set(
-        configData.agentGroups
-            .map((group, index) => (index === excludeIndex ? null : (group?.groupId || null)))
-            .filter(id => typeof id === 'string' && id.trim() !== '')
-            .map(id => id.trim())
-    );
-}
-
-function generateGroupIdFromName(name, excludeIndex = -1) {
-    const fallbackBase = `section-${(configData?.agentGroups?.length || 0) + 1}`;
-    const baseId = slugifyIdentifier(name) || fallbackBase;
-    const existingIds = getExistingGroupIdSet(excludeIndex);
-
-    let candidate = baseId;
-    let suffix = 2;
-    while (!candidate || existingIds.has(candidate)) {
-        candidate = `${baseId}-${suffix++}`;
-    }
-
-    return candidate;
-}
-
-function ensureGroupHasId(group, groupIndex = -1) {
-    if (!group || typeof group !== 'object') {
-        return group;
-    }
-
-    if (typeof group.groupId === 'string' && group.groupId.trim()) {
-        group.groupId = group.groupId.trim();
-        return group;
-    }
-
-    const fallbackName = group.groupName || `section-${Date.now()}`;
-    group.groupId = generateGroupIdFromName(fallbackName, groupIndex);
-    return group;
-}
-
-// ----- Document management helpers -----
-function getStoredDocumentPreference() {
-    try {
-        return localStorage.getItem(DOCUMENT_STORAGE_KEY);
-    } catch (error) {
-        console.warn('Unable to read document preference:', error);
-        return null;
-    }
-}
-
-function persistDocumentPreference(name) {
-    try {
-        if (name) {
-            localStorage.setItem(DOCUMENT_STORAGE_KEY, name);
-        } else {
-            localStorage.removeItem(DOCUMENT_STORAGE_KEY);
-        }
-    } catch (error) {
-        console.warn('Unable to persist document preference:', error);
-    }
-}
-
-function loadCollapsedState() {
-    try {
-        const stored = localStorage.getItem(COLLAPSED_SECTIONS_KEY);
-        if (stored) {
-            collapsedSections = JSON.parse(stored);
-        } else {
-            collapsedSections = {};
-        }
-    } catch (error) {
-        console.warn('Unable to read collapsed sections:', error);
-        collapsedSections = {};
-    }
-}
-
-function saveCollapsedState() {
-    try {
-        localStorage.setItem(COLLAPSED_SECTIONS_KEY, JSON.stringify(collapsedSections));
-    } catch (error) {
-        console.warn('Unable to save collapsed sections:', error);
-    }
-}
-
 function toggleSectionCollapse(groupId) {
-    collapsedSections[groupId] = !collapsedSections[groupId];
+    state.collapsedSections[groupId] = !state.collapsedSections[groupId];
     saveCollapsedState();
 
-    // Apply collapse state to DOM
     const section = document.querySelector(`[data-group-id="${groupId}"]`);
     if (section) {
-        if (collapsedSections[groupId]) {
-            section.classList.add('collapsed');
-        } else {
-            section.classList.remove('collapsed');
-        }
+        section.classList.toggle('collapsed', state.collapsedSections[groupId]);
     }
     updateCollapseAllButton();
 }
 
 function collapseAll() {
-    if (!configData?.agentGroups) return;
-
-    configData.agentGroups.forEach(group => {
-        collapsedSections[group.groupId] = true;
+    if (!state.configData?.agentGroups) return;
+    state.configData.agentGroups.forEach(group => {
+        state.collapsedSections[group.groupId] = true;
         const section = document.querySelector(`[data-group-id="${group.groupId}"]`);
-        if (section) {
-            section.classList.add('collapsed');
-        }
+        section?.classList.add('collapsed');
     });
-
     saveCollapsedState();
     updateCollapseAllButton();
 }
 
 function expandAll() {
-    if (!configData?.agentGroups) return;
-
-    configData.agentGroups.forEach(group => {
-        collapsedSections[group.groupId] = false;
+    if (!state.configData?.agentGroups) return;
+    state.configData.agentGroups.forEach(group => {
+        state.collapsedSections[group.groupId] = false;
         const section = document.querySelector(`[data-group-id="${group.groupId}"]`);
-        if (section) {
-            section.classList.remove('collapsed');
-        }
+        section?.classList.remove('collapsed');
     });
-
     saveCollapsedState();
     updateCollapseAllButton();
 }
 
 function toggleCollapseAll() {
-    if (!configData?.agentGroups) return;
-
-    // Check if all sections are collapsed using state variable
-    const allCollapsed = configData.agentGroups.every(group => collapsedSections[group.groupId] === true);
-
+    if (!state.configData?.agentGroups) return;
+    const allCollapsed = state.configData.agentGroups.every(group => state.collapsedSections[group.groupId] === true);
     if (allCollapsed) {
         expandAll();
     } else {
@@ -253,7 +70,7 @@ function toggleCollapseAll() {
 }
 
 function updateCollapseAllButton() {
-    if (!configData?.agentGroups || configData.agentGroups.length === 0) return;
+    if (!state.configData?.agentGroups || state.configData.agentGroups.length === 0) return;
 
     const btn = document.getElementById('collapseAllBtn');
     const text = document.getElementById('collapseAllText');
@@ -261,584 +78,14 @@ function updateCollapseAllButton() {
 
     if (!btn || !text || !icon) return;
 
-    // Use state variable as single source of truth
-    const allCollapsed = configData.agentGroups.every(group => collapsedSections[group.groupId] === true);
-
-    if (allCollapsed) {
-        text.textContent = 'Expand All';
-        icon.setAttribute('data-lucide', 'chevrons-up');
-    } else {
-        text.textContent = 'Collapse All';
-        icon.setAttribute('data-lucide', 'chevrons-down');
-    }
-
+    const allCollapsed = state.configData.agentGroups.every(group => state.collapsedSections[group.groupId] === true);
+    text.textContent = allCollapsed ? 'Expand All' : 'Collapse All';
+    icon.setAttribute('data-lucide', allCollapsed ? 'chevrons-up' : 'chevrons-down');
     refreshIcons();
-}
-
-function setActiveDocumentName(name, options = {}) {
-    currentDocumentName = name || null;
-
-    if (!options.skipPersist) {
-        persistDocumentPreference(currentDocumentName);
-    }
-
-    updateDocumentControlsUI();
-}
-
-function getDocumentSelectElement() {
-    return document.getElementById('documentSelect');
-}
-
-function getDocumentMetaElement() {
-    return document.getElementById('documentMeta');
-}
-
-function getDocumentStatusElement() {
-    return document.getElementById('documentStatusMessage');
-}
-
-function getDocumentMenuElement() {
-    return document.getElementById('documentMenu');
-}
-
-function closeDocumentMenu() {
-    const menu = getDocumentMenuElement();
-    const button = document.getElementById('documentMenuBtn');
-    if (menu) {
-        menu.classList.remove('open');
-    }
-    if (button) {
-        button.setAttribute('aria-expanded', 'false');
-    }
-}
-
-function toggleDocumentMenu(event) {
-    if (event) {
-        event.preventDefault();
-        event.stopPropagation();
-    }
-    const menu = getDocumentMenuElement();
-    const button = document.getElementById('documentMenuBtn');
-    if (!menu || !button) return;
-    const willOpen = !menu.classList.contains('open');
-    if (willOpen) {
-        menu.classList.add('open');
-        button.setAttribute('aria-expanded', 'true');
-    } else {
-        closeDocumentMenu();
-    }
-}
-
-function bindDocumentMenuEvents() {
-    if (documentMenuBound) return;
-    const menu = getDocumentMenuElement();
-    const button = document.getElementById('documentMenuBtn');
-    if (!menu || !button) return;
-
-    button.addEventListener('click', toggleDocumentMenu);
-    menu.addEventListener('click', event => {
-        const actionButton = event.target.closest('button[data-action]');
-        if (!actionButton) return;
-        event.preventDefault();
-        const action = actionButton.dataset.action;
-        closeDocumentMenu();
-        handleDocumentMenuAction(action);
-    });
-
-    document.addEventListener('click', event => {
-        const menuEl = getDocumentMenuElement();
-        const toggleBtn = document.getElementById('documentMenuBtn');
-        if (!menuEl || !menuEl.classList.contains('open')) return;
-        if (menuEl.contains(event.target) || toggleBtn.contains(event.target)) {
-            return;
-        }
-        closeDocumentMenu();
-    });
-
-    documentMenuBound = true;
-}
-
-function handleDocumentMenuAction(action) {
-    switch (action) {
-        case 'upload':
-            triggerDocumentUpload();
-            break;
-        case 'blank':
-            createBlankDocument();
-            break;
-        case 'rename':
-            renameCurrentDocument();
-            break;
-        case 'download':
-            downloadCurrentDocument();
-            break;
-        case 'delete':
-            deleteCurrentDocument();
-            break;
-        default:
-            break;
-    }
-}
-
-async function createBlankDocument() {
-    const defaultName = `document-${availableDocuments.length + 1}.yaml`;
-    const userInput = prompt('Name for the new document (.yaml will be appended if missing):', defaultName);
-    if (userInput === null) {
-        return;
-    }
-
-    let docName;
-    try {
-        docName = sanitizeDocumentNameForClient(userInput);
-    } catch (error) {
-        alert(error.message);
-        return;
-    }
-
-    if (availableDocuments.some(doc => doc.name === docName)) {
-        if (!confirm(`"${docName}" already exists. Overwrite it with a blank document?`)) {
-            return;
-        }
-    }
-
-    try {
-        setDocumentStatusMessage(`Creating "${docName}"...`);
-        console.log('[documents] Creating blank document', { docName });
-        await uploadDocumentFromContents(docName, BLANK_DOCUMENT_TEMPLATE);
-        setDocumentStatusMessage(`Document "${docName}" created.`, 'success');
-    } catch (error) {
-        console.error('[documents] Blank document creation failed', { docName, error });
-        setDocumentStatusMessage('Failed to create document.', 'error');
-    }
-}
-
-async function renameCurrentDocument() {
-    if (!currentDocumentName) {
-        alert('Select a document before renaming.');
-        return;
-    }
-
-    const userInput = prompt('Enter a new name (.yaml will be appended if missing):', currentDocumentName);
-    if (userInput === null) {
-        return;
-    }
-
-    let newDocName;
-    try {
-        newDocName = sanitizeDocumentNameForClient(userInput);
-    } catch (error) {
-        alert(error.message);
-        return;
-    }
-
-    if (newDocName === currentDocumentName) {
-        setDocumentStatusMessage('Document name unchanged.');
-        return;
-    }
-
-    if (availableDocuments.some(doc => doc.name === newDocName)) {
-        alert(`A document named "${newDocName}" already exists. Choose a different name.`);
-        return;
-    }
-
-    try {
-        setDocumentStatusMessage(`Renaming to "${newDocName}"...`);
-        const response = await fetch(
-            `/api/config?doc=${encodeURIComponent(currentDocumentName)}&newDoc=${encodeURIComponent(newDocName)}`,
-            { method: 'PUT' }
-        );
-
-        if (!response.ok) {
-            throw new Error('Rename failed');
-        }
-
-        await refreshDocumentList(newDocName);
-        await loadAgents(newDocName);
-        setDocumentStatusMessage(`Renamed to "${newDocName}".`, 'success');
-    } catch (error) {
-        console.error('Rename failed:', error);
-        alert('Failed to rename document: ' + (error.message || 'Unknown error'));
-        setDocumentStatusMessage('Rename failed.', 'error');
-    }
-}
-
-function updateDocumentControlsUI() {
-    const select = getDocumentSelectElement();
-    const meta = getDocumentMetaElement();
-    const menu = getDocumentMenuElement();
-
-    if (select) {
-        select.innerHTML = '';
-
-        if (!documentListLoaded) {
-            const option = document.createElement('option');
-            option.textContent = 'Loading...';
-            option.value = '';
-            select.appendChild(option);
-            select.disabled = true;
-        } else if (!availableDocuments.length) {
-            const option = document.createElement('option');
-            option.textContent = 'No documents available';
-            option.value = '';
-            select.appendChild(option);
-            select.disabled = true;
-        } else {
-            availableDocuments.forEach(doc => {
-                const option = document.createElement('option');
-                option.textContent = doc.name;
-                option.value = doc.name;
-                select.appendChild(option);
-            });
-            select.disabled = false;
-            if (currentDocumentName && availableDocuments.some(doc => doc.name === currentDocumentName)) {
-                select.value = currentDocumentName;
-            } else {
-                select.value = availableDocuments[0].name;
-            }
-        }
-    }
-
-    if (meta) {
-        if (!documentListLoaded) {
-            meta.textContent = 'Loading documents...';
-        } else if (!availableDocuments.length) {
-            meta.textContent = 'No YAML documents found. Upload one to get started.';
-        } else if (currentDocumentName) {
-            const doc = availableDocuments.find(d => d.name === currentDocumentName);
-            if (doc) {
-                const sizeText = typeof doc.size === 'number' ? formatBytes(doc.size) : '';
-                const updatedText = doc.updatedAt ? new Date(doc.updatedAt).toLocaleString() : '';
-                const details = [
-                    updatedText && `Last updated ${updatedText}`,
-                    sizeText && sizeText
-                ].filter(Boolean).join(' • ');
-                meta.textContent = details || 'Document details unavailable.';
-            } else {
-                meta.textContent = 'Document details unavailable.';
-            }
-        } else {
-            meta.textContent = 'Select a document to see details.';
-        }
-    }
-
-    if (menu) {
-        const renameBtn = menu.querySelector('button[data-action="rename"]');
-        const downloadMenuBtn = menu.querySelector('button[data-action="download"]');
-        const deleteBtn = menu.querySelector('button[data-action="delete"]');
-        const divider = menu.querySelector('[data-role="menu-divider"]');
-        const hasDocument = Boolean(currentDocumentName);
-        const isLastDocument = availableDocuments.length <= 1;
-
-        if (renameBtn) {
-            renameBtn.disabled = !hasDocument;
-        }
-        if (downloadMenuBtn) {
-            downloadMenuBtn.disabled = !hasDocument;
-        }
-        if (deleteBtn) {
-            // Disable if no document or if it's the last one
-            deleteBtn.disabled = !hasDocument || isLastDocument;
-            if (isLastDocument && hasDocument) {
-                deleteBtn.title = 'Cannot delete the last document';
-            } else {
-                deleteBtn.title = 'Delete current document';
-            }
-        }
-        if (divider) {
-            divider.style.display = hasDocument ? 'block' : 'none';
-        }
-    }
-
-    refreshIcons();
-}
-
-function formatBytes(bytes = 0) {
-    if (!Number.isFinite(bytes) || bytes <= 0) return '0 B';
-    const units = ['B', 'KB', 'MB', 'GB'];
-    const i = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
-    return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${units[i]}`;
-}
-
-function setDocumentStatusMessage(message, type = 'info') {
-    const statusEl = getDocumentStatusElement();
-    if (!statusEl) return;
-    statusEl.textContent = message || '';
-    statusEl.dataset.state = type;
-}
-
-function sanitizeDocumentNameForClient(name) {
-    if (!name) {
-        throw new Error('Document name is required.');
-    }
-    let normalized = name.trim();
-    if (!normalized.endsWith('.yaml')) {
-        normalized += '.yaml';
-    }
-    const isValid = /^[A-Za-z0-9._-]+\.yaml$/.test(normalized);
-    if (!isValid) {
-        throw new Error('Invalid document name. Use letters, numbers, dots, dashes, or underscores.');
-    }
-    return normalized;
-}
-
-async function refreshDocumentList(preferredDocName) {
-    try {
-        setDocumentStatusMessage('Loading documents...');
-        const response = await fetch('/api/config?list=1', {
-            headers: {
-                'Accept': 'application/json'
-            }
-        });
-
-        if (!response.ok) {
-            throw new Error('Failed to fetch document list');
-        }
-
-        const data = await response.json();
-        availableDocuments = Array.isArray(data.documents) ? data.documents : [];
-        documentListLoaded = true;
-
-        const docNames = availableDocuments.map(doc => doc.name);
-        let nextDoc = preferredDocName || currentDocumentName || getStoredDocumentPreference();
-
-        if (!nextDoc && docNames.length) {
-            nextDoc = docNames.includes(DEFAULT_DOCUMENT_NAME) ? DEFAULT_DOCUMENT_NAME : docNames[0];
-        }
-
-        if (nextDoc && !docNames.includes(nextDoc) && docNames.length) {
-            nextDoc = docNames[0];
-        }
-
-        setActiveDocumentName(nextDoc, { skipPersist: false });
-        setDocumentStatusMessage('');
-    } catch (error) {
-        console.error('Error listing documents:', error);
-        availableDocuments = [];
-        documentListLoaded = true;
-        setActiveDocumentName(null, { skipPersist: true });
-        setDocumentStatusMessage('Unable to load documents. Upload a YAML file to create one.', 'error');
-    } finally {
-        updateDocumentControlsUI();
-    }
-}
-
-async function initializeDocumentControls() {
-    const fileInput = document.getElementById('documentFileInput');
-    if (fileInput && !fileInput.dataset.bound) {
-        fileInput.addEventListener('change', handleDocumentFileSelected);
-        fileInput.dataset.bound = 'true';
-    }
-
-    bindDocumentMenuEvents();
-    await refreshDocumentList();
-}
-
-async function handleDocumentSelection(event) {
-    const selectedDoc = event.target.value;
-    if (!selectedDoc || selectedDoc === currentDocumentName) {
-        return;
-    }
-
-    setActiveDocumentName(selectedDoc);
-    setDocumentStatusMessage(`Loaded document "${selectedDoc}".`, 'success');
-    await loadAgents(selectedDoc);
-}
-
-function triggerDocumentUpload() {
-    const input = document.getElementById('documentFileInput');
-    if (input) {
-        input.click();
-    }
-}
-
-async function handleDocumentFileSelected(event) {
-    const file = event.target.files?.[0];
-    event.target.value = '';
-
-    if (!file) {
-        return;
-    }
-
-    let suggestedName = file.name || DEFAULT_DOCUMENT_NAME;
-    try {
-        suggestedName = sanitizeDocumentNameForClient(suggestedName);
-    } catch {
-        suggestedName = DEFAULT_DOCUMENT_NAME;
-    }
-
-    const userInput = prompt('Enter a name for this YAML document (.yaml will be appended if missing):', suggestedName);
-    if (userInput === null) {
-        return; // user cancelled
-    }
-
-    let docName;
-    try {
-        docName = sanitizeDocumentNameForClient(userInput);
-    } catch (error) {
-        alert(error.message);
-        return;
-    }
-
-    try {
-        const contents = await file.text();
-        await uploadDocumentFromContents(docName, contents);
-    } catch (error) {
-        console.error('Upload failed:', error);
-        alert('Failed to upload document: ' + (error.message || 'Unknown error'));
-    }
-}
-
-async function uploadDocumentFromContents(docName, yamlText) {
-    const payloadSize = typeof yamlText === 'string' ? yamlText.length : 0;
-    console.log(`[documents] Upload requested for ${docName} (${payloadSize} bytes)`);
-    if (!payloadSize) {
-        console.warn('[documents] Warning: upload payload is empty string');
-    }
-    setDocumentStatusMessage(`Uploading "${docName}"...`);
-
-    const response = await fetch(`/api/config?doc=${encodeURIComponent(docName)}`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'text/yaml',
-            'X-Config-Name': docName
-        },
-        body: yamlText
-    });
-
-    if (!response.ok) {
-        let errorDetail = '';
-        try {
-            const contentType = response.headers.get('content-type') || '';
-            if (contentType.includes('application/json')) {
-                const data = await response.json();
-                errorDetail = data?.error || JSON.stringify(data);
-            } else {
-                errorDetail = await response.text();
-            }
-        } catch (parseError) {
-            errorDetail = `Unable to parse error body: ${parseError.message}`;
-        }
-
-        console.error('[documents] Upload failed', {
-            docName,
-            status: response.status,
-            statusText: response.statusText,
-            errorDetail
-        });
-
-        throw new Error(errorDetail || `Upload failed with status ${response.status}`);
-    }
-
-    await refreshDocumentList(docName);
-    setActiveDocumentName(docName);
-    await loadAgents(docName);
-
-    setDocumentStatusMessage(`Document "${docName}" uploaded and loaded.`, 'success');
-}
-
-async function downloadCurrentDocument() {
-    if (!currentDocumentName) {
-        alert('No document selected to download.');
-        return;
-    }
-
-    try {
-        const response = await fetch(`/api/config?doc=${encodeURIComponent(currentDocumentName)}`);
-        if (!response.ok) {
-            throw new Error('Download failed');
-        }
-
-        const blob = await response.blob();
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = currentDocumentName;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-    } catch (error) {
-        console.error('Download failed:', error);
-        alert('Failed to download document: ' + (error.message || 'Unknown error'));
-    }
-}
-
-async function deleteCurrentDocument() {
-    if (!currentDocumentName) {
-        alert('No document selected to delete.');
-        return;
-    }
-
-    // Prevent deleting the last document
-    if (availableDocuments.length <= 1) {
-        alert('Cannot delete the last document. At least one document must remain.');
-        return;
-    }
-
-    // Confirm deletion
-    const confirmed = confirm(
-        `Are you sure you want to permanently delete "${currentDocumentName}"?\n\n` +
-        `This action cannot be undone.`
-    );
-
-    if (!confirmed) {
-        return;
-    }
-
-    try {
-        setDocumentStatusMessage(`Deleting "${currentDocumentName}"...`);
-        const response = await fetch(
-            `/api/config?doc=${encodeURIComponent(currentDocumentName)}`,
-            { method: 'DELETE' }
-        );
-
-        if (!response.ok) {
-            const data = await response.json().catch(() => ({}));
-            throw new Error(data.error || 'Delete failed');
-        }
-
-        // Find a new document to load (first one that's not the deleted one)
-        const remainingDocs = availableDocuments.filter(doc => doc.name !== currentDocumentName);
-        const nextDoc = remainingDocs.length > 0 ? remainingDocs[0].name : null;
-
-        // Refresh list and load next document
-        await refreshDocumentList(nextDoc);
-        if (nextDoc) {
-            await loadAgents(nextDoc);
-            setDocumentStatusMessage(`Document "${currentDocumentName}" deleted successfully.`, 'success');
-        } else {
-            setDocumentStatusMessage('Document deleted. No documents remaining.', 'success');
-        }
-
-    } catch (error) {
-        console.error('Delete failed:', error);
-        alert('Failed to delete document: ' + (error.message || 'Unknown error'));
-        setDocumentStatusMessage('Delete failed.', 'error');
-    }
 }
 
 // ----- Modal YAML view helpers -----
-function setElementText(elementId, text = '') {
-    const el = document.getElementById(elementId);
-    if (el) {
-        el.textContent = text;
-    }
-}
-
-async function copyTextToClipboard(text) {
-    if (!navigator.clipboard) {
-        return false;
-    }
-    try {
-        await navigator.clipboard.writeText(text);
-        return true;
-    } catch (error) {
-        console.warn('Clipboard copy failed:', error);
-        return false;
-    }
-}
-
-function updateAgentModalViewUI() {
+async function updateAgentModalViewUI() {
     updateDualViewModalUI(modalViewConfigs.agent);
 }
 
@@ -855,7 +102,7 @@ function populateAgentFormFields(agent = {}) {
     if (toolsContainer) {
         toolsContainer.innerHTML = '';
         const selectedTools = toArray(agent.tools);
-        Object.keys(configData?.toolsConfig || {}).forEach(toolName => {
+        Object.keys(state.configData?.toolsConfig || {}).forEach(toolName => {
             const checked = selectedTools.includes(toolName) ? 'checked' : '';
             toolsContainer.innerHTML += `
                 <label class="tool-checkbox-label">
@@ -902,9 +149,9 @@ function updateGroupIdPreview(options = {}) {
         : (Number.isNaN(datasetIndex) ? -1 : datasetIndex);
 
     const isExistingGroup = groupIndex > -1;
-    const groupSource = options.group || groupModalOriginal || {};
-    const configGroup = isExistingGroup && Array.isArray(configData?.agentGroups)
-        ? configData.agentGroups[groupIndex]
+    const groupSource = options.group || state.groupModalOriginal || {};
+    const configGroup = isExistingGroup && Array.isArray(state.configData?.agentGroups)
+        ? state.configData.agentGroups[groupIndex]
         : null;
 
     const resolvedExistingId = (groupSource.groupId || configGroup?.groupId || '').trim();
@@ -935,8 +182,8 @@ function buildAgentDraftFromForm() {
     const groupIndex = parseInt(form.dataset.groupIndex);
     const agentIndex = parseInt(form.dataset.agentIndex);
     const isNew = agentIndex === -1;
-    const baseAgent = deepClone(agentModalOriginal || {});
-    const group = configData?.agentGroups?.[groupIndex];
+    const baseAgent = deepClone(state.agentModalOriginal || {});
+    const group = state.configData?.agentGroups?.[groupIndex];
 
     const draft = { ...baseAgent };
     const existingAgentNumber = !isNew ? (baseAgent.agentNumber || group?.agents?.[agentIndex]?.agentNumber) : null;
@@ -967,12 +214,12 @@ function buildGroupDraftFromForm() {
 
     const groupIndex = parseInt(form.dataset.groupIndex);
     const isNew = groupIndex === -1;
-    const baseGroup = deepClone(groupModalOriginal || {});
+    const baseGroup = deepClone(state.groupModalOriginal || {});
 
     const draft = { ...baseGroup };
     draft.groupNumber = isNew
-        ? configData?.agentGroups?.length || 0
-        : (baseGroup.groupNumber ?? configData.agentGroups[groupIndex].groupNumber);
+        ? state.configData?.agentGroups?.length || 0
+        : (baseGroup.groupNumber ?? state.configData.agentGroups[groupIndex].groupNumber);
     draft.groupName = document.getElementById('groupName').value;
     // groupClass is derived from groupId, not set from form - only preserve if explicitly in original
     if (!baseGroup.groupClass) {
@@ -985,7 +232,7 @@ function buildGroupDraftFromForm() {
     if (isNew) {
         draft.agents = draft.agents || [];
     } else {
-        draft.agents = configData.agentGroups[groupIndex].agents;
+        draft.agents = state.configData.agentGroups[groupIndex].agents;
     }
 
     return draft;
@@ -994,21 +241,21 @@ function buildGroupDraftFromForm() {
 function syncAgentStateFromForm() {
     const draft = buildAgentDraftFromForm();
     if (!draft) return false;
-    agentModalOriginal = draft;
+    state.agentModalOriginal = draft;
     return true;
 }
 
 function syncGroupStateFromForm() {
     const draft = buildGroupDraftFromForm();
     if (!draft) return false;
-    groupModalOriginal = draft;
+    state.groupModalOriginal = draft;
     return true;
 }
 
 function updateAgentYamlEditor() {
     const textarea = document.getElementById('agentYamlInput');
     if (!textarea) return;
-    textarea.value = window.jsyaml.dump(agentModalOriginal || {});
+    textarea.value = window.jsyaml.dump(state.agentModalOriginal || {});
     setElementText('agentYamlError', '');
     setElementText('agentYamlStatus', '');
 }
@@ -1016,7 +263,7 @@ function updateAgentYamlEditor() {
 function updateGroupYamlEditor() {
     const textarea = document.getElementById('groupYamlInput');
     if (!textarea) return;
-    textarea.value = window.jsyaml.dump(groupModalOriginal || {});
+    textarea.value = window.jsyaml.dump(state.groupModalOriginal || {});
     setElementText('groupYamlError', '');
     setElementText('groupYamlStatus', '');
 }
@@ -1029,7 +276,7 @@ function applyAgentYamlToForm() {
         if (typeof parsed !== 'object' || Array.isArray(parsed)) {
             throw new Error('Agent YAML must describe an object.');
         }
-        agentModalOriginal = parsed;
+        state.agentModalOriginal = parsed;
         populateAgentFormFields(parsed);
         setElementText('agentYamlError', '');
         return true;
@@ -1050,8 +297,8 @@ function applyGroupYamlToForm() {
         const form = document.getElementById('groupForm');
         const datasetIndex = form ? parseInt(form.dataset.groupIndex ?? '-1', 10) : -1;
         const groupIndex = Number.isNaN(datasetIndex) ? -1 : datasetIndex;
-        groupModalOriginal = ensureGroupHasId(parsed, groupIndex);
-        populateGroupFormFields(groupModalOriginal, { groupIndex });
+        state.groupModalOriginal = ensureGroupHasId(parsed, groupIndex);
+        populateGroupFormFields(state.groupModalOriginal, { groupIndex });
         setElementText('groupYamlError', '');
         return true;
     } catch (error) {
@@ -1062,9 +309,9 @@ function applyGroupYamlToForm() {
 
 const modalViewConfigs = {
     agent: {
-        getMode: () => agentModalViewMode,
+        getMode: () => state.agentModalViewMode,
         setMode: mode => {
-            agentModalViewMode = mode;
+            state.agentModalViewMode = mode;
         },
         selectors: {
             formContentId: 'agentFormContent',
@@ -1079,9 +326,9 @@ const modalViewConfigs = {
         yamlValidationError: 'Please fix YAML errors before returning to form view.'
     },
     group: {
-        getMode: () => groupModalViewMode,
+        getMode: () => state.groupModalViewMode,
         setMode: mode => {
-            groupModalViewMode = mode;
+            state.groupModalViewMode = mode;
         },
         selectors: {
             formContentId: 'groupFormContent',
@@ -1191,7 +438,7 @@ async function copyGroupYaml() {
 }
 
 // ----- Config load/save -----
-async function loadConfig(docName = currentDocumentName || DEFAULT_DOCUMENT_NAME) {
+async function loadConfig(docName = state.currentDocumentName || DEFAULT_DOCUMENT_NAME) {
     try {
         const url = `/api/config?doc=${encodeURIComponent(docName)}`;
         const response = await fetch(url);
@@ -1199,12 +446,12 @@ async function loadConfig(docName = currentDocumentName || DEFAULT_DOCUMENT_NAME
             throw new Error(`Config request failed: ${response.status}`);
         }
         const yamlText = await response.text();
-        configData = window.jsyaml.load(yamlText);
+        state.configData = window.jsyaml.load(yamlText);
         const resolvedDoc = response.headers.get('X-Config-Document');
         if (resolvedDoc) {
             setActiveDocumentName(resolvedDoc);
         }
-        return configData;
+        return state.configData;
     } catch (error) {
         console.error('Error loading config:', error);
         document.getElementById('agentGroupsContainer').innerHTML =
@@ -1215,8 +462,8 @@ async function loadConfig(docName = currentDocumentName || DEFAULT_DOCUMENT_NAME
 
 async function saveConfig() {
     try {
-        const yamlText = window.jsyaml.dump(configData);
-        const docName = currentDocumentName || DEFAULT_DOCUMENT_NAME;
+        const yamlText = window.jsyaml.dump(state.configData);
+        const docName = state.currentDocumentName || DEFAULT_DOCUMENT_NAME;
         const response = await fetch(`/api/config?doc=${encodeURIComponent(docName)}`, {
             method: 'POST',
             headers: {
@@ -1245,10 +492,10 @@ async function saveConfig() {
 // Generate dynamic CSS for group colors
 function generateDynamicCSS(config) {
     // Reuse existing style element or create new one
-    if (!dynamicStyleElement) {
-        dynamicStyleElement = document.createElement('style');
-        dynamicStyleElement.id = 'dynamic-config-styles';
-        document.head.appendChild(dynamicStyleElement);
+    if (!state.dynamicStyleElement) {
+        state.dynamicStyleElement = document.createElement('style');
+        state.dynamicStyleElement.id = 'dynamic-config-styles';
+        document.head.appendChild(state.dynamicStyleElement);
     }
 
     const groupCss = (config.agentGroups || [])
@@ -1277,7 +524,7 @@ function generateDynamicCSS(config) {
         })
         .join('');
 
-    dynamicStyleElement.textContent = groupCss + toolCss;
+    state.dynamicStyleElement.textContent = groupCss + toolCss;
 }
 
 function renderMenuItems(actions = []) {
@@ -1466,7 +713,7 @@ function createAgentGroup(group, config, groupIndex) {
         createAgentCard(agent, config, groupIndex, agentIndex)
     ).join('');
 
-    const isCollapsed = collapsedSections[group.groupId] || false;
+    const isCollapsed = state.collapsedSections[group.groupId] || false;
     const collapsedClass = isCollapsed ? 'collapsed' : '';
 
     // Create agent name pills for collapsed view
@@ -1538,33 +785,33 @@ function createAgentGroup(group, config, groupIndex) {
 // ----- Primary render pipeline -----
 // Render agent groups (can be called to re-render after edits)
 function renderAgentGroups() {
-    if (!configData) return;
+    if (!state.configData) return;
 
     // Load collapsed state from localStorage
     loadCollapsedState();
 
-    // Initialize all groups in collapsedSections if not present
-    if (configData.agentGroups) {
-        configData.agentGroups.forEach(group => {
-            if (collapsedSections[group.groupId] === undefined) {
-                collapsedSections[group.groupId] = false;
+    // Initialize all groups in state.collapsedSections if not present
+    if (state.configData.agentGroups) {
+        state.configData.agentGroups.forEach(group => {
+            if (state.collapsedSections[group.groupId] === undefined) {
+                state.collapsedSections[group.groupId] = false;
             }
         });
     }
 
     // Update document title
-    const title = configData.documentTitle || 'TPS Operating System';
+    const title = state.configData.documentTitle || 'TPS Operating System';
     document.getElementById('documentTitle').textContent = title;
 
     // Update agent count
-    const totalAgents = configData.agentGroups.reduce((sum, group) => sum + group.agents.length, 0);
+    const totalAgents = state.configData.agentGroups.reduce((sum, group) => sum + group.agents.length, 0);
     document.getElementById('agent-count').textContent =
         `${totalAgents} AI Agents`;
 
     // Render all agent groups
     const container = document.getElementById('agentGroupsContainer');
-    const groupsHTML = configData.agentGroups.map((group, index) =>
-        createAgentGroup(group, configData, index)
+    const groupsHTML = state.configData.agentGroups.map((group, index) =>
+        createAgentGroup(group, state.configData, index)
     ).join('');
 
     container.innerHTML = groupsHTML;
@@ -1581,7 +828,7 @@ function renderAgentGroups() {
 
 // ----- Page interactions -----
 // Load and render agents
-async function loadAgents(docName = currentDocumentName) {
+async function loadAgents(docName = state.currentDocumentName) {
     if (!docName) {
         const container = document.getElementById('agentGroupsContainer');
         if (container) {
@@ -1604,6 +851,8 @@ async function loadAgents(docName = currentDocumentName) {
         console.error('Error loading agents:', error);
     }
 }
+
+registerLoadAgents(loadAgents);
 
 // Tooltip interactions
 // Helper function to attach tooltip handlers
@@ -1667,7 +916,7 @@ function setupTooltips() {
 
 // ----- Agent modal handlers -----
 function openEditAgentModal(groupIndex, agentIndex) {
-    const group = configData.agentGroups[groupIndex];
+    const group = state.configData.agentGroups[groupIndex];
     const agent = group.agents[agentIndex];
 
     showAgentModal(agent, groupIndex, agentIndex);
@@ -1675,7 +924,7 @@ function openEditAgentModal(groupIndex, agentIndex) {
 
 function openAddAgentModal(groupIndex) {
     const newAgent = {
-        agentNumber: configData.agentGroups[groupIndex].agents.length + 1,
+        agentNumber: state.configData.agentGroups[groupIndex].agents.length + 1,
         name: '',
         objective: '',
         description: '',
@@ -1693,9 +942,9 @@ function showAgentModal(agent, groupIndex, agentIndex) {
     const form = document.getElementById('agentForm');
 
     document.getElementById('modalAgentTitle').textContent = isNew ? 'Add Agent' : 'Edit Agent';
-    agentModalOriginal = deepClone(agent);
-    agentModalViewMode = 'form';
-    populateAgentFormFields(agentModalOriginal);
+    state.agentModalOriginal = deepClone(agent);
+    state.agentModalViewMode = 'form';
+    populateAgentFormFields(state.agentModalOriginal);
     setElementText('agentYamlError', '');
     setElementText('agentYamlStatus', '');
     const agentYamlInput = document.getElementById('agentYamlInput');
@@ -1718,8 +967,8 @@ function showAgentModal(agent, groupIndex, agentIndex) {
 }
 
 function closeAgentModal() {
-    agentModalViewMode = 'form';
-    agentModalOriginal = null;
+    state.agentModalViewMode = 'form';
+    state.agentModalOriginal = null;
     document.getElementById('agentModal').classList.remove('show');
 }
 
@@ -1734,17 +983,17 @@ function saveAgent() {
         return;
     }
 
-    const agent = deepClone(agentModalOriginal || {});
+    const agent = deepClone(state.agentModalOriginal || {});
     if (!agent.agentNumber) {
         agent.agentNumber = isNew
-            ? configData.agentGroups[groupIndex].agents.length + 1
-            : (configData.agentGroups[groupIndex].agents[agentIndex]?.agentNumber || agentIndex + 1);
+            ? state.configData.agentGroups[groupIndex].agents.length + 1
+            : (state.configData.agentGroups[groupIndex].agents[agentIndex]?.agentNumber || agentIndex + 1);
     }
 
     if (isNew) {
-        configData.agentGroups[groupIndex].agents.push(agent);
+        state.configData.agentGroups[groupIndex].agents.push(agent);
     } else {
-        configData.agentGroups[groupIndex].agents[agentIndex] = agent;
+        state.configData.agentGroups[groupIndex].agents[agentIndex] = agent;
     }
 
     saveConfig().then(success => {
@@ -1764,12 +1013,12 @@ function deleteAgent(groupIndex = null, agentIndex = null) {
         agentIndex = parseInt(form.dataset.agentIndex);
     }
 
-    const agent = configData.agentGroups[groupIndex].agents[agentIndex];
+    const agent = state.configData.agentGroups[groupIndex].agents[agentIndex];
     if (!confirm(`Are you sure you want to delete "${agent.name}"?`)) {
         return;
     }
 
-    configData.agentGroups[groupIndex].agents.splice(agentIndex, 1);
+    state.configData.agentGroups[groupIndex].agents.splice(agentIndex, 1);
 
     saveConfig().then(success => {
         if (success) {
@@ -1781,13 +1030,13 @@ function deleteAgent(groupIndex = null, agentIndex = null) {
 
 // ----- Group modal handlers -----
 function openEditGroupModal(groupIndex) {
-    const group = configData.agentGroups[groupIndex];
+    const group = state.configData.agentGroups[groupIndex];
     showGroupModal(group, groupIndex);
 }
 
 function openAddSectionModal() {
     const newGroup = {
-        groupNumber: configData.agentGroups.length,
+        groupNumber: state.configData.agentGroups.length,
         groupName: '',
         groupId: '',
         agents: []
@@ -1804,12 +1053,12 @@ function showGroupModal(group, groupIndex) {
     const form = document.getElementById('groupForm');
 
     document.getElementById('modalGroupTitle').textContent = isNew ? 'Add Section' : 'Edit Section';
-    groupModalOriginal = deepClone(group);
-    groupModalViewMode = 'form';
+    state.groupModalOriginal = deepClone(group);
+    state.groupModalViewMode = 'form';
     if (form) {
         form.dataset.groupIndex = groupIndex;
     }
-    populateGroupFormFields(groupModalOriginal, { groupIndex });
+    populateGroupFormFields(state.groupModalOriginal, { groupIndex });
     setElementText('groupYamlError', '');
     setElementText('groupYamlStatus', '');
     const groupYamlInput = document.getElementById('groupYamlInput');
@@ -1828,8 +1077,8 @@ function showGroupModal(group, groupIndex) {
 }
 
 function closeGroupModal() {
-    groupModalViewMode = 'form';
-    groupModalOriginal = null;
+    state.groupModalViewMode = 'form';
+    state.groupModalOriginal = null;
     document.getElementById('groupModal').classList.remove('show');
 }
 
@@ -1843,28 +1092,28 @@ function saveGroup() {
         return;
     }
 
-    const group = deepClone(groupModalOriginal || {});
+    const group = deepClone(state.groupModalOriginal || {});
     if (group.groupNumber === undefined || group.groupNumber === null) {
-        group.groupNumber = isNew ? configData.agentGroups.length : configData.agentGroups[groupIndex].groupNumber;
+        group.groupNumber = isNew ? state.configData.agentGroups.length : state.configData.agentGroups[groupIndex].groupNumber;
     }
 
     if (isNew) {
         group.agents = Array.isArray(group.agents) ? group.agents : [];
     } else {
-        group.agents = configData.agentGroups[groupIndex].agents;
+        group.agents = state.configData.agentGroups[groupIndex].agents;
     }
 
     if (isNew) {
-        configData.agentGroups.push(group);
+        state.configData.agentGroups.push(group);
     } else {
-        configData.agentGroups[groupIndex] = group;
+        state.configData.agentGroups[groupIndex] = group;
     }
 
     saveConfig().then(success => {
         if (success) {
             closeGroupModal();
             renderAgentGroups();
-            generateDynamicCSS(configData);
+            generateDynamicCSS(state.configData);
         }
     });
 }
@@ -1876,12 +1125,12 @@ function deleteGroup(groupIndex = null) {
         groupIndex = parseInt(form.dataset.groupIndex);
     }
 
-    const group = configData.agentGroups[groupIndex];
+    const group = state.configData.agentGroups[groupIndex];
     if (!confirm(`Are you sure you want to delete "${group.groupName}" and all its agents?`)) {
         return;
     }
 
-    configData.agentGroups.splice(groupIndex, 1);
+    state.configData.agentGroups.splice(groupIndex, 1);
 
     saveConfig().then(success => {
         if (success) {
@@ -1897,7 +1146,7 @@ function openEditTitleModal() {
     const input = document.getElementById('documentTitleInput');
 
     // Set current title or default
-    const currentTitle = configData.documentTitle || 'TPS Operating System';
+    const currentTitle = state.configData.documentTitle || 'TPS Operating System';
     input.value = currentTitle;
 
     modal.classList.add('show');
@@ -1919,7 +1168,7 @@ function saveTitleEdit() {
     }
 
     // Update config
-    configData.documentTitle = newTitle;
+    state.configData.documentTitle = newTitle;
 
     // Update display
     document.getElementById('documentTitle').textContent = newTitle;
@@ -1998,3 +1247,28 @@ if (groupNameInput) {
 }
 
 document.addEventListener('DOMContentLoaded', bootstrapApp);
+
+Object.assign(window, {
+    toggleContextMenu,
+    closeAllContextMenus,
+    toggleCollapseAll,
+    toggleSectionCollapse,
+    handleDocumentSelection,
+    openEditTitleModal,
+    closeTitleModal,
+    saveTitleEdit,
+    openAddSectionModal,
+    openEditGroupModal,
+    openAddAgentModal,
+    openEditAgentModal,
+    closeAgentModal,
+    saveAgent,
+    deleteAgent,
+    setAgentModalView,
+    copyAgentYaml,
+    closeGroupModal,
+    saveGroup,
+    deleteGroup,
+    setGroupModalView,
+    copyGroupYaml
+});

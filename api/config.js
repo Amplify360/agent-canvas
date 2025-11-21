@@ -9,88 +9,18 @@ export const config = {
   },
 };
 
-function getReadableStreamDiagnostics(req) {
-  return {
-    hasPipe: typeof req.pipe === 'function',
-    hasOn: typeof req.on === 'function',
-    readable: req.readable,
-    hasBodyProp: Object.prototype.hasOwnProperty.call(req, 'body'),
-    typeofBody: typeof req.body,
-    hasRawBodyProp: Object.prototype.hasOwnProperty.call(req, 'rawBody'),
-    typeofRawBody: typeof req.rawBody,
-    reqConstructor: req.constructor?.name,
-    httpVersion: req.httpVersion,
-    headers: req.headers
-  };
-}
+const json = (res, status, payload) =>
+  res.status(status).setHeader('Content-Type', 'application/json').send(JSON.stringify(payload));
 
-async function readRequestBody(req) {
+async function readRawBody(req) {
   return new Promise((resolve, reject) => {
     const chunks = [];
-    let chunkCount = 0;
-    let totalBytes = 0;
-    const chunkDetails = [];
-
-    const cleanup = () => {
-      req.off?.('data', onData);
-      req.off?.('end', onEnd);
-      req.off?.('error', onError);
-    };
-
-    const onData = chunk => {
-      chunkCount += 1;
-      const isBuffer = typeof Buffer !== 'undefined' && Buffer.isBuffer?.(chunk);
-      let bufferChunk;
-      if (typeof chunk === 'string') {
-        bufferChunk = Buffer.from(chunk, 'utf8');
-      } else if (isBuffer) {
-        bufferChunk = chunk;
-      } else if (chunk instanceof Uint8Array) {
-        bufferChunk = Buffer.from(chunk);
-      } else if (chunk && typeof chunk === 'object' && typeof chunk.valueOf === 'function') {
-        bufferChunk = Buffer.from(String(chunk.valueOf()));
-      } else {
-        bufferChunk = Buffer.from('');
-      }
-
-      totalBytes += bufferChunk.length;
-      chunkDetails.push({
-        index: chunkCount,
-        originalType: typeof chunk,
-        isBuffer,
-        bufferLength: bufferChunk.length
-      });
-
-      chunks.push(bufferChunk);
-    };
-
-    const onEnd = () => {
-      cleanup();
-      resolve({
-        buffer: Buffer.concat(chunks),
-        chunkCount,
-        totalBytes,
-        chunkDetails
-      });
-    };
-
-    const onError = error => {
-      cleanup();
-      reject(error);
-    };
-
-    if (typeof req.on === 'function') {
-      req.on('data', onData);
-      req.on('end', onEnd);
-      req.on('error', onError);
-    } else {
-      resolve({
-        buffer: Buffer.alloc(0),
-        chunkCount: 0,
-        totalBytes: 0,
-        chunkDetails: [],
-        unsupported: true
-      });
+    req.on?.('data', chunk => chunks.push(typeof chunk === 'string' ? Buffer.from(chunk, 'utf8') : Buffer.from(chunk)));
+    req.on?.('end', () => resolve(Buffer.concat(chunks)));
+    req.on?.('error', reject);
+    // Fallback for environments without streams
+    if (typeof req.on !== 'function') {
+      resolve(Buffer.alloc(0));
     }
   });
 }
@@ -151,9 +81,7 @@ function getQueryParam(req, key) {
 function ensureBlobToken(res) {
   const blobToken = process.env.BLOB_READ_WRITE_TOKEN;
   if (!blobToken) {
-    res.status(500).setHeader('Content-Type', 'application/json').send(JSON.stringify({
-      error: 'Blob storage token is not configured. Please set BLOB_READ_WRITE_TOKEN.'
-    }));
+    json(res, 500, { error: 'Blob storage token is not configured. Please set BLOB_READ_WRITE_TOKEN.' });
     return null;
   }
   return blobToken;
@@ -217,14 +145,10 @@ async function handleGet(req, res) {
           updatedAt: blob.uploadedAt
         }));
 
-      res.status(200)
-        .setHeader('Content-Type', 'application/json')
-        .send(JSON.stringify({ documents }));
+      json(res, 200, { documents });
     } catch (error) {
       console.error('Error listing documents:', error);
-      res.status(500)
-        .setHeader('Content-Type', 'application/json')
-        .send(JSON.stringify({ error: 'Failed to list documents' }));
+      json(res, 500, { error: 'Failed to list documents' });
     }
     return;
   }
@@ -234,9 +158,7 @@ async function handleGet(req, res) {
     const yamlText = await fetchDocumentFromBlob(docName, blobToken);
 
     if (!yamlText) {
-      res.status(404)
-        .setHeader('Content-Type', 'application/json')
-        .send(JSON.stringify({ error: `Document "${docName}" not found` }));
+      json(res, 404, { error: `Document "${docName}" not found` });
       return;
     }
 
@@ -247,9 +169,7 @@ async function handleGet(req, res) {
       .send(yamlText);
   } catch (error) {
     console.error('Error fetching config:', error);
-    res.status(500)
-      .setHeader('Content-Type', 'application/json')
-      .send(JSON.stringify({ error: 'Failed to load configuration' }));
+    json(res, 500, { error: 'Failed to load configuration' });
   }
 }
 
@@ -262,67 +182,22 @@ async function handlePost(req, res) {
   if (!blobToken) return;
 
   try {
-    const reqDiagnostics = getReadableStreamDiagnostics(req);
-    console.log('[api/config POST] Request diagnostics', reqDiagnostics);
+    const buffer = await readRawBody(req);
+    let yamlText = buffer.toString('utf8');
 
-    const { buffer, chunkCount, totalBytes, chunkDetails, unsupported } = await readRequestBody(req);
-    let yamlText = buffer?.toString('utf8') || '';
-
-    if (!yamlText && !unsupported) {
-      console.warn('[api/config POST] Attempted upload with empty body', {
-        contentLength: req.headers['content-length'],
-        transferEncoding: req.headers['transfer-encoding'],
-        chunkCount,
-        totalBytes,
-        chunkDetails
-      });
-      res.status(400)
-        .setHeader('Content-Type', 'application/json')
-        .send(JSON.stringify({ error: 'No content provided' }));
-      return;
-    } else if (!yamlText && unsupported) {
-      console.warn('[api/config POST] Request stream unsupported, falling back to req.body');
+    if (!yamlText && req.body) {
+      yamlText = typeof req.body === 'string' ? req.body : Buffer.from(req.body).toString('utf8');
+    }
+    if (!yamlText && req.rawBody) {
+      yamlText = Buffer.from(req.rawBody).toString('utf8');
     }
 
     if (!yamlText) {
-      const fallback = req.body ?? req.rawBody;
-      const fallbackType = fallback ? typeof fallback : 'undefined';
-      if (typeof fallback === 'string') {
-        yamlText = fallback;
-      } else if (fallback && typeof Buffer !== 'undefined' && Buffer.isBuffer?.(fallback)) {
-        yamlText = fallback.toString('utf8');
-      }
-      console.warn('[api/config POST] Fallback body inspection', {
-        hasReqBody: Boolean(req.body),
-        hasRawBody: Boolean(req.rawBody),
-        fallbackType,
-        derivedLength: yamlText.length,
-        contentLength: req.headers['content-length'],
-        transferEncoding: req.headers['transfer-encoding'],
-        chunkCount,
-        totalBytes,
-        chunkDetails
-      });
-    }
-
-    if (!yamlText) {
-      res.status(400)
-        .setHeader('Content-Type', 'application/json')
-        .send(JSON.stringify({ error: 'No content provided' }));
+      json(res, 400, { error: 'No content provided' });
       return;
     }
 
     const docName = getDocumentName(req);
-    console.log('[api/config POST] Upload request received', {
-      docName,
-      bytes: yamlText.length,
-      chunkCount,
-      totalBytes,
-      contentLength: req.headers['content-length'],
-      transferEncoding: req.headers['transfer-encoding'],
-      chunkDetails
-    });
-
     const blob = await put(docName, yamlText, {
       access: 'public',
       token: blobToken,
@@ -330,20 +205,16 @@ async function handlePost(req, res) {
       contentType: YAML_CONTENT_TYPE
     });
 
-    res.status(200)
-      .setHeader('Content-Type', 'application/json')
-      .send(JSON.stringify({
-        success: true,
-        document: docName,
-        url: blob.url,
-        size: yamlText.length
-      }));
+    json(res, 200, {
+      success: true,
+      document: docName,
+      url: blob.url,
+      size: yamlText.length
+    });
 
   } catch (error) {
     console.error('[api/config POST] Error saving config', { error });
-    res.status(500)
-      .setHeader('Content-Type', 'application/json')
-      .send(JSON.stringify({ error: 'Failed to save configuration' }));
+    json(res, 500, { error: 'Failed to save configuration' });
   }
 }
 
@@ -359,25 +230,19 @@ async function handlePut(req, res) {
     const docName = getDocumentName(req);
     const newDocParam = getQueryParam(req, 'newDoc');
     if (!newDocParam) {
-      res.status(400)
-        .setHeader('Content-Type', 'application/json')
-        .send(JSON.stringify({ error: 'Missing new document name' }));
+      json(res, 400, { error: 'Missing new document name' });
       return;
     }
 
     const newDocName = sanitizeDocumentName(newDocParam);
     if (docName === newDocName) {
-      res.status(400)
-        .setHeader('Content-Type', 'application/json')
-        .send(JSON.stringify({ error: 'New document name must be different' }));
+      json(res, 400, { error: 'New document name must be different' });
       return;
     }
 
     const yamlText = await fetchDocumentFromBlob(docName, blobToken);
     if (!yamlText) {
-      res.status(404)
-        .setHeader('Content-Type', 'application/json')
-        .send(JSON.stringify({ error: `Document "${docName}" not found` }));
+      json(res, 404, { error: `Document "${docName}" not found` });
       return;
     }
 
@@ -390,19 +255,15 @@ async function handlePut(req, res) {
 
     await del(docName, { token: blobToken });
 
-    res.status(200)
-      .setHeader('Content-Type', 'application/json')
-      .send(JSON.stringify({
-        success: true,
-        document: newDocName,
-        previous: docName
-      }));
+    json(res, 200, {
+      success: true,
+      document: newDocName,
+      previous: docName
+    });
 
   } catch (error) {
     console.error('Error renaming config:', error);
-    res.status(500)
-      .setHeader('Content-Type', 'application/json')
-      .send(JSON.stringify({ error: 'Failed to rename configuration' }));
+    json(res, 500, { error: 'Failed to rename configuration' });
   }
 }
 
@@ -417,9 +278,7 @@ async function handleDelete(req, res) {
   try {
     const docParam = getQueryParam(req, 'doc');
     if (!docParam) {
-      res.status(400)
-        .setHeader('Content-Type', 'application/json')
-        .send(JSON.stringify({ error: 'Missing document name' }));
+      json(res, 400, { error: 'Missing document name' });
       return;
     }
 
@@ -428,27 +287,18 @@ async function handleDelete(req, res) {
     // Check if document exists
     const exists = await fetchDocumentFromBlob(docName, blobToken);
     if (!exists) {
-      res.status(404)
-        .setHeader('Content-Type', 'application/json')
-        .send(JSON.stringify({ error: `Document "${docName}" not found` }));
+      json(res, 404, { error: `Document "${docName}" not found` });
       return;
     }
 
     // Delete from Blob Storage
     await del(docName, { token: blobToken });
 
-    res.status(200)
-      .setHeader('Content-Type', 'application/json')
-      .send(JSON.stringify({
-        success: true,
-        deleted: docName
-      }));
+    json(res, 200, { success: true, deleted: docName });
 
   } catch (error) {
     console.error('Error deleting config:', error);
-    res.status(500)
-      .setHeader('Content-Type', 'application/json')
-      .send(JSON.stringify({ error: 'Failed to delete configuration' }));
+    json(res, 500, { error: 'Failed to delete configuration' });
   }
 }
 
