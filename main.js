@@ -1246,29 +1246,53 @@ if (groupNameInput) {
     });
 }
 
+function bindStaticEventHandlers() {
+    const collapseBtn = document.getElementById('collapseAllBtn');
+    collapseBtn?.addEventListener('click', toggleCollapseAll);
+
+    const docSelect = document.getElementById('documentSelect');
+    docSelect?.addEventListener('change', handleDocumentSelection);
+
+    const boardTrigger = document.querySelector('[data-board-trigger="board-menu"]');
+    boardTrigger?.addEventListener('click', event => {
+        event.stopPropagation();
+        toggleContextMenu(event, 'board-menu');
+    });
+
+    document.getElementById('agentModalClose')?.addEventListener('click', closeAgentModal);
+    document.getElementById('agentFormToggle')?.addEventListener('click', () => setAgentModalView('form'));
+    document.getElementById('agentYamlToggle')?.addEventListener('click', () => setAgentModalView('yaml'));
+    document.getElementById('agentCopyYamlBtn')?.addEventListener('click', copyAgentYaml);
+    document.getElementById('agentCancelBtn')?.addEventListener('click', closeAgentModal);
+    document.getElementById('agentSaveBtn')?.addEventListener('click', saveAgent);
+    document.getElementById('deleteAgentBtn')?.addEventListener('click', () => deleteAgent());
+
+    document.getElementById('groupModalClose')?.addEventListener('click', closeGroupModal);
+    document.getElementById('groupFormToggle')?.addEventListener('click', () => setGroupModalView('form'));
+    document.getElementById('groupYamlToggle')?.addEventListener('click', () => setGroupModalView('yaml'));
+    document.getElementById('groupCopyYamlBtn')?.addEventListener('click', copyGroupYaml);
+    document.getElementById('groupCancelBtn')?.addEventListener('click', closeGroupModal);
+    document.getElementById('groupSaveBtn')?.addEventListener('click', saveGroup);
+    document.getElementById('deleteGroupBtn')?.addEventListener('click', () => deleteGroup());
+
+    document.getElementById('titleModalClose')?.addEventListener('click', closeTitleModal);
+    document.getElementById('titleModalCancel')?.addEventListener('click', closeTitleModal);
+    document.getElementById('titleModalSave')?.addEventListener('click', saveTitleEdit);
+
+    document.addEventListener('click', event => {
+        const action = event.target.closest('[data-board-action]')?.dataset.boardAction;
+        if (!action) return;
+        event.preventDefault();
+        closeAllContextMenus();
+        if (action === 'edit-title') {
+            openEditTitleModal();
+        } else if (action === 'add-section') {
+            openAddSectionModal();
+        }
+    });
+}
+
+document.addEventListener('DOMContentLoaded', bindStaticEventHandlers);
 document.addEventListener('DOMContentLoaded', bootstrapApp);
 
-Object.assign(window, {
-    toggleContextMenu,
-    closeAllContextMenus,
-    toggleCollapseAll,
-    toggleSectionCollapse,
-    handleDocumentSelection,
-    openEditTitleModal,
-    closeTitleModal,
-    saveTitleEdit,
-    openAddSectionModal,
-    openEditGroupModal,
-    openAddAgentModal,
-    openEditAgentModal,
-    closeAgentModal,
-    saveAgent,
-    deleteAgent,
-    setAgentModalView,
-    copyAgentYaml,
-    closeGroupModal,
-    saveGroup,
-    deleteGroup,
-    setGroupModalView,
-    copyGroupYaml
-});
+// No global window exports; all handlers are bound below.

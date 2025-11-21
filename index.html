@@ -14,15 +14,15 @@
             <div class="header-row u-flex u-justify-between u-align-center u-gap-lg u-wrap">
                 <div class="title-section u-flex u-align-center u-gap-md u-wrap">
                     <h1 id="documentTitle">TPS Operating System</h1>
-                    <div class="context-menu-trigger" onclick="toggleContextMenu(event, 'board-menu')" title="Board options">
+                    <div class="context-menu-trigger" data-board-trigger="board-menu" title="Board options">
                         <i data-lucide="more-vertical"></i>
                         <div class="context-menu menu-panel" id="board-menu">
-                            <button type="button" class="menu-item" onclick="openEditTitleModal(); closeAllContextMenus();">
+                            <button type="button" class="menu-item" data-board-action="edit-title">
                                 <i data-lucide="edit-3"></i>
                                 Edit Title
                             </button>
                             <div class="context-menu-divider menu-divider"></div>
-                            <button type="button" class="menu-item" onclick="openAddSectionModal(); closeAllContextMenus();">
+                            <button type="button" class="menu-item" data-board-action="add-section">
                                 <i data-lucide="plus"></i>
                                 Add Section
                             </button>
@@ -31,12 +31,12 @@
                     <p id="agent-count" class="agent-count-inline">Loading...</p>
                 </div>
                 <div class="header-actions u-flex u-align-center u-gap-sm">
-                    <button type="button" class="btn btn-glass collapse-all-btn" id="collapseAllBtn" onclick="toggleCollapseAll()" title="Collapse/Expand All">
+                    <button type="button" class="btn btn-glass collapse-all-btn" id="collapseAllBtn" title="Collapse/Expand All">
                         <i id="collapseAllIcon" data-lucide="chevrons-down"></i>
                         <span id="collapseAllText">Collapse All</span>
                     </button>
                     <div class="document-controls-compact u-flex u-align-center u-gap-sm u-relative">
-                        <select id="documentSelect" onchange="handleDocumentSelection(event)">
+                        <select id="documentSelect">
                             <option value="">Loading...</option>
                         </select>
                         <button type="button" class="btn btn-icon" id="documentMenuBtn" aria-haspopup="true" aria-expanded="false" title="Document actions">
@@ -89,16 +89,16 @@
         <div class="surface-card modal-content">
             <div class="modal-header">
                 <h2 id="modalAgentTitle">Edit Agent</h2>
-                <button class="modal-close" onclick="closeAgentModal()">
+                <button class="modal-close" id="agentModalClose">
                     <i data-lucide="x"></i>
                 </button>
             </div>
             <form id="agentForm">
                 <div class="modal-view-toggle">
-                    <button type="button" class="btn btn-toggle view-toggle-btn active" id="agentFormToggle" onclick="setAgentModalView('form')">
+                    <button type="button" class="btn btn-toggle view-toggle-btn active" id="agentFormToggle">
                         Form View
                     </button>
-                    <button type="button" class="btn btn-toggle view-toggle-btn" id="agentYamlToggle" onclick="setAgentModalView('yaml')">
+                    <button type="button" class="btn btn-toggle view-toggle-btn" id="agentYamlToggle">
                         YAML View
                     </button>
                 </div>
@@ -145,7 +145,7 @@
 
                 <div id="agentYamlContent" class="yaml-editor">
                     <div class="yaml-toolbar">
-                        <button type="button" class="btn btn-secondary" onclick="copyAgentYaml()">
+                        <button type="button" class="btn btn-secondary" id="agentCopyYamlBtn">
                             <i data-lucide="copy"></i> Copy YAML
                         </button>
                         <span class="yaml-status" id="agentYamlStatus"></span>
@@ -155,11 +155,11 @@
                 </div>
 
                 <div class="modal-actions">
-                    <button type="button" class="btn btn-danger" onclick="deleteAgent()" id="deleteAgentBtn">
+                    <button type="button" class="btn btn-danger" id="deleteAgentBtn">
                         <i data-lucide="trash-2"></i> Delete
                     </button>
-                    <button type="button" class="btn btn-secondary" onclick="closeAgentModal()">Cancel</button>
-                    <button type="button" class="btn btn-primary" onclick="saveAgent()">
+                    <button type="button" class="btn btn-secondary" id="agentCancelBtn">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="agentSaveBtn">
                         <i data-lucide="save"></i> Save
                     </button>
                 </div>
@@ -172,16 +172,16 @@
         <div class="surface-card modal-content">
             <div class="modal-header">
                 <h2 id="modalGroupTitle">Edit Section</h2>
-                <button class="modal-close" onclick="closeGroupModal()">
+                <button class="modal-close" id="groupModalClose">
                     <i data-lucide="x"></i>
                 </button>
             </div>
             <form id="groupForm">
                 <div class="modal-view-toggle">
-                    <button type="button" class="btn btn-toggle view-toggle-btn active" id="groupFormToggle" onclick="setGroupModalView('form')">
+                    <button type="button" class="btn btn-toggle view-toggle-btn active" id="groupFormToggle">
                         Form View
                     </button>
-                    <button type="button" class="btn btn-toggle view-toggle-btn" id="groupYamlToggle" onclick="setGroupModalView('yaml')">
+                    <button type="button" class="btn btn-toggle view-toggle-btn" id="groupYamlToggle">
                         YAML View
                     </button>
                 </div>
@@ -205,7 +205,7 @@
 
                 <div id="groupYamlContent" class="yaml-editor">
                     <div class="yaml-toolbar">
-                        <button type="button" class="btn btn-secondary" onclick="copyGroupYaml()">
+                        <button type="button" class="btn btn-secondary" id="groupCopyYamlBtn">
                             <i data-lucide="copy"></i> Copy YAML
                         </button>
                         <span class="yaml-status" id="groupYamlStatus"></span>
@@ -215,11 +215,11 @@
                 </div>
 
                 <div class="modal-actions">
-                    <button type="button" class="btn btn-danger" onclick="deleteGroup()" id="deleteGroupBtn">
+                    <button type="button" class="btn btn-danger" id="deleteGroupBtn">
                         <i data-lucide="trash-2"></i> Delete Section
                     </button>
-                    <button type="button" class="btn btn-secondary" onclick="closeGroupModal()">Cancel</button>
-                    <button type="button" class="btn btn-primary" onclick="saveGroup()">
+                    <button type="button" class="btn btn-secondary" id="groupCancelBtn">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="groupSaveBtn">
                         <i data-lucide="save"></i> Save
                     </button>
                 </div>
@@ -232,7 +232,7 @@
         <div class="surface-card modal-content modal-narrow">
             <div class="modal-header">
                 <h2>Edit Document Title</h2>
-                <button class="modal-close" onclick="closeTitleModal()">
+                <button class="modal-close" id="titleModalClose">
                     <i data-lucide="x"></i>
                 </button>
             </div>
@@ -243,8 +243,8 @@
                     <small>This title will be displayed at the top of the page</small>
                 </div>
                 <div class="modal-actions">
-                    <button type="button" class="btn btn-secondary" onclick="closeTitleModal()">Cancel</button>
-                    <button type="button" class="btn btn-primary" onclick="saveTitleEdit()">
+                    <button type="button" class="btn btn-secondary" id="titleModalClose">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="titleModalSave">
                         <i data-lucide="save"></i> Save
                     </button>
                 </div>
