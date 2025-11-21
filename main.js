@@ -1262,6 +1262,7 @@ function bindStaticEventHandlers() {
     const boardTrigger = document.querySelector('[data-board-trigger="board-menu"]');
     boardTrigger?.addEventListener('click', event => {
         event.stopPropagation();
+        console.debug('[board-trigger-click]');
         toggleContextMenu(event, 'board-menu', boardTrigger);
     });
 
@@ -1343,6 +1344,7 @@ function bindStaticEventHandlers() {
         event.preventDefault();
         closeAllContextMenus();
         const type = action.dataset.boardAction;
+        console.debug('[board-action-click]', { type });
         if (type === 'edit-title') {
             openEditTitleModal();
         } else if (type === 'add-section') {
