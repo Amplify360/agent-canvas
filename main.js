@@ -1265,6 +1265,19 @@ function bindStaticEventHandlers() {
         console.debug('[board-trigger-click]');
         toggleContextMenu(event, 'board-menu', boardTrigger);
     });
+    boardMenu?.addEventListener('click', event => {
+        const actionBtn = event.target.closest('[data-board-action]');
+        if (!actionBtn) return;
+        event.preventDefault();
+        closeAllContextMenus();
+        const type = actionBtn.dataset.boardAction;
+        console.debug('[board-action-click]', { type });
+        if (type === 'edit-title') {
+            openEditTitleModal();
+        } else if (type === 'add-section') {
+            openAddSectionModal();
+        }
+    });
 
     document.getElementById('agentModalClose')?.addEventListener('click', closeAgentModal);
     document.getElementById('agentFormToggle')?.addEventListener('click', () => setAgentModalView('form'));
