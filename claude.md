@@ -236,10 +236,38 @@ All storage operations in `api/config.js`:
 }
 ```
 
+### Utility Surfaces & Chips
+- `.surface-card`, `.surface-panel`, and `.surface-glass` centralize the common padding/radius/shadow logic for agent groups, cards, and modals. Customize them by setting `--surface-padding`, `--surface-shadow`, `--surface-bg`, etc. on the consuming selector.
+- `.chip` and `.badge` replace bespoke pill/badge CSS. Set `--chip-bg` / `--chip-text` (or `--badge-bg` / `--badge-text`) inline or via CSS to theme individual pills, tool chips, or badges.
+- Context menus share `.menu-panel` + `.menu-item`, so `renderContextMenuTrigger()` just needs to output those base classes to look consistent anywhere in the UI.
+- Modals now use `<div class="surface-card modal-content">` so future modals only need to tweak CSS variables instead of redefining box styles.
+- Collapsed agent pills rely on the `pill-palette-0` → `pill-palette-4` classes, so `createAgentGroup()` simply appends a palette class instead of inlining colors. Adjust those classes in CSS to change the palette.
+
 ### Dynamic YAML-driven accents
 - `generateDynamicCSS()` now injects only CSS variables (no hard-coded colors). Each agent group gets `--group-accent` and `--phase-tag-color`, and every tool class receives `--tool-chip-bg`.
 - `styles.css` consumes those variables (`border-color: var(--group-accent, var(--group-accent-fallback))`, `background: var(--tool-chip-bg, var(--tool-chip-bg-fallback))`, etc.), so theming flows from YAML → JS → CSS without inline overrides.
 - To add new themable surfaces, create a token in `:root`, reference it in the relevant selectors, then (optionally) expose a YAML field that sets a matching CSS variable inside `generateDynamicCSS()`.
+- `phaseTag` values are still persisted in YAML / forms for downstream tooling, but the UI no longer renders a badge for them. Removing the CSS/DOM keeps the interface lean while preserving the data.
+- `renderAgentIconPanel()` centralizes the icon cluster (journey tooltip, demo link, video link, metrics tooltip). Extend that helper if you need additional quick actions.
+
+### Duplication Map (UI)
+- **Cards & Sections**: Use `surface-card` for big sections (agent groups, modals) and `surface-panel` for inner cards (agent cards, inline panels). Avoid reintroducing bespoke box/shadow rules—override the CSS variables instead.
+- **Menus & Context Actions**: Always route through `renderContextMenuTrigger()` which outputs `.menu-panel` + `.menu-item` markup. This keeps document menus, agent menus, and section menus aligned without extra CSS.
+- **Collapsed Pills**: Collapsed agent pills pull from the `COLLAPSED_PILL_PALETTE` JS constant. The CSS now reads `--pill-bg` / `--pill-text`, so new pill palettes only require editing the JS array (no nth-child selectors).
+- **Chips/Badges**: Any inline status (tool chips, badges, pills) should opt into `.chip`/`.badge` so hover/spacing logic stays centralized. Set per-instance colors via inline CSS variables or helper functions.
+- **Icon Panel**: `renderAgentIconPanel()` owns the HTML for the journey/demo/video/metrics buttons. Reuse that helper instead of duplicating markup when you add or remove card actions.
+
+### Utility layout layer
+- Common flex/spacing patterns live in lightweight utility classes such as `u-flex`, `u-gap-sm`, `u-wrap`, `u-flex-column`, and `u-relative`. Apply them directly in `index.html` or generated markup to avoid bespoke selectors.
+- Buttons now share a consolidated `.btn` base plus modifiers (`.btn-glass`, `.btn-icon`, `.btn-toggle`). Favor stacking these classes over introducing new button-specific selectors.
+
+### Reusable context menus
+- Use `renderContextMenuTrigger({ menuId, title, actions, icon, stopPropagation })` to generate both the trigger and menu markup. The helper takes an `actions` array where each entry is `{ icon, label, onClick, danger }` or `{ type: 'divider' }`.
+- This keeps every context menu on the page consistent and automatically wires up the shared `.menu-panel`/`.menu-item` styling.
+
+### Collapsed pill palette
+- Agent “pill” chips in collapsed sections no longer rely on `nth-child` selectors. The palette is configured in `COLLAPSED_PILL_PALETTE`, and `getCollapsedPillStyle()` injects `--pill-bg`/`--pill-text` per pill.
+- To adjust the palette, update the array in `main.js`; no CSS changes are required.
 
 ### Key UI Patterns
 - **Agent Cards**: CSS Grid layout, hover effects with transform and shadow

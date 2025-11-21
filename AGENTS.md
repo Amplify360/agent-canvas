@@ -223,11 +223,42 @@ All storage operations in `api/config.js`:
 ### Design Tokens (CSS Variables)
 ```css
 :root {
-  --interactive-teal: #17a2b8;
-  --sales-red: #e74c3c;
-  /* Dynamic tool colors generated from YAML */
+  --page-bg-start: #0a3d4d;
+  --page-bg-end: #1a5f73;
+  --brand-primary: #17a2b8;
+  --brand-primary-strong: #138496;
+  --group-accent-fallback: var(--brand-primary);
+  --tool-chip-bg-fallback: #999999;
+  /* See styles.css for the full token set */
 }
 ```
+
+### Utility Surfaces & Chips
+- `.surface-card`, `.surface-panel`, and `.surface-glass` centralize the common padding/radius/shadow logic for agent groups, cards, and modals. Customize them by setting `--surface-padding`, `--surface-shadow`, `--surface-bg`, etc. on the consuming selector.
+- `.chip` and `.badge` replace bespoke pill/badge CSS. Set `--chip-bg` / `--chip-text` (or `--badge-bg` / `--badge-text`) inline or via CSS to theme individual pills, tool chips, or badges.
+- Context menus share `.menu-panel` + `.menu-item`, so `renderContextMenuTrigger()` just needs to output those base classes to look consistent anywhere in the UI.
+- Modals now use `<div class="surface-card modal-content">` so future modals only need to tweak CSS variables instead of redefining box styles.
+- `phaseTag` metadata still lives in the YAML schema and edit modal for downstream consumers, but the UI no longer renders a badge for it. Keeping the data while pruning the DOM/CSS helps keep the board lightweight.
+- Collapsed agent pills rely on palette classes (`pill-palette-0` → `pill-palette-4`) instead of inline colors. Update the CSS definitions for those classes if you want a different palette.
+
+### Utility layout layer
+- Shared layout helpers (`u-flex`, `u-gap-sm`, `u-wrap`, `u-flex-column`, `u-relative`, etc.) keep markup lean without bespoke selectors. Prefer stacking these in HTML/JS over adding new structural CSS rules.
+- Buttons use a unified `.btn` base with modifiers (`.btn-glass`, `.btn-icon`, `.btn-toggle`, `.btn-primary`, etc.) to cover nearly every variation.
+
+### Reusable context menus
+- Call `renderContextMenuTrigger({ menuId, title, actions, icon, stopPropagation })` when generating menus. Each action is `{ icon, label, onClick, danger }` or `{ type: 'divider' }`, which renders consistent `.menu-panel` / `.menu-item` markup automatically.
+- This also keeps the JS small—no more copy/pasting context-menu DOM snippets.
+
+### Collapsed pill palette
+- Collapsed agent pills use `COLLAPSED_PILL_PALETTE` and `getCollapsedPillStyle()` to inject per-pill CSS variables (`--pill-bg`, `--pill-text`), replacing `nth-child` color overrides.
+- Adjusting the pill colors now only requires editing that palette array in `main.js`.
+
+### Duplication Map (UI)
+- **Cards & Sections**: Use `surface-card` for big sections (agent groups, modals) and `surface-panel` for inner cards (agent cards, inline panels). Avoid reintroducing bespoke box/shadow rules—override the CSS variables instead.
+- **Menus & Context Actions**: Always route through `renderContextMenuTrigger()` which outputs `.menu-panel` + `.menu-item` markup. This keeps document menus, agent menus, and section menus aligned without extra CSS.
+- **Collapsed Pills**: Collapsed agent pills pull from the `COLLAPSED_PILL_PALETTE` JS constant. The CSS now reads `--pill-bg` / `--pill-text`, so new pill palettes only require editing the JS array (no nth-child selectors).
+- **Chips/Badges**: Any inline status (tool chips, badges, pills) should opt into `.chip`/`.badge` so hover/spacing logic stays centralized. Set per-instance colors via inline CSS variables or helper functions.
+- **Icon Panel**: `renderAgentIconPanel()` controls the journey/demo/video/metrics quick actions. Modify that helper to add or remove agent card icons instead of editing the card template directly.
 
 ### Key UI Patterns
 - **Agent Cards**: CSS Grid layout, hover effects with transform and shadow

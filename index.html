@@ -11,18 +11,18 @@
 <body>
     <div class="container">
         <div class="header">
-            <div class="header-row">
-                <div class="title-section">
+            <div class="header-row u-flex u-justify-between u-align-center u-gap-lg u-wrap">
+                <div class="title-section u-flex u-align-center u-gap-md u-wrap">
                     <h1 id="documentTitle">TPS Operating System</h1>
                     <div class="context-menu-trigger" onclick="toggleContextMenu(event, 'board-menu')" title="Board options">
-                        <i data-lucide="more-horizontal"></i>
-                        <div class="context-menu" id="board-menu">
-                            <button type="button" class="context-menu-item" onclick="openEditTitleModal(); closeAllContextMenus();">
+                        <i data-lucide="more-vertical"></i>
+                        <div class="context-menu menu-panel" id="board-menu">
+                            <button type="button" class="menu-item" onclick="openEditTitleModal(); closeAllContextMenus();">
                                 <i data-lucide="edit-3"></i>
                                 Edit Title
                             </button>
-                            <div class="context-menu-divider"></div>
-                            <button type="button" class="context-menu-item" onclick="openAddSectionModal(); closeAllContextMenus();">
+                            <div class="context-menu-divider menu-divider"></div>
+                            <button type="button" class="menu-item" onclick="openAddSectionModal(); closeAllContextMenus();">
                                 <i data-lucide="plus"></i>
                                 Add Section
                             </button>
@@ -30,41 +30,41 @@
                     </div>
                     <p id="agent-count" class="agent-count-inline">Loading...</p>
                 </div>
-                <div class="header-actions">
-                    <button type="button" class="collapse-all-btn" id="collapseAllBtn" onclick="toggleCollapseAll()" title="Collapse/Expand All">
+                <div class="header-actions u-flex u-align-center u-gap-sm">
+                    <button type="button" class="btn btn-glass collapse-all-btn" id="collapseAllBtn" onclick="toggleCollapseAll()" title="Collapse/Expand All">
                         <i id="collapseAllIcon" data-lucide="chevrons-down"></i>
                         <span id="collapseAllText">Collapse All</span>
                     </button>
-                    <div class="document-controls-compact">
+                    <div class="document-controls-compact u-flex u-align-center u-gap-sm u-relative">
                         <select id="documentSelect" onchange="handleDocumentSelection(event)">
                             <option value="">Loading...</option>
                         </select>
-                        <button type="button" class="icon-btn" id="documentMenuBtn" aria-haspopup="true" aria-expanded="false" title="Document actions">
+                        <button type="button" class="btn btn-icon" id="documentMenuBtn" aria-haspopup="true" aria-expanded="false" title="Document actions">
                             <i data-lucide="sliders"></i>
                         </button>
-                        <div class="document-menu" id="documentMenu">
-                            <div class="document-menu-group">
+                        <div class="document-menu menu-panel" id="documentMenu">
+                            <div class="document-menu-group u-flex u-flex-column u-gap-sm">
                                 <p class="menu-label">Documents</p>
-                                <button type="button" data-action="upload">
+                                <button type="button" class="menu-item" data-action="upload">
                                     <i data-lucide="upload"></i>
                                     Upload YAML
                                 </button>
-                                <button type="button" data-action="blank">
+                                <button type="button" class="menu-item" data-action="blank">
                                     <i data-lucide="file-plus"></i>
                                     New Blank Document
                                 </button>
                             </div>
-                            <div class="document-menu-divider" data-role="menu-divider"></div>
-                            <div class="document-menu-group">
-                                <button type="button" data-action="rename">
+                            <div class="document-menu-divider menu-divider" data-role="menu-divider"></div>
+                            <div class="document-menu-group u-flex u-flex-column u-gap-sm">
+                                <button type="button" class="menu-item" data-action="rename">
                                     <i data-lucide="edit-3"></i>
                                     Rename Current
                                 </button>
-                                <button type="button" data-action="download">
+                                <button type="button" class="menu-item" data-action="download">
                                     <i data-lucide="download"></i>
                                     Download Current
                                 </button>
-                                <button type="button" data-action="delete" style="color: #dc3545;">
+                                <button type="button" class="menu-item danger" data-action="delete">
                                     <i data-lucide="trash-2"></i>
                                     Delete Current
                                 </button>
@@ -78,7 +78,7 @@
                 <p class="document-status" id="documentStatusMessage"></p>
             </div>
         </div>
-        <input type="file" id="documentFileInput" accept=".yaml,.yml,text/yaml" style="display: none;">
+        <input type="file" id="documentFileInput" class="is-hidden" accept=".yaml,.yml,text/yaml">
 
         <!-- Agent Groups Container - will be populated by JavaScript -->
         <div class="agent-groups" id="agentGroupsContainer"></div>
@@ -86,7 +86,7 @@
 
     <!-- Edit Agent Modal -->
     <div id="agentModal" class="modal">
-        <div class="modal-content">
+        <div class="surface-card modal-content">
             <div class="modal-header">
                 <h2 id="modalAgentTitle">Edit Agent</h2>
                 <button class="modal-close" onclick="closeAgentModal()">
@@ -95,10 +95,10 @@
             </div>
             <form id="agentForm">
                 <div class="modal-view-toggle">
-                    <button type="button" class="view-toggle-btn active" id="agentFormToggle" onclick="setAgentModalView('form')">
+                    <button type="button" class="btn btn-toggle view-toggle-btn active" id="agentFormToggle" onclick="setAgentModalView('form')">
                         Form View
                     </button>
-                    <button type="button" class="view-toggle-btn" id="agentYamlToggle" onclick="setAgentModalView('yaml')">
+                    <button type="button" class="btn btn-toggle view-toggle-btn" id="agentYamlToggle" onclick="setAgentModalView('yaml')">
                         YAML View
                     </button>
                 </div>
@@ -169,7 +169,7 @@
 
     <!-- Edit Group Modal -->
     <div id="groupModal" class="modal">
-        <div class="modal-content">
+        <div class="surface-card modal-content">
             <div class="modal-header">
                 <h2 id="modalGroupTitle">Edit Section</h2>
                 <button class="modal-close" onclick="closeGroupModal()">
@@ -178,10 +178,10 @@
             </div>
             <form id="groupForm">
                 <div class="modal-view-toggle">
-                    <button type="button" class="view-toggle-btn active" id="groupFormToggle" onclick="setGroupModalView('form')">
+                    <button type="button" class="btn btn-toggle view-toggle-btn active" id="groupFormToggle" onclick="setGroupModalView('form')">
                         Form View
                     </button>
-                    <button type="button" class="view-toggle-btn" id="groupYamlToggle" onclick="setGroupModalView('yaml')">
+                    <button type="button" class="btn btn-toggle view-toggle-btn" id="groupYamlToggle" onclick="setGroupModalView('yaml')">
                         YAML View
                     </button>
                 </div>
@@ -229,7 +229,7 @@
 
     <!-- Edit Title Modal -->
     <div id="titleModal" class="modal">
-        <div class="modal-content" style="max-width: 500px;">
+        <div class="surface-card modal-content modal-narrow">
             <div class="modal-header">
                 <h2>Edit Document Title</h2>
                 <button class="modal-close" onclick="closeTitleModal()">

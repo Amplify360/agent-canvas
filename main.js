@@ -31,6 +31,14 @@ const defaultAgentMetrics = {
     roiContribution: 'Medium'
 };
 
+const COLLAPSED_PILL_CLASSES = [
+    'pill-palette-0',
+    'pill-palette-1',
+    'pill-palette-2',
+    'pill-palette-3',
+    'pill-palette-4'
+];
+
 function getAgentMetrics(agent = {}) {
     return { ...defaultAgentMetrics, ...(agent.metrics || {}) };
 }
@@ -43,7 +51,6 @@ function getGroupFormatting(group, field) {
     const defaults = configData.sectionDefaults || {
         color: '#1a5f73',
         iconType: 'target',
-        phaseTagColor: null,
         showInFlow: true,
         isSupport: false
     };
@@ -83,6 +90,10 @@ function slugifyIdentifier(value) {
         .replace(/[^a-z0-9]+/g, '-')
         .replace(/-{2,}/g, '-')
         .replace(/^-+|-+$/g, '');
+}
+
+function getCollapsedPillClass(index) {
+    return COLLAPSED_PILL_CLASSES[index % COLLAPSED_PILL_CLASSES.length];
 }
 
 function refreshIcons() {
@@ -1197,7 +1208,7 @@ async function loadConfig(docName = currentDocumentName || DEFAULT_DOCUMENT_NAME
     } catch (error) {
         console.error('Error loading config:', error);
         document.getElementById('agentGroupsContainer').innerHTML =
-            '<p style="color: white; text-align: center;">Error loading configuration file</p>';
+            '<p class="empty-state-message">Error loading configuration file</p>';
         throw error;
     }
 }
@@ -1243,12 +1254,10 @@ function generateDynamicCSS(config) {
     const groupCss = (config.agentGroups || [])
         .map(group => {
             const color = getGroupFormatting(group, 'color');
-            const phaseColor = getGroupFormatting(group, 'phaseTagColor') || color;
             const groupClass = getGroupClass(group);
             return `
                 .${groupClass} {
                     --group-accent: ${color};
-                    --phase-tag-color: ${phaseColor};
                 }
             `;
         })
@@ -1271,14 +1280,41 @@ function generateDynamicCSS(config) {
     dynamicStyleElement.textContent = groupCss + toolCss;
 }
 
+function renderMenuItems(actions = []) {
+    return actions.map(action => {
+        if (action.type === 'divider') {
+            return '<div class="context-menu-divider menu-divider"></div>';
+        }
+        const dangerClass = action.danger ? ' danger' : '';
+        const iconMarkup = action.icon ? `<i data-lucide="${action.icon}"></i>` : '';
+        return `<button type="button" class="menu-item${dangerClass}" onclick="${action.onClick}">
+            ${iconMarkup}
+            ${action.label}
+        </button>`;
+    }).join('');
+}
+
+function renderContextMenuTrigger({ menuId, title, actions, icon = 'more-vertical', stopPropagation = false }) {
+    const menuMarkup = renderMenuItems(actions);
+    const preHandler = stopPropagation ? 'event.stopPropagation(); ' : '';
+    return `
+        <div class="context-menu-trigger" onclick="${preHandler}toggleContextMenu(event, '${menuId}')" title="${title}">
+            <i data-lucide="${icon}"></i>
+            <div class="context-menu menu-panel" id="${menuId}">
+                ${menuMarkup}
+            </div>
+        </div>
+    `;
+}
+
 // Template Functions
 function createToolChip(toolName, config) {
     const toolConfig = config.toolsConfig[toolName];
     if (!toolConfig) {
         console.warn(`Unknown tool "${toolName}" referenced in config. Available tools:`, Object.keys(config.toolsConfig));
-        return `<span class="tool-chip" style="background: var(--tool-chip-bg-fallback);" title="Unknown tool: ${toolName}"><i data-lucide="alert-circle"></i> ${toolName}</span>`;
+        return `<span class="chip tool-chip tool-chip-unknown" title="Unknown tool: ${toolName}"><i data-lucide="alert-circle"></i> ${toolName}</span>`;
     }
-    return `<span class="tool-chip ${toolConfig.class}"><i data-lucide="${toolConfig.icon}"></i> ${toolName}</span>`;
+    return `<span class="chip tool-chip ${toolConfig.class}"><i data-lucide="${toolConfig.icon}"></i> ${toolName}</span>`;
 }
 
 function createJourneyTooltip(steps) {
@@ -1288,6 +1324,19 @@ function createJourneyTooltip(steps) {
     }
     const stepsHTML = stepsList.map(step => `→ ${step}`).join('<br>');
     return `<div class="journey-tooltip"><strong>User Journey:</strong><br>${stepsHTML}</div>`;
+}
+
+function renderMetricRow({ label, value, fillClass, width }) {
+    return `
+        <div class="metric-row">
+            <div class="metric-label">
+                <span>${label}</span>
+                <span class="metric-value">${value}</span>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill ${fillClass}" style="width: ${width}%;"></div>
+            </div>
+        </div>`;
 }
 
 function createMetricsTooltip(agent) {
@@ -1301,39 +1350,56 @@ function createMetricsTooltip(agent) {
                     metrics.roiContribution === 'High' ? 85 :
                     metrics.roiContribution === 'Medium' ? 60 : 30;
 
+    const metricRows = [
+        {
+            label: 'Usage This Week',
+            value: metrics.usageThisWeek,
+            fillClass: 'usage',
+            width: usagePercent
+        },
+        {
+            label: 'Time Saved',
+            value: metrics.timeSaved,
+            fillClass: 'time-saved',
+            width: timeSavedNum
+        },
+        {
+            label: 'ROI Contribution',
+            value: metrics.roiContribution,
+            fillClass: 'roi-contribution',
+            width: roiValue
+        }
+    ].map(renderMetricRow).join('');
+
     return `
         <div class="metrics-tooltip">
             <div class="metrics-tooltip-header">
-                <h4><i data-lucide="trending-up" style="display: inline-block; width: 18px; height: 18px; vertical-align: middle; margin-right: 6px;"></i>${agent.name}</h4>
+                <h4><i data-lucide="trending-up"></i>${agent.name}</h4>
             </div>
             <div class="metrics-tooltip-content">
-                <div class="metric-row">
-                    <div class="metric-label">
-                        <span>Usage This Week</span>
-                        <span class="metric-value">${metrics.usageThisWeek}</span>
-                    </div>
-                    <div class="progress-bar">
-                        <div class="progress-fill usage" style="width: ${usagePercent}%;"></div>
-                    </div>
-                </div>
-                <div class="metric-row">
-                    <div class="metric-label">
-                        <span>Time Saved</span>
-                        <span class="metric-value">${metrics.timeSaved}</span>
-                    </div>
-                    <div class="progress-bar">
-                        <div class="progress-fill time-saved" style="width: ${timeSavedNum}%;"></div>
-                    </div>
-                </div>
-                <div class="metric-row">
-                    <div class="metric-label">
-                        <span>ROI Contribution</span>
-                        <span class="metric-value">${metrics.roiContribution}</span>
-                    </div>
-                    <div class="progress-bar">
-                        <div class="progress-fill roi-contribution" style="width: ${roiValue}%;"></div>
-                    </div>
-                </div>
+                ${metricRows}
+            </div>
+        </div>`;
+}
+
+function renderAgentIconPanel({ journeyHTML, linkUrl, linkTarget, linkTitle, videoLink, metricsHTML }) {
+    const safeVideoLink = videoLink || '#';
+    const videoTitle = videoLink ? 'Watch video overview' : 'Video not available';
+    return `
+        <div class="icon-panel">
+            <div class="icon-panel-item journey-icon">
+                <i data-lucide="map"></i>
+                ${journeyHTML}
+            </div>
+            <a href="${linkUrl}" ${linkTarget} class="icon-panel-item agent-link-icon" title="${linkTitle}">
+                <i data-lucide="external-link"></i>
+            </a>
+            <a href="${safeVideoLink}" class="icon-panel-item video-icon" title="${videoTitle}">
+                <i data-lucide="video"></i>
+            </a>
+            <div class="icon-panel-item metrics-icon">
+                <i data-lucide="trending-up"></i>
+                ${metricsHTML}
             </div>
         </div>`;
 }
@@ -1348,62 +1414,57 @@ function createAgentCard(agent, config, groupIndex, agentIndex) {
     const linkUrl = agent.demoLink || '#';
     const linkTarget = agent.demoLink ? 'target="_blank"' : '';
     const linkTitle = agent.demoLink ? 'Try Demo' : 'Go to agent';
-    const handoverBadge = agent.badge ? `<span class="handover-badge">${agent.badge}</span>` : '';
+    const handoverBadge = agent.badge ? `<span class="badge handover-badge">${agent.badge}</span>` : '';
+    const agentMenuTrigger = renderContextMenuTrigger({
+        menuId: `agent-menu-${groupIndex}-${agentIndex}`,
+        title: 'Agent options',
+        actions: [
+            {
+                icon: 'edit-3',
+                label: 'Edit Agent',
+                onClick: `openEditAgentModal(${groupIndex}, ${agentIndex}); closeAllContextMenus();`
+            },
+            { type: 'divider' },
+            {
+                icon: 'trash-2',
+                label: 'Delete Agent',
+                danger: true,
+                onClick: `deleteAgent(${groupIndex}, ${agentIndex}); closeAllContextMenus();`
+            }
+        ]
+    });
+
+    const iconPanelHTML = renderAgentIconPanel({
+        journeyHTML,
+        linkUrl,
+        linkTarget,
+        linkTitle,
+        videoLink: agent.videoLink,
+        metricsHTML
+    });
 
     return `
-        <div class="agent-card">
+        <div class="surface-panel agent-card">
             <div class="agent-number">${agent.agentNumber}</div>
-            <h3 style="display: flex; align-items: center; gap: 8px;">
+            <h3 class="agent-title u-flex u-align-center u-gap-sm">
                 <span>${agent.name}${handoverBadge}</span>
-                <div class="context-menu-trigger" onclick="toggleContextMenu(event, 'agent-menu-${groupIndex}-${agentIndex}')" title="Agent options">
-                    <i data-lucide="more-vertical"></i>
-                    <div class="context-menu" id="agent-menu-${groupIndex}-${agentIndex}">
-                        <button type="button" class="context-menu-item" onclick="openEditAgentModal(${groupIndex}, ${agentIndex}); closeAllContextMenus();">
-                            <i data-lucide="edit-3"></i>
-                            Edit Agent
-                        </button>
-                        <div class="context-menu-divider"></div>
-                        <button type="button" class="context-menu-item danger" onclick="deleteAgent(${groupIndex}, ${agentIndex}); closeAllContextMenus();">
-                            <i data-lucide="trash-2"></i>
-                            Delete Agent
-                        </button>
-                    </div>
-                </div>
+                ${agentMenuTrigger}
             </h3>
             <div class="agent-objective">Objective: ${agent.objective}</div>
             <div class="agent-description">${agent.description}</div>
             <div class="tools-container">${toolsHTML}</div>
-            <div class="icon-panel">
-                <div class="icon-panel-item journey-icon">
-                    <i data-lucide="map"></i>
-                    ${journeyHTML}
-                </div>
-                <a href="${linkUrl}" ${linkTarget} class="icon-panel-item agent-link-icon" title="${linkTitle}">
-                    <i data-lucide="external-link"></i>
-                </a>
-                <a href="${agent.videoLink || '#'}" class="icon-panel-item video-icon" title="Watch video overview">
-                    <i data-lucide="video"></i>
-                </a>
-                <div class="icon-panel-item metrics-icon">
-                    <i data-lucide="trending-up"></i>
-                    ${metricsHTML}
-                </div>
-            </div>
+            ${iconPanelHTML}
         </div>`;
 }
 
 function createAgentGroup(group, config, groupIndex) {
     const color = getGroupFormatting(group, 'color');
-    const phaseTagColor = getGroupFormatting(group, 'phaseTagColor');
     const iconType = getGroupFormatting(group, 'iconType');
     const groupClass = getGroupClass(group);
 
     const agentsHTML = group.agents.map((agent, agentIndex) =>
         createAgentCard(agent, config, groupIndex, agentIndex)
     ).join('');
-    const phaseColor = phaseTagColor || color;
-    const phaseStyle = phaseColor ? `style="--phase-tag-color: ${phaseColor};"` : '';
-    const phaseTagHTML = group.phaseTag ? `<div class="phase-tag-wrapper"><span class="phase-tag" ${phaseStyle}>${group.phaseTag}</span></div>` : '';
 
     const isCollapsed = collapsedSections[group.groupId] || false;
     const collapsedClass = isCollapsed ? 'collapsed' : '';
@@ -1413,46 +1474,55 @@ function createAgentGroup(group, config, groupIndex) {
     const agentPills = group.agents
         .slice(0, maxPills)
         .filter(agent => agent && agent.name)
-        .map(agent => `<span class="agent-name-pill">${agent.name}</span>`)
+        .map((agent, pillIndex) => {
+            const pillClass = getCollapsedPillClass(pillIndex);
+            return `<span class="chip agent-name-pill ${pillClass}">${agent.name}</span>`;
+        })
         .join('');
     const morePill = group.agents.length > maxPills
-        ? `<span class="agent-name-pill more-pill">+${group.agents.length - maxPills} more</span>`
+        ? `<span class="chip agent-name-pill more-pill">+${group.agents.length - maxPills} more</span>`
         : '';
     const agentPillsHTML = `<div class="agent-pills-container">${agentPills}${morePill}</div>`;
+    const sectionMenuTrigger = renderContextMenuTrigger({
+        menuId: `section-menu-${groupIndex}`,
+        title: 'Section options',
+        stopPropagation: true,
+        actions: [
+            {
+                icon: 'edit-3',
+                label: 'Edit Section',
+                onClick: `openEditGroupModal(${groupIndex}); closeAllContextMenus();`
+            },
+            {
+                icon: 'plus',
+                label: 'Add Agent',
+                onClick: `openAddAgentModal(${groupIndex}); closeAllContextMenus();`
+            },
+            { type: 'divider' },
+            {
+                icon: 'trash-2',
+                label: 'Delete Section',
+                danger: true,
+                onClick: `deleteGroup(${groupIndex}); closeAllContextMenus();`
+            }
+        ]
+    });
 
     return `
-        <div class="agent-group ${groupClass} ${collapsedClass}" data-group-id="${group.groupId}" data-group-index="${groupIndex}">
+        <div class="surface-card agent-group ${groupClass} ${collapsedClass}" data-group-id="${group.groupId}" data-group-index="${groupIndex}">
             <div class="group-header" onclick="toggleSectionCollapse('${group.groupId}')">
                 <div class="group-header-edit">
-                    <div style="display: flex; align-items: center; width: 100%;">
+                    <div class="u-flex u-align-center u-full-width">
                         <div class="section-collapse-toggle">
                             <i data-lucide="chevron-down"></i>
                         </div>
                         <div class="group-icon">
                             <i data-lucide="${iconType}"></i>
                         </div>
-                        <div class="group-title" style="display: flex; align-items: center; flex: 1; flex-wrap: wrap; gap: 12px;">
-                            <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 8px;">
-                                <h2 style="display: inline-block; margin: 0;">${group.groupName}</h2>
-                                <div class="context-menu-trigger" onclick="event.stopPropagation(); toggleContextMenu(event, 'section-menu-${groupIndex}')" title="Section options">
-                                    <i data-lucide="more-vertical"></i>
-                                    <div class="context-menu" id="section-menu-${groupIndex}">
-                                        <button type="button" class="context-menu-item" onclick="openEditGroupModal(${groupIndex}); closeAllContextMenus();">
-                                            <i data-lucide="edit-3"></i>
-                                            Edit Section
-                                        </button>
-                                        <button type="button" class="context-menu-item" onclick="openAddAgentModal(${groupIndex}); closeAllContextMenus();">
-                                            <i data-lucide="plus"></i>
-                                            Add Agent
-                                        </button>
-                                        <div class="context-menu-divider"></div>
-                                        <button type="button" class="context-menu-item danger" onclick="deleteGroup(${groupIndex}); closeAllContextMenus();">
-                                            <i data-lucide="trash-2"></i>
-                                            Delete Section
-                                        </button>
-                                    </div>
-                                </div>
-                                ${phaseTagHTML}
+                        <div class="group-title u-flex u-align-center u-wrap u-gap-md u-flex-1">
+                            <div class="u-flex u-align-center u-wrap u-gap-sm">
+                                <h2>${group.groupName}</h2>
+                                ${sectionMenuTrigger}
                             </div>
                             ${agentPillsHTML}
                         </div>
@@ -1516,7 +1586,7 @@ async function loadAgents(docName = currentDocumentName) {
         const container = document.getElementById('agentGroupsContainer');
         if (container) {
             container.innerHTML =
-                '<p style="color: white; text-align: center;">No YAML document selected. Upload or select a document to begin.</p>';
+                '<p class="empty-state-message">No YAML document selected. Upload or select a document to begin.</p>';
         }
         return;
     }
