@@ -4,7 +4,7 @@ export const config = {
 
 export default function middleware(request) {
   const basicAuth = request.headers.get('authorization');
-  const expectedPassword = process.env.BASIC_AUTH_PASSWORD;
+  const expectedPassword = process.env.BASIC_AUTH_PASSWORD?.trim();
 
   // If no password is configured, deny access
   if (!expectedPassword) {
@@ -23,7 +23,7 @@ export default function middleware(request) {
       const [user, pwd] = atob(authValue).split(':');
 
       // Username can be anything, password must match environment variable
-      if (pwd === expectedPassword) {
+      if (pwd?.trim() === expectedPassword) {
         // Authentication successful, continue to the original request
         return;
       }

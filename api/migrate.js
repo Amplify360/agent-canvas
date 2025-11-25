@@ -24,7 +24,7 @@ function getHeader(request, name) {
  */
 function checkAuth(request) {
   const basicAuth = getHeader(request, 'authorization');
-  const expectedPassword = process.env.BASIC_AUTH_PASSWORD;
+  const expectedPassword = process.env.BASIC_AUTH_PASSWORD?.trim();
 
   if (!expectedPassword) {
     return { authorized: false, response: new Response('Server configuration error', { status: 500 }) };
@@ -34,7 +34,7 @@ function checkAuth(request) {
     const authValue = basicAuth.split(' ')[1];
     try {
       const [, pwd] = atob(authValue).split(':');
-      if (pwd === expectedPassword) {
+      if (pwd?.trim() === expectedPassword) {
         return { authorized: true };
       }
     } catch (e) {

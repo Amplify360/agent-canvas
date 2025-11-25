@@ -37,7 +37,7 @@ function getHeader(req, name) {
  */
 function checkAuth(req, res) {
   const basicAuth = getHeader(req, 'authorization');
-  const expectedPassword = process.env.BASIC_AUTH_PASSWORD;
+  const expectedPassword = process.env.BASIC_AUTH_PASSWORD?.trim();
 
   if (!expectedPassword) {
     res.status(500).send('Server configuration error');
@@ -52,7 +52,7 @@ function checkAuth(req, res) {
   const encodedToken = basicAuth.split(' ')[1];
   try {
     const [, pwd] = Buffer.from(encodedToken, 'base64').toString().split(':');
-    if (pwd === expectedPassword) {
+    if (pwd?.trim() === expectedPassword) {
       return true;
     }
   } catch (e) {
