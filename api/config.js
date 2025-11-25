@@ -14,14 +14,16 @@ const json = (res, status, payload) =>
 
 async function readRawBody(req) {
   return new Promise((resolve, reject) => {
-    const chunks = [];
-    req.on?.('data', chunk => chunks.push(typeof chunk === 'string' ? Buffer.from(chunk, 'utf8') : Buffer.from(chunk)));
-    req.on?.('end', () => resolve(Buffer.concat(chunks)));
-    req.on?.('error', reject);
-    // Fallback for environments without streams
+    // Fallback for environments without streams - check before attaching listeners
     if (typeof req.on !== 'function') {
       resolve(Buffer.alloc(0));
+      return;
     }
+    
+    const chunks = [];
+    req.on('data', chunk => chunks.push(typeof chunk === 'string' ? Buffer.from(chunk, 'utf8') : Buffer.from(chunk)));
+    req.on('end', () => resolve(Buffer.concat(chunks)));
+    req.on('error', reject);
   });
 }
 
@@ -134,11 +136,12 @@ async function handleGet(req, res) {
   const blobToken = ensureBlobToken(res);
   if (!blobToken) return;
 
-  if (req.query?.list === '1' || req.query?.list === 'true') {
+  const listParam = getQueryParam(req, 'list');
+  if (listParam === '1' || listParam === 'true') {
     try {
       const { blobs } = await list({ token: blobToken, limit: 1000 });
       const documents = blobs
-        .filter(blob => blob.pathname.endsWith('.yaml'))
+        .filter(blob => blob.pathname.endsWith('.yaml') || blob.pathname.endsWith('.yml'))
         .map(blob => ({
           name: blob.pathname,
           size: blob.size,

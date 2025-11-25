@@ -112,11 +112,19 @@ function bindDocumentMenuEvents() {
     button.addEventListener('click', toggleDocumentMenu);
     menu.addEventListener('click', event => {
         const actionButton = event.target.closest('button[data-action]');
-        if (!actionButton) return;
-        event.preventDefault();
-        const action = actionButton.dataset.action;
-        closeDocumentMenu();
-        handleDocumentMenuAction(action);
+        if (actionButton) {
+            event.preventDefault();
+            const action = actionButton.dataset.action;
+            closeDocumentMenu();
+            handleDocumentMenuAction(action);
+            return;
+        }
+        
+        const menuLink = event.target.closest('a.menu-link');
+        if (menuLink) {
+            closeDocumentMenu();
+            // Allow default navigation behavior (opens in new tab)
+        }
     });
 
     document.addEventListener('click', event => {
@@ -567,13 +575,15 @@ export async function deleteCurrentDocument() {
             throw new Error(data.error || 'Delete failed');
         }
 
-        const remainingDocs = state.availableDocuments.filter(doc => doc.name !== state.currentDocumentName);
+        // Store deleted document name before refreshDocumentList changes state.currentDocumentName
+        const deletedDocName = state.currentDocumentName;
+        const remainingDocs = state.availableDocuments.filter(doc => doc.name !== deletedDocName);
         const nextDoc = remainingDocs.length > 0 ? remainingDocs[0].name : null;
 
         await refreshDocumentList(nextDoc);
         if (nextDoc) {
             await loadAgentsCallback(nextDoc);
-            setDocumentStatusMessage(`Document "${state.currentDocumentName}" deleted successfully.`, 'success');
+            setDocumentStatusMessage(`Document "${deletedDocName}" deleted successfully.`, 'success');
         } else {
             setDocumentStatusMessage('Document deleted. No documents remaining.', 'success');
         }

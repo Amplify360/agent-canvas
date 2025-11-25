@@ -23,7 +23,9 @@ export const BLANK_DOCUMENT_TEMPLATE = [
     '  iconType: target',
     '  showInFlow: true',
     '  isSupport: false',
-    'agentGroups: []',
+    'agentGroups:',
+    '  - groupName: New Section',
+    '    agents: []',
     ''
 ].join('\n');
 
