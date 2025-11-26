@@ -210,20 +210,7 @@ export function getBaseUrl(req) {
     // 2. We're in Vercel production (always uses HTTPS)
     const protocol = proto === 'https' || (isVercel && proto !== 'http') ? 'https' : 'http';
     
-    const baseUrl = `${protocol}://${host}`;
-    
-    // Log for debugging (only in production to verify it's working)
-    if (isVercel) {
-      console.log('[BASE_URL] Constructed from headers:', {
-        host,
-        proto,
-        protocol,
-        baseUrl,
-        hasBaseUrlEnv: !!process.env.BASE_URL
-      });
-    }
-    
-    return baseUrl;
+    return `${protocol}://${host}`;
   }
   
   // Fallback to localhost for development

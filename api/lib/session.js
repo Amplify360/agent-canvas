@@ -172,15 +172,17 @@ export async function createSession(response, email) {
   const sessionData = { email, expiresAt };
   
   const encrypted = await encryptSession(sessionData);
-  // Set Secure flag on all Vercel deployments (production and preview) since they use HTTPS
-  // Also set in production NODE_ENV for local production builds
-  const isSecure = process.env.VERCEL || process.env.NODE_ENV === 'production';
-  
+  // Set Secure flag only on actual HTTPS deployments (not localhost dev server)
+  // In vercel dev, VERCEL_URL might be "localhost:3000" which is HTTP, not HTTPS
+  const vercelUrl = process.env.VERCEL_URL || '';
+  const isLocalhost = vercelUrl.includes('localhost') || vercelUrl.includes('127.0.0.1');
+  const isSecure = (vercelUrl && !isLocalhost) || process.env.NODE_ENV === 'production';
+
   const cookieOptions = [
     `${COOKIE_NAME}=${encrypted}`,
     `Max-Age=${SESSION_DURATION_MS / 1000}`,
     'HttpOnly',
-    'SameSite=Strict',
+    'SameSite=Lax',  // Lax allows cookies on top-level navigations (like magic link clicks from email)
     `Path=/`
   ];
   
@@ -189,7 +191,7 @@ export async function createSession(response, email) {
   }
   
   const cookieHeader = cookieOptions.join('; ');
-  
+
   if (response.headers) {
     // Edge runtime
     response.headers.set('Set-Cookie', cookieHeader);
@@ -208,19 +210,20 @@ export function destroySession(response) {
     `${COOKIE_NAME}=`,
     'Max-Age=0',
     'HttpOnly',
-    'SameSite=Strict',
+    'SameSite=Lax',
     'Path=/'
   ];
   
-  // Set Secure flag on all Vercel deployments (production and preview) since they use HTTPS
-  // Also set in production NODE_ENV for local production builds
-  const isSecure = process.env.VERCEL || process.env.NODE_ENV === 'production';
+  // Set Secure flag only on actual HTTPS deployments (not localhost dev server)
+  const vercelUrl = process.env.VERCEL_URL || '';
+  const isLocalhost = vercelUrl.includes('localhost') || vercelUrl.includes('127.0.0.1');
+  const isSecure = (vercelUrl && !isLocalhost) || process.env.NODE_ENV === 'production';
   if (isSecure) {
     cookieOptions.push('Secure');
   }
-  
+
   const cookieHeader = cookieOptions.join('; ');
-  
+
   if (response.headers) {
     // Edge runtime
     response.headers.set('Set-Cookie', cookieHeader);

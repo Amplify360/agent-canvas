@@ -23,23 +23,17 @@ export default async function handler(req, res) {
       return res.status(405).setHeader('Allow', 'POST').send('Method not allowed');
     }
 
-    console.log('[AUTH] send-magic-link called', { 
-      method: req.method,
-      hasBody: !!req.body,
-      bodyType: typeof req.body
-    });
-    
     // With bodyParser: true, Vercel automatically parses JSON into req.body
     const body = req.body || {};
-    console.log('[AUTH] Body parsed:', { email: body?.email, hasRedirectUrl: !!body?.redirectUrl });
     const { email, redirectUrl } = body;
 
     // Rate limit by IP (skip in development mode)
     let ipRateLimit;
-    const isDevMode = process.env.NODE_ENV === 'development' || !process.env.VERCEL;
+    const isDevMode = process.env.NODE_ENV === 'development' || !process.env.VERCEL || process.env.DISABLE_RATE_LIMIT === 'true';
     
-    if (isDevMode && process.env.DISABLE_RATE_LIMIT === 'true') {
-      console.log('[AUTH] Rate limiting disabled for development');
+    if (process.env.DISABLE_RATE_LIMIT === 'true') {
+      ipRateLimit = { allowed: true };
+    } else if (isDevMode) {
       ipRateLimit = { allowed: true };
     } else {
       try {
@@ -78,8 +72,9 @@ export default async function handler(req, res) {
     // Rate limit by email (skip in development mode)
     let emailRateLimit;
     
-    if (isDevMode && process.env.DISABLE_RATE_LIMIT === 'true') {
-      console.log('[AUTH] Email rate limiting disabled for development');
+    if (process.env.DISABLE_RATE_LIMIT === 'true') {
+      emailRateLimit = { allowed: true };
+    } else if (isDevMode) {
       emailRateLimit = { allowed: true };
     } else {
       try {
@@ -141,8 +136,7 @@ export default async function handler(req, res) {
         redirectUrl: validatedRedirect || null
       }, TOKEN_TTL_SECONDS);
     } catch (storageError) {
-      console.error('[AUTH] Failed to store magic link token:', storageError);
-      // If storage fails, we can't create a valid magic link, so return error
+      console.error('[AUTH] Failed to store token:', storageError.message);
       return json(res, 500, {
         success: false,
         error: 'Failed to create magic link. Please try again.'
@@ -156,24 +150,9 @@ export default async function handler(req, res) {
     const emailResult = await sendMagicLinkEmail(normalizedEmail, magicLinkUrl);
     
     if (!emailResult.success) {
-      // Log error with context for monitoring/alerting
       console.error('[AUTH] Failed to send magic link email:', {
         email: normalizedEmail,
-        error: emailResult.error,
-        details: emailResult.details,
-        emailId: emailResult.emailId,
-        timestamp: new Date().toISOString()
-      });
-      
-      // If email is in allowlist but sending failed, this is a real problem
-      // We still return success to user (security best practice - don't reveal email existence)
-      // but log it for monitoring/alerting
-      // In production, consider sending to error tracking service (e.g., Sentry)
-    } else {
-      console.log('[AUTH] Magic link email sent successfully:', {
-        email: normalizedEmail,
-        emailId: emailResult.emailId,
-        timestamp: new Date().toISOString()
+        error: emailResult.error
       });
     }
 
@@ -184,33 +163,11 @@ export default async function handler(req, res) {
     });
 
   } catch (error) {
-    console.error('[AUTH] Error in send-magic-link:', {
-      error: error,
-      message: error?.message,
-      stack: error?.stack,
-      name: error?.name,
-      cause: error?.cause,
-      toString: String(error)
+    console.error('[AUTH] Error:', error.message);
+    return json(res, 500, {
+      success: false,
+      error: 'Internal server error'
     });
-    
-    // Make sure we always return JSON, even on error
-    try {
-      return json(res, 500, {
-        success: false,
-        error: 'Internal server error',
-        details: process.env.NODE_ENV === 'development' ? error.message : undefined,
-        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
-      });
-    } catch (jsonError) {
-      // If even JSON response fails, send plain text
-      console.error('[AUTH] Failed to send JSON error response:', jsonError);
-      return res.status(500)
-        .setHeader('Content-Type', 'application/json')
-        .send(JSON.stringify({ 
-          success: false, 
-          error: 'Internal server error' 
-        }));
-    }
   }
 }
 

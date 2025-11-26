@@ -14,8 +14,14 @@ const ALLOWLIST_INDEX_KEY = 'allowlist:index'; // Set of all allowlisted emails
  */
 export async function storeMagicLink(token, data, ttlSeconds) {
   const key = `${MAGIC_LINK_KEY_PREFIX}${token}`;
-  // @vercel/kv auto-serializes JSON, so we can pass the object directly
-  await kv.set(key, data, { ex: ttlSeconds });
+
+  try {
+    // @vercel/kv auto-serializes JSON, so we can pass the object directly
+    await kv.set(key, data, { ex: ttlSeconds });
+  } catch (error) {
+    console.error('[STORAGE] Failed to store token:', error.message);
+    throw error;
+  }
 }
 
 /**
@@ -26,14 +32,12 @@ export async function storeMagicLink(token, data, ttlSeconds) {
  */
 export async function verifyAndConsumeMagicLink(token) {
   const key = `${MAGIC_LINK_KEY_PREFIX}${token}`;
-  
+
   // Use Lua script for atomic get-and-delete
   // This prevents race conditions where two requests could both read before either deletes
   try {
-    // Try using eval if available (Redis-compatible)
     if (typeof kv.eval === 'function') {
       // Lua script: atomically get and delete the key
-      // Returns the value if it exists, nil otherwise
       const luaScript = `
         local val = redis.call('GET', KEYS[1])
         if val then
@@ -43,70 +47,72 @@ export async function verifyAndConsumeMagicLink(token) {
         return nil
       `;
       const result = await kv.eval(luaScript, [key], []);
-      
+
       if (!result) {
         return null;
       }
-      
+
       // @vercel/kv auto-deserializes JSON, so result is already an object
       const data = typeof result === 'string' ? JSON.parse(result) : result;
-      
+
       // Check expiration
       if (new Date(data.expiresAt) <= new Date()) {
         return null;
       }
-      
+
       return data;
     }
   } catch (error) {
     // If eval is not available or fails, fall back to best-effort approach
-    // This is not ideal but prevents complete failure
-    console.warn('Lua script evaluation failed, using fallback:', error);
+    console.warn('[STORAGE] Lua script failed, using fallback:', error.message);
   }
-  
+
   // Fallback: best-effort atomic operation using getdel if available
-  // Note: This may not be available in all Redis versions
   try {
     if (typeof kv.getdel === 'function') {
       const data = await kv.getdel(key);
       if (!data) {
         return null;
       }
-      
+
       // @vercel/kv auto-deserializes JSON
       const parsed = typeof data === 'string' ? JSON.parse(data) : data;
-      
+
       // Check expiration
       if (new Date(parsed.expiresAt) <= new Date()) {
         return null;
       }
-      
+
       return parsed;
     }
   } catch (error) {
-    console.warn('getdel not available, using non-atomic fallback:', error);
+    // getdel not available, continue to next fallback
   }
-  
+
   // Last resort: non-atomic fallback (not ideal, but prevents complete failure)
-  // This has a race condition but is better than nothing
-  const data = await kv.get(key);
-  
-  if (!data) {
-    return null;
-  }
+  try {
+    const data = await kv.get(key);
 
-  // @vercel/kv auto-deserializes JSON, so data is already an object
-  const parsed = typeof data === 'string' ? JSON.parse(data) : data;
+    if (!data) {
+      return null;
+    }
 
-  // Check expiration
-  if (new Date(parsed.expiresAt) <= new Date()) {
+    // @vercel/kv auto-deserializes JSON, so data is already an object
+    const parsed = typeof data === 'string' ? JSON.parse(data) : data;
+
+    // Check expiration
+    if (new Date(parsed.expiresAt) <= new Date()) {
+      await kv.del(key);
+      return null;
+    }
+
+    // Delete after retrieval (single-use)
     await kv.del(key);
+    return parsed;
+  } catch (error) {
+    console.error('[STORAGE] Error in token retrieval:', error.message);
     return null;
   }
-
-  // Delete after retrieval (single-use) - race condition possible here
-  await kv.del(key);
-  return parsed;
 }
 
 /**

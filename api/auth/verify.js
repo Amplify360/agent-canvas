@@ -103,7 +103,7 @@ export default async function handler(req, res) {
       .send('');
 
   } catch (error) {
-    console.error('Error in verify:', error);
+    console.error('[VERIFY] Error:', error.message);
     return res.status(500)
       .setHeader('Content-Type', 'text/html')
       .send(htmlErrorPage(
@@ -112,4 +112,3 @@ export default async function handler(req, res) {
       ));
   }
 }
-
