@@ -51,15 +51,15 @@ export default async function handler(req, res) {
     
     if (!ipRateLimit.allowed) {
       const retryAfter = ipRateLimit.resetAt - Math.floor(Date.now() / 1000);
-      return res.status(429)
+      res.status(429)
         .setHeader('Retry-After', retryAfter.toString())
         .setHeader('X-RateLimit-Limit', RATE_LIMIT_IP.maxRequests.toString())
         .setHeader('X-RateLimit-Remaining', '0')
-        .setHeader('X-RateLimit-Reset', ipRateLimit.resetAt.toString())
-        .json({
-          success: false,
-          error: 'Too many requests. Please try again later.'
-        });
+        .setHeader('X-RateLimit-Reset', ipRateLimit.resetAt.toString());
+      return json(res, 429, {
+        success: false,
+        error: 'Too many requests. Please try again later.'
+      });
     }
 
     // Validate email format
@@ -77,19 +77,20 @@ export default async function handler(req, res) {
     
     if (!emailRateLimit.allowed) {
       const retryAfter = emailRateLimit.resetAt - Math.floor(Date.now() / 1000);
-      return res.status(429)
+      res.status(429)
         .setHeader('Retry-After', retryAfter.toString())
         .setHeader('X-RateLimit-Limit', RATE_LIMIT_EMAIL.maxRequests.toString())
         .setHeader('X-RateLimit-Remaining', '0')
-        .setHeader('X-RateLimit-Reset', emailRateLimit.resetAt.toString())
-        .json({
-          success: false,
-          error: 'Too many requests. Please try again later.'
-        });
+        .setHeader('X-RateLimit-Reset', emailRateLimit.resetAt.toString());
+      return json(res, 429, {
+        success: false,
+        error: 'Too many requests. Please try again later.'
+      });
     }
 
-    // Check email allowlist
-    if (!checkEmailAllowlist(normalizedEmail)) {
+    // Check email allowlist (checks both env var and KV storage)
+    const isAllowed = await checkEmailAllowlist(normalizedEmail);
+    if (!isAllowed) {
       // Return generic success message (don't reveal if email exists)
       return json(res, 200, {
         success: true,

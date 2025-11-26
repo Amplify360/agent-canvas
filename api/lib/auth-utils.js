@@ -27,14 +27,42 @@ export function validateEmail(email) {
 }
 
 /**
- * Check if email is in allowlist
+ * Check if email is in allowlist (checks both env var and KV storage)
  * @param {string} email - Email address
- * @returns {boolean} True if allowed
+ * @returns {Promise<boolean>} True if allowed
  */
-export function checkEmailAllowlist(email) {
+export async function checkEmailAllowlist(email) {
+  const normalized = normalizeEmail(email);
+  
+  // Check environment variable allowlist (for admins/initial setup)
+  const allowedEmails = process.env.ALLOWED_EMAILS;
+  if (allowedEmails) {
+    const allowedList = allowedEmails.split(',').map(e => normalizeEmail(e.trim()));
+    if (allowedList.includes(normalized)) {
+      return true;
+    }
+  }
+  
+  // Check KV storage allowlist (for user-managed list)
+  try {
+    const { isInAllowlist } = await import('./storage.js');
+    return await isInAllowlist(email);
+  } catch (error) {
+    console.error('Error checking KV allowlist:', error);
+    // If KV check fails, fall back to env var only
+    return false;
+  }
+}
+
+/**
+ * Synchronous version for backward compatibility (checks env var only)
+ * @param {string} email - Email address
+ * @returns {boolean} True if allowed (env var only)
+ */
+export function checkEmailAllowlistSync(email) {
   const allowedEmails = process.env.ALLOWED_EMAILS;
   if (!allowedEmails) {
-    return false; // No allowlist configured means no access
+    return false;
   }
   
   const normalized = normalizeEmail(email);

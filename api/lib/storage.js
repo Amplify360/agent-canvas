@@ -3,6 +3,8 @@ import { kv } from '@vercel/kv';
 const MAGIC_LINK_KEY_PREFIX = 'magiclink:';
 const RATE_LIMIT_IP_PREFIX = 'ratelimit:ip:';
 const RATE_LIMIT_EMAIL_PREFIX = 'ratelimit:email:';
+const ALLOWLIST_KEY_PREFIX = 'allowlist:';
+const ALLOWLIST_INDEX_KEY = 'allowlist:index'; // Set of all allowlisted emails
 
 /**
  * Store a magic link token with automatic expiration
@@ -215,5 +217,106 @@ export async function checkRateLimit(identifier, config) {
     remaining: maxRequests - newCount,
     resetAt
   };
+}
+
+/**
+ * Add email to allowlist in KV storage
+ * @param {string} email - Email address to add
+ * @param {string} addedBy - Email of admin who added it
+ * @returns {Promise<boolean>} True if added, false if already exists
+ */
+export async function addToAllowlist(email, addedBy) {
+  const normalizedEmail = email.trim().toLowerCase();
+  const key = `${ALLOWLIST_KEY_PREFIX}${normalizedEmail}`;
+  
+  // Check if already exists
+  const existing = await kv.get(key);
+  if (existing) {
+    return false; // Already exists
+  }
+  
+  // Store email with metadata
+  const data = {
+    email: normalizedEmail,
+    addedAt: new Date().toISOString(),
+    addedBy: addedBy.trim().toLowerCase()
+  };
+  
+  await kv.set(key, data);
+  
+  // Add to index set (for efficient listing)
+  // Use a simple pattern: store all emails in a set-like structure
+  // Since Vercel KV doesn't have native sets, we'll use a JSON array
+  const indexKey = ALLOWLIST_INDEX_KEY;
+  const index = await kv.get(indexKey) || [];
+  if (!index.includes(normalizedEmail)) {
+    index.push(normalizedEmail);
+    await kv.set(indexKey, index);
+  }
+  
+  return true;
+}
+
+/**
+ * Remove email from allowlist in KV storage
+ * @param {string} email - Email address to remove
+ * @returns {Promise<boolean>} True if removed, false if not found
+ */
+export async function removeFromAllowlist(email) {
+  const normalizedEmail = email.trim().toLowerCase();
+  const key = `${ALLOWLIST_KEY_PREFIX}${normalizedEmail}`;
+  
+  // Check if exists
+  const existing = await kv.get(key);
+  if (!existing) {
+    return false; // Not found
+  }
+  
+  // Delete the email record
+  await kv.del(key);
+  
+  // Remove from index
+  const indexKey = ALLOWLIST_INDEX_KEY;
+  const index = await kv.get(indexKey) || [];
+  const updatedIndex = index.filter(e => e !== normalizedEmail);
+  await kv.set(indexKey, updatedIndex);
+  
+  return true;
+}
+
+/**
+ * Check if email is in KV allowlist
+ * @param {string} email - Email address to check
+ * @returns {Promise<boolean>} True if in allowlist
+ */
+export async function isInAllowlist(email) {
+  const normalizedEmail = email.trim().toLowerCase();
+  const key = `${ALLOWLIST_KEY_PREFIX}${normalizedEmail}`;
+  const data = await kv.get(key);
+  return data !== null;
+}
+
+/**
+ * List all emails in KV allowlist
+ * @returns {Promise<Array<Object>>} Array of allowlist entries with metadata
+ */
+export async function listAllowlist() {
+  const indexKey = ALLOWLIST_INDEX_KEY;
+  const index = await kv.get(indexKey) || [];
+  
+  // Fetch all email records
+  const entries = [];
+  for (const email of index) {
+    const key = `${ALLOWLIST_KEY_PREFIX}${email}`;
+    const data = await kv.get(key);
+    if (data) {
+      entries.push(data);
+    }
+  }
+  
+  // Sort by added date (newest first)
+  entries.sort((a, b) => new Date(b.addedAt) - new Date(a.addedAt));
+  
+  return entries;
 }
 
