@@ -90,6 +90,7 @@ export async function sendMagicLinkEmail(toEmail, magicLinkUrl) {
   try {
     const resend = getResendClient();
     const appName = getAppName();
+    console.log('Sending email:', { from: fromEmail, to: toEmail, subject: `Sign in to ${appName}` });
     const result = await resend.emails.send({
       from: fromEmail,
       to: toEmail,
@@ -97,12 +98,14 @@ export async function sendMagicLinkEmail(toEmail, magicLinkUrl) {
       html: buildEmailHtml(magicLinkUrl, appName),
       text: buildEmailText(magicLinkUrl, appName),
     });
+    console.log('Resend result:', JSON.stringify(result));
 
     if (result.error) {
       console.error('Resend error:', result.error);
       return { success: false, error: result.error.message };
     }
 
+    console.log('Email sent successfully to:', toEmail);
     return { success: true };
   } catch (error) {
     console.error('Failed to send email:', error);

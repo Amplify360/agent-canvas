@@ -5,55 +5,34 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sign In</title>
     <link rel="stylesheet" href="styles.css">
-    <style>
-        #email::placeholder {
-            color: rgba(255, 255, 255, 0.6);
-            opacity: 1;
-        }
-        #email::-webkit-input-placeholder {
-            color: rgba(255, 255, 255, 0.6);
-            opacity: 1;
-        }
-        #email::-moz-placeholder {
-            color: rgba(255, 255, 255, 0.6);
-            opacity: 1;
-        }
-        #email:-ms-input-placeholder {
-            color: rgba(255, 255, 255, 0.6);
-            opacity: 1;
-        }
-    </style>
 </head>
 <body>
     <div class="container" style="display: flex; align-items: center; justify-content: center; min-height: 100vh;">
         <div class="surface-card" style="max-width: 400px; width: 100%; margin: 20px;">
             <h1 style="margin-top: 0; text-align: center; color: var(--brand-primary);" id="appName">AgentCanvas</h1>
-            <p style="text-align: center; color: rgba(255, 255, 255, 0.8); margin-bottom: 30px;">
+            <p style="text-align: center; color: var(--text-secondary); margin-bottom: 30px;">
                 Enter your email to receive a magic link
             </p>
             
             <form id="loginForm">
-                <div style="margin-bottom: 20px;">
-                    <label for="email" style="display: block; margin-bottom: 8px; color: rgba(255, 255, 255, 0.9);">
-                        Email Address
-                    </label>
+                <div class="login-form-group">
+                    <label for="email">Email Address</label>
                     <input 
                         type="email" 
                         id="email" 
                         name="email" 
                         required 
                         autocomplete="email"
-                        style="width: 100%; padding: 12px; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.3); background: rgba(255, 255, 255, 0.15); color: #ffffff; font-size: 16px; box-sizing: border-box;"
+                        class="login-input"
                         placeholder="your@email.com"
                     >
                 </div>
                 
-                <div id="message" style="margin-bottom: 20px; padding: 12px; border-radius: 6px; display: none;"></div>
+                <div id="message" class="login-message"></div>
                 
                 <button 
                     type="submit" 
-                    class="btn btn-glass"
-                    style="width: 100%; padding: 14px; font-size: 16px; font-weight: 600;"
+                    class="btn btn-primary login-submit-btn"
                     id="submitBtn"
                 >
                     Send Magic Link
@@ -71,15 +50,15 @@
         function showMessage(text, isError = false) {
             messageDiv.textContent = text;
             messageDiv.style.display = 'block';
-            messageDiv.style.background = isError 
-                ? 'rgba(220, 53, 69, 0.2)' 
-                : 'rgba(23, 162, 184, 0.2)';
-            messageDiv.style.color = isError ? '#ff6b6b' : '#17a2b8';
-            messageDiv.style.border = `1px solid ${isError ? '#ff6b6b' : '#17a2b8'}`;
+            // Remove previous state classes
+            messageDiv.classList.remove('login-message-success', 'login-message-error');
+            // Add appropriate state class
+            messageDiv.classList.add(isError ? 'login-message-error' : 'login-message-success');
         }
 
         function hideMessage() {
             messageDiv.style.display = 'none';
+            messageDiv.classList.remove('login-message-success', 'login-message-error');
         }
 
         form.addEventListener('submit', async (e) => {
@@ -96,7 +75,7 @@
             submitBtn.textContent = 'Sending...';
 
             try {
-                const response = await fetch('/auth/send-magic-link', {
+                const response = await fetch('/api/auth/send-magic-link', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -104,7 +83,17 @@
                     body: JSON.stringify({ email }),
                 });
 
-                const data = await response.json();
+                let data;
+                const contentType = response.headers.get('content-type');
+                if (contentType && contentType.includes('application/json')) {
+                    data = await response.json();
+                } else {
+                    // If response is not JSON, read as text for error message
+                    const text = await response.text();
+                    console.error('Non-JSON response:', text);
+                    showMessage('Server error: Invalid response format. Please try again.', true);
+                    return;
+                }
 
                 if (response.ok && data.success) {
                     showMessage(data.message || 'If that email is registered, a magic link has been sent. Check your inbox!', false);
@@ -114,7 +103,11 @@
                 }
             } catch (error) {
                 console.error('Login error:', error);
-                showMessage('An error occurred. Please try again.', true);
+                if (error instanceof SyntaxError) {
+                    showMessage('Server error: Invalid response. Please try again.', true);
+                } else {
+                    showMessage('An error occurred. Please try again.', true);
+                }
             } finally {
                 submitBtn.disabled = false;
                 submitBtn.textContent = 'Send Magic Link';
