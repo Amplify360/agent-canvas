@@ -144,13 +144,16 @@ See `tests/README.md` for test suite details.
 ### Environment Variables Required
 ```bash
 SESSION_SECRET           # 32+ char secret for session encryption (generate with openssl rand -hex 32)
-RESEND_API_KEY          # API key from Resend
+RESEND_API_KEY          # API key from Resend (must have access to verified domain)
 RESEND_FROM_EMAIL       # Verified sender email (must be from verified domain) (e.g., info@login.amplify360.ai)
 BASE_URL                # Application base URL (e.g., https://canvas.amplify360.ai)
 ALLOWED_EMAILS          # Comma-separated list of allowed email addresses
 KV_REST_API_URL         # Vercel KV REST API URL
 KV_REST_API_TOKEN       # Vercel KV REST API token
 BLOB_READ_WRITE_TOKEN   # Vercel Blob storage token
+
+# Optional (Development Only)
+DISABLE_RATE_LIMIT      # Set to "true" to bypass rate limiting in local development
 ```
 
 ## Key Architectural Patterns
@@ -266,8 +269,13 @@ All storage operations in `api/config.js`:
 - **Session Management**: Encrypted cookies using Web Crypto API (works in both Edge and Node.js runtimes)
 - **Token Storage**: Vercel KV stores magic link tokens with 15-minute TTL
 - **Rate Limiting**: Applied at IP and email levels to prevent abuse
+  - **Development**: Set `DISABLE_RATE_LIMIT=true` in `.env.local` to bypass rate limiting locally
+  - **Production**: Rate limits enforced (10 requests/15min by IP, 5 requests/15min by email)
 - **Email Allowlist**: Only emails in `ALLOWED_EMAILS` can authenticate
 - **API Routes**: All API routes check session via `isAuthenticated()` from `api/lib/session.js`
+- **Resend API Key**: Must have access to the verified domain specified in `RESEND_FROM_EMAIL`
+  - Verify domain in Resend dashboard: https://resend.com/domains
+  - API key must have "Full Access" or domain-specific permissions
 
 ## Styling System
 
@@ -332,14 +340,23 @@ All storage operations in `api/config.js`:
 ## Security Considerations
 
 ### Authentication
-- HTTP Basic Authentication on all routes (middleware.js)
-- API endpoints validate credentials independently
-- No granular permissions (all-or-nothing access)
+- **Session-based authentication**: Magic link authentication with encrypted cookies
+- **Middleware**: `middleware.js` enforces authentication on all routes except `/login` and `/api/auth/*`
+- **API Routes**: All protected API routes check session via `isAuthenticated()` from `api/lib/session.js`
+- **No granular permissions**: All-or-nothing access (authenticated users have full access)
+
+### Email Security
+- **Resend API Key**: Must have access to verified domain in `RESEND_FROM_EMAIL`
+  - Domain must be verified in Resend dashboard with DKIM/SPF records
+  - API key must have "Full Access" or domain-specific permissions
+- **Email Allowlist**: Only emails in `ALLOWED_EMAILS` can receive magic links
+- **Rate Limiting**: Prevents abuse (bypass in dev with `DISABLE_RATE_LIMIT=true`)
 
 ### Input Validation
 - Document name sanitization: `/^[A-Za-z0-9._-]+\.yaml$/`
 - YAML parsing errors caught and displayed to user
 - No SQL injection risk (no database)
+- Redirect URL validation prevents open redirect attacks
 
 ### XSS Prevention
 - Use `textContent` for user-generated content (not `innerHTML`)

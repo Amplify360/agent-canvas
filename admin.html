@@ -298,42 +298,67 @@
                 const source = email.source || 'kv';
                 const canRemove = source !== 'env';
 
-                item.innerHTML = `
-                    <div class="email-info">
-                        <div class="email-address">${escapeHtml(email.email)}</div>
-                        <div class="email-meta">
-                            <span class="email-source ${source}">
-                                ${source === 'env' ? 'Environment Variable' : source === 'both' ? 'Both' : 'KV Storage'}
-                            </span>
-                            ${email.addedAt ? `<span>Added: ${formatDate(email.addedAt)}</span>` : ''}
-                            ${email.addedBy && email.addedBy !== 'system' ? `<span>By: ${escapeHtml(email.addedBy)}</span>` : ''}
-                        </div>
-                    </div>
-                    <div class="email-actions">
-                        ${canRemove ? `
-                            <button 
-                                type="button" 
-                                class="btn-remove" 
-                                onclick="handleRemoveEmail('${escapeHtml(email.email)}')"
-                                title="Remove from allowlist"
-                            >
-                                <i data-lucide="trash-2"></i>
-                                <span>Remove</span>
-                            </button>
-                        ` : `
-                            <button 
-                                type="button" 
-                                class="btn-remove env-disabled" 
-                                disabled
-                                title="Cannot remove emails from environment variable allowlist"
-                            >
-                                <i data-lucide="lock"></i>
-                                <span>Locked</span>
-                            </button>
-                        `}
-                    </div>
-                `;
+                // Create email info section
+                const emailInfo = document.createElement('div');
+                emailInfo.className = 'email-info';
                 
+                const emailAddress = document.createElement('div');
+                emailAddress.className = 'email-address';
+                emailAddress.textContent = email.email;
+                
+                const emailMeta = document.createElement('div');
+                emailMeta.className = 'email-meta';
+                
+                const sourceSpan = document.createElement('span');
+                sourceSpan.className = `email-source ${source}`;
+                sourceSpan.textContent = source === 'env' ? 'Environment Variable' : source === 'both' ? 'Both' : 'KV Storage';
+                emailMeta.appendChild(sourceSpan);
+                
+                if (email.addedAt) {
+                    const addedSpan = document.createElement('span');
+                    addedSpan.textContent = `Added: ${formatDate(email.addedAt)}`;
+                    emailMeta.appendChild(addedSpan);
+                }
+                
+                if (email.addedBy && email.addedBy !== 'system') {
+                    const addedBySpan = document.createElement('span');
+                    addedBySpan.textContent = `By: ${email.addedBy}`;
+                    emailMeta.appendChild(addedBySpan);
+                }
+                
+                emailInfo.appendChild(emailAddress);
+                emailInfo.appendChild(emailMeta);
+                
+                // Create actions section
+                const emailActions = document.createElement('div');
+                emailActions.className = 'email-actions';
+                
+                const removeBtn = document.createElement('button');
+                removeBtn.type = 'button';
+                removeBtn.className = canRemove ? 'btn-remove' : 'btn-remove env-disabled';
+                removeBtn.title = canRemove ? 'Remove from allowlist' : 'Cannot remove emails from environment variable allowlist';
+                removeBtn.disabled = !canRemove;
+                
+                const trashIcon = document.createElement('i');
+                trashIcon.setAttribute('data-lucide', canRemove ? 'trash-2' : 'lock');
+                
+                const btnText = document.createElement('span');
+                btnText.textContent = canRemove ? 'Remove' : 'Locked';
+                
+                removeBtn.appendChild(trashIcon);
+                removeBtn.appendChild(btnText);
+                
+                // Attach event listener safely (no inline onclick)
+                if (canRemove) {
+                    removeBtn.addEventListener('click', () => {
+                        handleRemoveEmail(email.email);
+                    });
+                }
+                
+                emailActions.appendChild(removeBtn);
+                
+                item.appendChild(emailInfo);
+                item.appendChild(emailActions);
                 emailList.appendChild(item);
             });
 

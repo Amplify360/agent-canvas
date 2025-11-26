@@ -46,7 +46,7 @@ export async function checkEmailAllowlist(email) {
   // Check KV storage allowlist (for user-managed list)
   try {
     const { isInAllowlist } = await import('./storage.js');
-    return await isInAllowlist(email);
+    return await isInAllowlist(normalized);
   } catch (error) {
     console.error('Error checking KV allowlist:', error);
     // If KV check fails, fall back to env var only

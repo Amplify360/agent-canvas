@@ -188,3 +188,6 @@ yarn.lock
 # Keep pnpm-lock.yaml tracked for reproducible builds
 .vercel
 .env*.local
+
+# Utility scripts (may contain local test data)
+clear-rate-limits.js

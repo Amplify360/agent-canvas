@@ -82,7 +82,7 @@ If you didn't request this email, you can safely ignore it.`;
  * @returns {Promise<Object>} Result with success boolean and optional error
  */
 export async function sendMagicLinkEmail(toEmail, magicLinkUrl) {
-  const fromEmail = process.env.RESEND_FROM_EMAIL;
+  const fromEmail = process.env.RESEND_FROM_EMAIL?.trim();
   if (!fromEmail) {
     return { success: false, error: 'RESEND_FROM_EMAIL not configured' };
   }
@@ -90,28 +90,107 @@ export async function sendMagicLinkEmail(toEmail, magicLinkUrl) {
   try {
     const resend = getResendClient();
     const appName = getAppName();
-    console.log('Sending email:', { from: fromEmail, to: toEmail, subject: `Sign in to ${appName}` });
-    const result = await resend.emails.send({
+    console.log('[EMAIL] Sending email:', { 
+      from: fromEmail, 
+      to: toEmail, 
+      subject: `Sign in to ${appName}`
+    });
+    
+    const emailPayload = {
       from: fromEmail,
       to: toEmail,
       subject: `Sign in to ${appName}`,
       html: buildEmailHtml(magicLinkUrl, appName),
       text: buildEmailText(magicLinkUrl, appName),
+    };
+    
+    console.log('[EMAIL] Payload (sanitized):', {
+      from: emailPayload.from,
+      to: emailPayload.to,
+      subject: emailPayload.subject,
+      htmlLength: emailPayload.html.length,
+      textLength: emailPayload.text.length
     });
-    console.log('Resend result:', JSON.stringify(result));
+    
+    const result = await resend.emails.send(emailPayload);
+    
+    console.log('[EMAIL] Resend response:', JSON.stringify(result, null, 2));
+    console.log('[EMAIL] Response structure:', {
+      hasError: !!result?.error,
+      hasData: !!result?.data,
+      dataId: result?.data?.id,
+      errorMessage: result?.error?.message
+    });
 
-    if (result.error) {
-      console.error('Resend error:', result.error);
-      return { success: false, error: result.error.message };
+    // Resend API returns { data: { id: string } | null, error: ErrorResponse | null }
+    // Check for error first (error takes precedence)
+    if (result?.error) {
+      const errorMessage = result.error?.message || JSON.stringify(result.error);
+      const errorName = result.error?.name || 'UnknownError';
+      const statusCode = result.error?.statusCode || result.error?.status;
+      
+      console.error('[EMAIL] Resend API error:', {
+        name: errorName,
+        message: errorMessage,
+        statusCode: statusCode,
+        error: result.error,
+        fullResult: result,
+        troubleshooting: statusCode === 400 && errorMessage.includes('not verified') 
+          ? 'Domain verification issue: Check that your API key has access to the verified domain. Go to https://resend.com/api-keys to verify.'
+          : undefined
+      });
+      
+      return { 
+        success: false, 
+        error: errorMessage,
+        errorName: errorName,
+        statusCode: statusCode,
+        details: result.error
+      };
     }
 
-    console.log('Email sent successfully to:', toEmail);
-    return { success: true };
+    // Check if we have a successful response (should have data.id)
+    if (result?.data?.id) {
+      const emailId = result.data.id;
+      console.log('[EMAIL] ✅ Email sent successfully:', {
+        emailId: emailId,
+        to: toEmail,
+        from: fromEmail,
+        resendEmailId: emailId,
+        note: 'Check Resend dashboard for this email ID: ' + emailId
+      });
+      console.log('[EMAIL] 🔍 To find this email in Resend:');
+      console.log('[EMAIL]   1. Go to https://resend.com/emails');
+      console.log('[EMAIL]   2. Search for email ID:', emailId);
+      console.log('[EMAIL]   3. Or search for recipient:', toEmail);
+      return { 
+        success: true,
+        emailId: emailId
+      };
+    }
+
+    // Unexpected response structure (both data and error are null/missing)
+    console.warn('[EMAIL] Unexpected response structure - neither data.id nor error present:', {
+      result: result,
+      resultType: typeof result,
+      resultKeys: result ? Object.keys(result) : 'null'
+    });
+    return { 
+      success: false, 
+      error: 'Unexpected response from Resend API - no data.id and no error',
+      details: result
+    };
   } catch (error) {
-    console.error('Failed to send email:', error);
+    console.error('[EMAIL] Exception sending email:', {
+      error: error,
+      message: error?.message,
+      stack: error?.stack,
+      name: error?.name
+    });
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: error instanceof Error ? error.message : 'Unknown error',
+      details: error
     };
   }
 }

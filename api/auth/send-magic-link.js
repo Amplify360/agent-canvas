@@ -16,38 +16,41 @@ export const config = {
 const json = (res, status, payload) =>
   res.status(status).setHeader('Content-Type', 'application/json').send(JSON.stringify(payload));
 
-async function readBody(req) {
-  if (req.body) {
-    return typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
-  }
-  
-  return new Promise((resolve, reject) => {
-    const chunks = [];
-    req.on('data', chunk => chunks.push(chunk));
-    req.on('end', () => {
-      try {
-        const body = Buffer.concat(chunks).toString('utf8');
-        resolve(JSON.parse(body));
-      } catch (e) {
-        reject(e);
-      }
-    });
-    req.on('error', reject);
-  });
-}
-
 export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    return res.status(405).setHeader('Allow', 'POST').send('Method not allowed');
-  }
-
+  // Wrap everything in try-catch to catch any initialization errors
   try {
-    const body = await readBody(req);
-    const { email, redirectUrl } = body || {};
+    if (req.method !== 'POST') {
+      return res.status(405).setHeader('Allow', 'POST').send('Method not allowed');
+    }
 
-    // Rate limit by IP
-    const clientIP = getClientIP(req);
-    const ipRateLimit = await checkRateLimit(clientIP, RATE_LIMIT_IP);
+    console.log('[AUTH] send-magic-link called', { 
+      method: req.method,
+      hasBody: !!req.body,
+      bodyType: typeof req.body
+    });
+    
+    // With bodyParser: true, Vercel automatically parses JSON into req.body
+    const body = req.body || {};
+    console.log('[AUTH] Body parsed:', { email: body?.email, hasRedirectUrl: !!body?.redirectUrl });
+    const { email, redirectUrl } = body;
+
+    // Rate limit by IP (skip in development mode)
+    let ipRateLimit;
+    const isDevMode = process.env.NODE_ENV === 'development' || !process.env.VERCEL;
+    
+    if (isDevMode && process.env.DISABLE_RATE_LIMIT === 'true') {
+      console.log('[AUTH] Rate limiting disabled for development');
+      ipRateLimit = { allowed: true };
+    } else {
+      try {
+        const clientIP = getClientIP(req);
+        ipRateLimit = await checkRateLimit(clientIP, RATE_LIMIT_IP);
+      } catch (rateLimitError) {
+        console.error('[AUTH] Rate limit check failed:', rateLimitError);
+        // If rate limiting fails, allow the request (fail open for availability)
+        ipRateLimit = { allowed: true };
+      }
+    }
     
     if (!ipRateLimit.allowed) {
       const retryAfter = ipRateLimit.resetAt - Math.floor(Date.now() / 1000);
@@ -72,8 +75,21 @@ export default async function handler(req, res) {
 
     const normalizedEmail = normalizeEmail(email);
 
-    // Rate limit by email
-    const emailRateLimit = await checkRateLimit(normalizedEmail, RATE_LIMIT_EMAIL);
+    // Rate limit by email (skip in development mode)
+    let emailRateLimit;
+    
+    if (isDevMode && process.env.DISABLE_RATE_LIMIT === 'true') {
+      console.log('[AUTH] Email rate limiting disabled for development');
+      emailRateLimit = { allowed: true };
+    } else {
+      try {
+        emailRateLimit = await checkRateLimit(normalizedEmail, RATE_LIMIT_EMAIL);
+      } catch (rateLimitError) {
+        console.error('[AUTH] Email rate limit check failed:', rateLimitError);
+        // If rate limiting fails, allow the request (fail open for availability)
+        emailRateLimit = { allowed: true };
+      }
+    }
     
     if (!emailRateLimit.allowed) {
       const retryAfter = emailRateLimit.resetAt - Math.floor(Date.now() / 1000);
@@ -89,7 +105,18 @@ export default async function handler(req, res) {
     }
 
     // Check email allowlist (checks both env var and KV storage)
-    const isAllowed = await checkEmailAllowlist(normalizedEmail);
+    let isAllowed = false;
+    try {
+      isAllowed = await checkEmailAllowlist(normalizedEmail);
+    } catch (allowlistError) {
+      console.error('[AUTH] Allowlist check failed:', allowlistError);
+      // If allowlist check fails, deny access (fail closed for security)
+      return json(res, 200, {
+        success: true,
+        message: 'If that email is registered, a magic link has been sent.'
+      });
+    }
+    
     if (!isAllowed) {
       // Return generic success message (don't reveal if email exists)
       return json(res, 200, {
@@ -107,11 +134,20 @@ export default async function handler(req, res) {
     const expiresAt = new Date(Date.now() + TOKEN_TTL_SECONDS * 1000).toISOString();
 
     // Store token
-    await storeMagicLink(token, {
-      email: normalizedEmail,
-      expiresAt,
-      redirectUrl: validatedRedirect || null
-    }, TOKEN_TTL_SECONDS);
+    try {
+      await storeMagicLink(token, {
+        email: normalizedEmail,
+        expiresAt,
+        redirectUrl: validatedRedirect || null
+      }, TOKEN_TTL_SECONDS);
+    } catch (storageError) {
+      console.error('[AUTH] Failed to store magic link token:', storageError);
+      // If storage fails, we can't create a valid magic link, so return error
+      return json(res, 500, {
+        success: false,
+        error: 'Failed to create magic link. Please try again.'
+      });
+    }
 
     // Construct magic link URL
     const magicLinkUrl = `${baseUrl}/api/auth/verify?token=${token}${validatedRedirect ? `&redirect=${encodeURIComponent(validatedRedirect)}` : ''}`;
@@ -121,9 +157,11 @@ export default async function handler(req, res) {
     
     if (!emailResult.success) {
       // Log error with context for monitoring/alerting
-      console.error('Failed to send magic link email:', {
+      console.error('[AUTH] Failed to send magic link email:', {
         email: normalizedEmail,
         error: emailResult.error,
+        details: emailResult.details,
+        emailId: emailResult.emailId,
         timestamp: new Date().toISOString()
       });
       
@@ -131,6 +169,12 @@ export default async function handler(req, res) {
       // We still return success to user (security best practice - don't reveal email existence)
       // but log it for monitoring/alerting
       // In production, consider sending to error tracking service (e.g., Sentry)
+    } else {
+      console.log('[AUTH] Magic link email sent successfully:', {
+        email: normalizedEmail,
+        emailId: emailResult.emailId,
+        timestamp: new Date().toISOString()
+      });
     }
 
     // Return generic success message (same regardless of email allowlist status)
@@ -140,11 +184,33 @@ export default async function handler(req, res) {
     });
 
   } catch (error) {
-    console.error('Error in send-magic-link:', error);
-    return json(res, 500, {
-      success: false,
-      error: 'Internal server error'
+    console.error('[AUTH] Error in send-magic-link:', {
+      error: error,
+      message: error?.message,
+      stack: error?.stack,
+      name: error?.name,
+      cause: error?.cause,
+      toString: String(error)
     });
+    
+    // Make sure we always return JSON, even on error
+    try {
+      return json(res, 500, {
+        success: false,
+        error: 'Internal server error',
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined,
+        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      });
+    } catch (jsonError) {
+      // If even JSON response fails, send plain text
+      console.error('[AUTH] Failed to send JSON error response:', jsonError);
+      return res.status(500)
+        .setHeader('Content-Type', 'application/json')
+        .send(JSON.stringify({ 
+          success: false, 
+          error: 'Internal server error' 
+        }));
+    }
   }
 }
 

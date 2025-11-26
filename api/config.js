@@ -233,6 +233,7 @@ async function handlePut(req, res) {
       return;
     }
 
+    // Create new document first
     await put(newDocName, yamlText, {
       access: 'public',
       token: blobToken,
@@ -240,7 +241,19 @@ async function handlePut(req, res) {
       contentType: YAML_CONTENT_TYPE
     });
 
-    await del(docName, { token: blobToken });
+    // Delete old document - if this fails, rollback by deleting the new document
+    try {
+      await del(docName, { token: blobToken });
+    } catch (deleteError) {
+      // Rollback: delete the newly created document to maintain atomicity
+      try {
+        await del(newDocName, { token: blobToken });
+      } catch (rollbackError) {
+        console.error('Failed to rollback new document after delete failure:', rollbackError);
+        // Log but don't throw - the original delete error is more important
+      }
+      throw deleteError; // Re-throw the original delete error
+    }
 
     json(res, 200, {
       success: true,
