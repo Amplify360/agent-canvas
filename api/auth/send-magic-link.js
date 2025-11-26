@@ -1,5 +1,5 @@
 import { nanoid } from 'nanoid';
-import { checkEmailAllowlist, getClientIP, normalizeEmail, validateEmail, validateRedirectUrl } from '../lib/auth-utils.js';
+import { checkEmailAllowlist, getBaseUrl, getClientIP, normalizeEmail, validateEmail, validateRedirectUrl } from '../lib/auth-utils.js';
 import { sendMagicLinkEmail } from '../lib/email.js';
 import { checkRateLimit, storeMagicLink } from '../lib/storage.js';
 
@@ -125,8 +125,8 @@ export default async function handler(req, res) {
       });
     }
 
-    // Validate redirect URL
-    const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
+    // Get base URL from environment or request headers
+    const baseUrl = getBaseUrl(req);
     const validatedRedirect = validateRedirectUrl(redirectUrl, baseUrl);
 
     // Generate token

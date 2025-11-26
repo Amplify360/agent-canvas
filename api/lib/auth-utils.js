@@ -172,3 +172,61 @@ export function getQueryParam(req, key) {
   return null;
 }
 
+/**
+ * Get base URL from environment variable or construct from request
+ * @param {Request|Object} req - Request object
+ * @returns {string} Base URL (e.g., https://canvas.amplify360.ai or http://localhost:3000)
+ */
+export function getBaseUrl(req) {
+  // First, check environment variable
+  if (process.env.BASE_URL) {
+    return process.env.BASE_URL.trim();
+  }
+  
+  // Try to construct from request headers
+  const headers = req.headers || {};
+  
+  // Helper to get header value
+  const getHeader = (name) => {
+    if (headers.get) {
+      // Edge runtime
+      return headers.get(name) || headers.get(name.toLowerCase());
+    }
+    // Node.js runtime
+    return headers[name] || headers[name.toLowerCase()];
+  };
+  
+  // Get host from headers
+  const host = getHeader('host') || getHeader('x-forwarded-host');
+  
+  if (host) {
+    // Check if request is secure (HTTPS)
+    // In Vercel/production, X-Forwarded-Proto will be 'https'
+    const proto = getHeader('x-forwarded-proto');
+    const isVercel = !!process.env.VERCEL;
+    
+    // Use https if:
+    // 1. x-forwarded-proto is explicitly 'https', OR
+    // 2. We're in Vercel production (always uses HTTPS)
+    const protocol = proto === 'https' || (isVercel && proto !== 'http') ? 'https' : 'http';
+    
+    const baseUrl = `${protocol}://${host}`;
+    
+    // Log for debugging (only in production to verify it's working)
+    if (isVercel) {
+      console.log('[BASE_URL] Constructed from headers:', {
+        host,
+        proto,
+        protocol,
+        baseUrl,
+        hasBaseUrlEnv: !!process.env.BASE_URL
+      });
+    }
+    
+    return baseUrl;
+  }
+  
+  // Fallback to localhost for development
+  return 'http://localhost:3000';
+}
+

@@ -221,6 +221,7 @@ export async function checkRateLimit(identifier, config) {
 
 /**
  * Add email to allowlist in KV storage
+ * Uses atomic operations to prevent TOCTOU race conditions
  * @param {string} email - Email address to add
  * @param {string} addedBy - Email of admin who added it
  * @returns {Promise<boolean>} True if added, false if already exists
@@ -229,44 +230,197 @@ export async function addToAllowlist(email, addedBy) {
   const normalizedEmail = email.trim().toLowerCase();
   const key = `${ALLOWLIST_KEY_PREFIX}${normalizedEmail}`;
   
-  // Check if already exists
-  const existing = await kv.get(key);
-  if (existing) {
-    return false; // Already exists
-  }
-  
-  // Store email with metadata
+  // Store email with metadata using atomic SET NX (only if not exists)
+  // This prevents race conditions where two concurrent requests both see the email as missing
   const data = {
     email: normalizedEmail,
     addedAt: new Date().toISOString(),
     addedBy: addedBy.trim().toLowerCase()
   };
   
-  await kv.set(key, data);
-  
-  // Add to index set (for efficient listing)
-  // Use a simple pattern: store all emails in a set-like structure
-  // Since Vercel KV doesn't have native sets, we'll use a JSON array
-  const indexKey = ALLOWLIST_INDEX_KEY;
-  const index = await kv.get(indexKey) || [];
-  if (!index.includes(normalizedEmail)) {
-    index.push(normalizedEmail);
-    await kv.set(indexKey, index);
+  // Try atomic set-if-not-exists operation
+  try {
+    // Use Lua script for atomic check-and-set + index update
+    if (typeof kv.eval === 'function') {
+      const indexKey = ALLOWLIST_INDEX_KEY;
+      const luaScript = `
+        -- Check if key already exists
+        local exists = redis.call('EXISTS', KEYS[1])
+        if exists == 1 then
+          return {false, 'exists'}
+        end
+        
+        -- Set the email data
+        redis.call('SET', KEYS[1], ARGV[1])
+        
+        -- Atomically update index (read-modify-write)
+        local index = redis.call('GET', KEYS[2])
+        local indexArray = {}
+        if index then
+          indexArray = cjson.decode(index)
+        end
+        
+        -- Add email to index if not already present
+        local found = false
+        for i, email in ipairs(indexArray) do
+          if email == ARGV[2] then
+            found = true
+            break
+          end
+        end
+        
+        if not found then
+          table.insert(indexArray, ARGV[2])
+          redis.call('SET', KEYS[2], cjson.encode(indexArray))
+        end
+        
+        return {true, 'added'}
+      `;
+      
+      const result = await kv.eval(
+        luaScript,
+        [key, indexKey],
+        [JSON.stringify(data), normalizedEmail]
+      );
+      
+      // Result is [success, status]
+      return result[0] === true;
+    }
+  } catch (error) {
+    console.warn('Lua script evaluation failed, using fallback:', error);
   }
   
-  return true;
+  // Fallback: Use SET NX if available (atomic check-and-set)
+  try {
+    // Try SET with NX option (only set if not exists)
+    // Note: @vercel/kv may support this via options
+    const setResult = await kv.set(key, data, { nx: true });
+    
+    if (!setResult) {
+      // Key already exists (NX prevented the set)
+      return false;
+    }
+    
+    // Update index atomically using Lua script
+    const indexKey = ALLOWLIST_INDEX_KEY;
+    if (typeof kv.eval === 'function') {
+      try {
+        const luaScript = `
+          local index = redis.call('GET', KEYS[1])
+          local indexArray = {}
+          if index then
+            indexArray = cjson.decode(index)
+          end
+          
+          local found = false
+          for i, email in ipairs(indexArray) do
+            if email == ARGV[1] then
+              found = true
+              break
+            end
+          end
+          
+          if not found then
+            table.insert(indexArray, ARGV[1])
+            redis.call('SET', KEYS[1], cjson.encode(indexArray))
+          end
+        `;
+        await kv.eval(luaScript, [indexKey], [normalizedEmail]);
+      } catch (error) {
+        console.warn('Index update Lua script failed:', error);
+        // Fallback to non-atomic update (has race condition but better than nothing)
+        const index = await kv.get(indexKey) || [];
+        if (!index.includes(normalizedEmail)) {
+          index.push(normalizedEmail);
+          await kv.set(indexKey, index);
+        }
+      }
+    } else {
+      // Non-atomic fallback
+      const index = await kv.get(indexKey) || [];
+      if (!index.includes(normalizedEmail)) {
+        index.push(normalizedEmail);
+        await kv.set(indexKey, index);
+      }
+    }
+    
+    return true;
+  } catch (error) {
+    // If SET NX is not available, fall back to check-then-set (has race condition)
+    console.warn('SET NX not available, using non-atomic fallback:', error);
+    const existing = await kv.get(key);
+    if (existing) {
+      return false;
+    }
+    
+    await kv.set(key, data);
+    
+    // Non-atomic index update (race condition possible)
+    const indexKey = ALLOWLIST_INDEX_KEY;
+    const index = await kv.get(indexKey) || [];
+    if (!index.includes(normalizedEmail)) {
+      index.push(normalizedEmail);
+      await kv.set(indexKey, index);
+    }
+    
+    return true;
+  }
 }
 
 /**
  * Remove email from allowlist in KV storage
+ * Uses atomic operations to prevent TOCTOU race conditions
  * @param {string} email - Email address to remove
  * @returns {Promise<boolean>} True if removed, false if not found
  */
 export async function removeFromAllowlist(email) {
   const normalizedEmail = email.trim().toLowerCase();
   const key = `${ALLOWLIST_KEY_PREFIX}${normalizedEmail}`;
+  const indexKey = ALLOWLIST_INDEX_KEY;
   
-  // Check if exists
+  // Use Lua script for atomic check-delete-index-update
+  try {
+    if (typeof kv.eval === 'function') {
+      const luaScript = `
+        -- Check if key exists
+        local exists = redis.call('EXISTS', KEYS[1])
+        if exists == 0 then
+          return {false, 'not_found'}
+        end
+        
+        -- Delete the email record
+        redis.call('DEL', KEYS[1])
+        
+        -- Atomically update index (read-modify-write)
+        local index = redis.call('GET', KEYS[2])
+        if index then
+          local indexArray = cjson.decode(index)
+          local updatedArray = {}
+          for i, email in ipairs(indexArray) do
+            if email ~= ARGV[1] then
+              table.insert(updatedArray, email)
+            end
+          end
+          redis.call('SET', KEYS[2], cjson.encode(updatedArray))
+        end
+        
+        return {true, 'removed'}
+      `;
+      
+      const result = await kv.eval(
+        luaScript,
+        [key, indexKey],
+        [normalizedEmail]
+      );
+      
+      // Result is [success, status]
+      return result[0] === true;
+    }
+  } catch (error) {
+    console.warn('Lua script evaluation failed, using fallback:', error);
+  }
+  
+  // Fallback: Non-atomic approach (has race condition but prevents complete failure)
   const existing = await kv.get(key);
   if (!existing) {
     return false; // Not found
@@ -275,8 +429,7 @@ export async function removeFromAllowlist(email) {
   // Delete the email record
   await kv.del(key);
   
-  // Remove from index
-  const indexKey = ALLOWLIST_INDEX_KEY;
+  // Update index (non-atomic, race condition possible)
   const index = await kv.get(indexKey) || [];
   const updatedIndex = index.filter(e => e !== normalizedEmail);
   await kv.set(indexKey, updatedIndex);

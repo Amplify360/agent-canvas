@@ -1,4 +1,4 @@
-import { getQueryParam, validateRedirectUrl } from '../lib/auth-utils.js';
+import { getBaseUrl, getQueryParam, validateRedirectUrl } from '../lib/auth-utils.js';
 import { destroySession } from '../lib/session.js';
 
 const json = (res, status, payload) =>
@@ -31,7 +31,7 @@ export default async function handler(req, res) {
     try {
       destroySession(res);
       
-      const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
+      const baseUrl = getBaseUrl(req);
       const redirectParam = getQueryParam(req, 'redirect');
       const redirectUrl = validateRedirectUrl(redirectParam, baseUrl) || '/login';
 

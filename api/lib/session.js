@@ -172,7 +172,9 @@ export async function createSession(response, email) {
   const sessionData = { email, expiresAt };
   
   const encrypted = await encryptSession(sessionData);
-  const isProduction = process.env.NODE_ENV === 'production';
+  // Set Secure flag on all Vercel deployments (production and preview) since they use HTTPS
+  // Also set in production NODE_ENV for local production builds
+  const isSecure = process.env.VERCEL || process.env.NODE_ENV === 'production';
   
   const cookieOptions = [
     `${COOKIE_NAME}=${encrypted}`,
@@ -182,7 +184,7 @@ export async function createSession(response, email) {
     `Path=/`
   ];
   
-  if (isProduction) {
+  if (isSecure) {
     cookieOptions.push('Secure');
   }
   
@@ -210,8 +212,10 @@ export function destroySession(response) {
     'Path=/'
   ];
   
-  const isProduction = process.env.NODE_ENV === 'production';
-  if (isProduction) {
+  // Set Secure flag on all Vercel deployments (production and preview) since they use HTTPS
+  // Also set in production NODE_ENV for local production builds
+  const isSecure = process.env.VERCEL || process.env.NODE_ENV === 'production';
+  if (isSecure) {
     cookieOptions.push('Secure');
   }
   

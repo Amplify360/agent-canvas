@@ -1,4 +1,4 @@
-import { getQueryParam, validateRedirectUrl } from '../lib/auth-utils.js';
+import { getBaseUrl, getQueryParam, validateRedirectUrl } from '../lib/auth-utils.js';
 import { createSession } from '../lib/session.js';
 import { verifyAndConsumeMagicLink } from '../lib/storage.js';
 
@@ -91,7 +91,7 @@ export default async function handler(req, res) {
     await createSession(res, tokenData.email);
 
     // Determine redirect URL
-    const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
+    const baseUrl = getBaseUrl(req);
     const redirectUrl = validateRedirectUrl(
       tokenData.redirectUrl || redirectParam,
       baseUrl
