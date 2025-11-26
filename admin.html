@@ -15,16 +15,16 @@
                 <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 20px;">
                     <div>
                         <h1 style="margin: 0 0 8px 0; color: var(--brand-primary);">Allowlist Management</h1>
-                        <p style="margin: 0; color: rgba(255, 255, 255, 0.8); font-size: 14px;">
+                        <p style="margin: 0; color: var(--text-secondary); font-size: 14px;">
                             Manage user access to AgentCanvas
                         </p>
                     </div>
                     <div style="display: flex; gap: 12px; flex-wrap: wrap;">
-                        <a href="/" class="btn btn-glass" style="text-decoration: none; display: inline-flex; align-items: center; gap: 8px;">
+                        <a href="/" class="btn btn-primary" style="text-decoration: none; display: inline-flex; align-items: center; gap: 8px;">
                             <i data-lucide="arrow-left"></i>
                             <span>Back to App</span>
                         </a>
-                        <button type="button" class="btn btn-glass" id="refreshBtn" title="Refresh list">
+                        <button type="button" class="btn btn-primary" id="refreshBtn" title="Refresh list">
                             <i data-lucide="refresh-cw"></i>
                             <span>Refresh</span>
                         </button>
@@ -34,25 +34,25 @@
 
             <!-- Add Email Form -->
             <div class="surface-card" style="margin-bottom: 30px;">
-                <h2 style="margin: 0 0 20px 0; color: rgba(255, 255, 255, 0.9); font-size: 20px;">Add Email to Allowlist</h2>
+                <h2 style="margin: 0 0 20px 0; color: var(--text-primary); font-size: 20px;">Add Email to Allowlist</h2>
                 <form id="addEmailForm" style="display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end;">
                     <div style="flex: 1; min-width: 250px;">
-                        <label for="newEmail" style="display: block; margin-bottom: 8px; color: rgba(255, 255, 255, 0.9); font-size: 14px;">
+                        <label for="newEmail" style="display: block; margin-bottom: 8px; color: var(--text-primary); font-size: 14px;">
                             Email Address
                         </label>
-                        <input 
-                            type="email" 
-                            id="newEmail" 
-                            name="email" 
-                            required 
+                        <input
+                            type="email"
+                            id="newEmail"
+                            name="email"
+                            required
                             autocomplete="email"
-                            style="width: 100%; padding: 12px; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.2); background: rgba(255, 255, 255, 0.1); color: #fff; font-size: 16px; box-sizing: border-box;"
+                            style="width: 100%; padding: 12px; border-radius: 6px; border: 1px solid var(--border-strong); background: var(--surface-alt); color: var(--text-primary); font-size: 16px; box-sizing: border-box;"
                             placeholder="user@example.com"
                         >
                     </div>
-                    <button 
-                        type="submit" 
-                        class="btn btn-glass"
+                    <button
+                        type="submit"
+                        class="btn btn-primary"
                         style="padding: 12px 24px; font-weight: 600; white-space: nowrap;"
                         id="addEmailBtn"
                     >
@@ -66,20 +66,20 @@
             <!-- Email List -->
             <div class="surface-card">
                 <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
-                    <h2 style="margin: 0; color: rgba(255, 255, 255, 0.9); font-size: 20px;">
+                    <h2 style="margin: 0; color: var(--text-primary); font-size: 20px;">
                         Allowed Emails (<span id="emailCount">0</span>)
                     </h2>
                     <div style="display: flex; gap: 8px; align-items: center;">
-                        <input 
-                            type="search" 
-                            id="searchInput" 
+                        <input
+                            type="search"
+                            id="searchInput"
                             placeholder="Search emails..."
-                            style="padding: 8px 12px; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.2); background: rgba(255, 255, 255, 0.1); color: #fff; font-size: 14px; min-width: 200px;"
+                            style="padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-strong); background: var(--surface-alt); color: var(--text-primary); font-size: 14px; min-width: 200px;"
                         >
                     </div>
                 </div>
 
-                <div id="loadingMessage" style="text-align: center; padding: 40px; color: rgba(255, 255, 255, 0.7);">
+                <div id="loadingMessage" style="text-align: center; padding: 40px; color: var(--text-muted);">
                     <i data-lucide="loader-2" style="animation: spin 1s linear infinite;"></i>
                     <p style="margin-top: 12px;">Loading allowlist...</p>
                 </div>
@@ -90,7 +90,7 @@
                     <!-- Email items will be inserted here -->
                 </div>
 
-                <div id="emptyMessage" style="display: none; text-align: center; padding: 40px; color: rgba(255, 255, 255, 0.6);">
+                <div id="emptyMessage" style="display: none; text-align: center; padding: 40px; color: var(--text-muted);">
                     <i data-lucide="inbox" style="opacity: 0.5;"></i>
                     <p style="margin-top: 12px;">No emails in allowlist</p>
                 </div>
@@ -109,7 +109,7 @@
             align-items: center;
             justify-content: space-between;
             padding: 16px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            border-bottom: 1px solid var(--border-muted);
             transition: background 0.2s;
         }
 
@@ -118,7 +118,7 @@
         }
 
         .email-item:hover {
-            background: rgba(255, 255, 255, 0.05);
+            background: var(--surface-muted);
         }
 
         .email-info {
@@ -128,14 +128,14 @@
 
         .email-address {
             font-weight: 500;
-            color: rgba(255, 255, 255, 0.9);
+            color: var(--text-primary);
             margin-bottom: 4px;
             word-break: break-all;
         }
 
         .email-meta {
             font-size: 12px;
-            color: rgba(255, 255, 255, 0.6);
+            color: var(--text-muted);
             display: flex;
             gap: 16px;
             flex-wrap: wrap;
@@ -210,8 +210,8 @@
             right: 0;
             margin-bottom: 4px;
             padding: 4px 8px;
-            background: rgba(0, 0, 0, 0.9);
-            color: #fff;
+            background: var(--text-strong);
+            color: var(--text-inverse);
             border-radius: 4px;
             font-size: 11px;
             white-space: nowrap;
