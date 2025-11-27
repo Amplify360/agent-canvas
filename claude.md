@@ -145,7 +145,7 @@ See `tests/README.md` for test suite details.
 ```bash
 SESSION_SECRET           # 32+ char secret for session encryption (generate with openssl rand -hex 32)
 RESEND_API_KEY          # API key from Resend (must have access to verified domain)
-RESEND_FROM_EMAIL       # Verified sender email (must be from verified domain) (e.g., info@login.amplify360.ai)
+RESEND_FROM_EMAIL       # Verified sender email (must be from verified domain) (e.g., info@send.amplify360.ai)
 BASE_URL                # Application base URL (e.g., https://canvas.amplify360.ai)
 ALLOWED_EMAILS          # Comma-separated list of allowed email addresses
 KV_REST_API_URL         # Vercel KV REST API URL
