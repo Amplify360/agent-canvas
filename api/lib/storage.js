@@ -25,6 +25,36 @@ export async function storeMagicLink(token, data, ttlSeconds) {
 }
 
 /**
+ * Verify a magic link token WITHOUT consuming it (time-based expiry only)
+ * Token remains valid until TTL expires, can be used multiple times
+ * @param {string} token - The token to verify
+ * @returns {Promise<Object|null>} Token data if valid and not expired, null otherwise
+ */
+export async function verifyMagicLink(token) {
+  const key = `${MAGIC_LINK_KEY_PREFIX}${token}`;
+
+  try {
+    const data = await kv.get(key);
+    if (!data) {
+      return null;
+    }
+
+    // Check expiration
+    const parsed = typeof data === 'string' ? JSON.parse(data) : data;
+    if (new Date(parsed.expiresAt) <= new Date()) {
+      // Clean up expired token
+      await kv.del(key);
+      return null;
+    }
+
+    return parsed;
+  } catch (error) {
+    console.error('[STORAGE] Error verifying token:', error.message);
+    return null;
+  }
+}
+
+/**
  * Retrieve and DELETE a magic link token (single-use)
  * Uses atomic Lua script to prevent race conditions (TOCTOU)
  * @param {string} token - The token to verify

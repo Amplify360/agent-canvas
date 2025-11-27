@@ -76,7 +76,6 @@ See `tests/README.md` for test suite details.
 ├── styles.css          # Complete styling system (1,276 lines)
 ├── api/
 │   ├── config.js       # CRUD API for configurations
-│   ├── migrate.js      # One-time migration endpoint
 │   ├── auth/
 │   │   ├── send-magic-link.js  # POST endpoint to send magic link
 │   │   ├── verify.js            # GET endpoint to verify token
@@ -122,10 +121,6 @@ See `tests/README.md` for test suite details.
 
 **DELETE /api/config**
 - Not implemented (use Vercel Dashboard or API directly)
-
-**POST /api/migrate**
-- One-time migration from static `data/config.yaml` to Blob Storage
-- Protected by session authentication
 
 **POST /auth/send-magic-link**
 - Sends magic link email to provided address

@@ -148,15 +148,20 @@ export default async function handler(req, res) {
 
     // Send email
     const emailResult = await sendMagicLinkEmail(normalizedEmail, magicLinkUrl);
-    
+
     if (!emailResult.success) {
       console.error('[AUTH] Failed to send magic link email:', {
         email: normalizedEmail,
         error: emailResult.error
       });
+      // Report actual send failures to the user (this is different from "email not in allowlist")
+      return json(res, 500, {
+        success: false,
+        error: 'Failed to send email. Please try again later.'
+      });
     }
 
-    // Return generic success message (same regardless of email allowlist status)
+    // Return success message
     return json(res, 200, {
       success: true,
       message: 'If that email is registered, a magic link has been sent.'

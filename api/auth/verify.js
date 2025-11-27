@@ -1,6 +1,6 @@
 import { getBaseUrl, getQueryParam, validateRedirectUrl } from '../lib/auth-utils.js';
 import { createSession } from '../lib/session.js';
-import { verifyAndConsumeMagicLink } from '../lib/storage.js';
+import { verifyMagicLink } from '../lib/storage.js';
 
 function htmlErrorPage(title, message, status = 400) {
   return `<!DOCTYPE html>
@@ -75,15 +75,15 @@ export default async function handler(req, res) {
         ));
     }
 
-    // Verify and consume token
-    const tokenData = await verifyAndConsumeMagicLink(token);
+    // Verify token (time-based expiry - token is NOT consumed, can be reused until TTL)
+    const tokenData = await verifyMagicLink(token);
 
     if (!tokenData) {
       return res.status(401)
         .setHeader('Content-Type', 'text/html')
         .send(htmlErrorPage(
-          'Link Expired or Invalid',
-          'This magic link has expired or has already been used. Please request a new one.'
+          'Link Expired',
+          'This magic link has expired. Please request a new one.'
         ));
     }
 
