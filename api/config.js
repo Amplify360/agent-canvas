@@ -1,6 +1,7 @@
-import { BlobAccessError, BlobNotFoundError, del, head, list, put } from '@vercel/blob';
 import { getQueryParam } from './lib/auth-utils.js';
-import { isAuthenticated } from './lib/session.js';
+import { requireAuth } from './lib/clerk.js';
+import { query, queryOne } from './lib/db.js';
+import { checkCanvasAccess, checkCanvasWriteAccess, getAccessibleCanvases } from './lib/permissions.js';
 
 const DEFAULT_DOCUMENT = 'config.yaml';
 const YAML_CONTENT_TYPE = 'text/yaml';
@@ -16,7 +17,6 @@ const json = (res, status, payload) =>
 
 async function readRawBody(req) {
   return new Promise((resolve, reject) => {
-    // Fallback for environments without streams - check before attaching listeners
     if (typeof req.on !== 'function') {
       resolve(Buffer.alloc(0));
       return;
@@ -29,132 +29,82 @@ async function readRawBody(req) {
   });
 }
 
-/**
- * Get header value from Node.js request
- */
 function getHeader(req, name) {
   return req.headers[name] || req.headers[name.toLowerCase()];
 }
 
-/**
- * Check session-based authentication
- */
-async function checkAuth(req, res) {
-  const authenticated = await isAuthenticated(req);
-  
-  if (!authenticated) {
-    json(res, 401, { error: 'Authentication required' });
-    return false;
-  }
-  
-  return true;
-}
-
-function ensureBlobToken(res) {
-  const blobToken = process.env.BLOB_READ_WRITE_TOKEN;
-  if (!blobToken) {
-    json(res, 500, { error: 'Blob storage token is not configured. Please set BLOB_READ_WRITE_TOKEN.' });
-    return null;
-  }
-  return blobToken;
-}
-
-function sanitizeDocumentName(name) {
-  if (!name) return DEFAULT_DOCUMENT;
-  let normalized = name.trim();
-  if (!normalized.endsWith('.yaml')) {
-    normalized += '.yaml';
-  }
-  const isValid = /^[A-Za-z0-9._-]+\.yaml$/.test(normalized);
-  if (!isValid) {
-    throw new Error('Invalid document name. Use alphanumeric, dot, dash, or underscore characters only.');
+function sanitizeSlug(slug) {
+  if (!slug) return null;
+  // Remove .yaml extension if present, then sanitize
+  let normalized = slug.trim().replace(/\.yaml$/, '').replace(/\.yml$/, '');
+  // Allow alphanumeric, dash, underscore, dot
+  normalized = normalized.replace(/[^A-Za-z0-9._-]/g, '-');
+  if (!normalized) {
+    throw new Error('Invalid slug. Use alphanumeric, dot, dash, or underscore characters.');
   }
   return normalized;
 }
 
-function getDocumentName(req) {
+function getDocumentIdentifier(req) {
   const queryDoc = getQueryParam(req, 'doc');
   const headerDoc = getHeader(req, 'x-config-name');
-  return sanitizeDocumentName(queryDoc || headerDoc || DEFAULT_DOCUMENT);
-}
-
-async function fetchDocumentFromBlob(docName, token) {
-  try {
-    const { url } = await head(docName, { token });
-    if (!url) {
-      return null;
-    }
-    const response = await fetch(url);
-    if (!response.ok) {
-      throw new Error(`Blob fetch failed with status ${response.status}`);
-    }
-    return await response.text();
-  } catch (error) {
-    // Handle BlobAccessError and BlobNotFoundError from @vercel/blob
-    // These are thrown when a document doesn't exist
-    // Check both instanceof and error name for robustness
-    if (
-      error instanceof BlobAccessError ||
-      error instanceof BlobNotFoundError ||
-      error?.name === 'BlobAccessError' ||
-      error?.name === 'BlobNotFoundError'
-    ) {
-      return null;
-    }
-    // Backward compatibility: check for status properties (for test mocks)
-    // This comes after the real error type checks since BlobAccessError/BlobNotFoundError
-    // don't have .status or .statusCode properties
-    if (error?.status === 404 || error?.statusCode === 404) {
-      return null;
-    }
-    throw error;
-  }
+  return queryDoc || headerDoc || null;
 }
 
 /**
  * GET handler
- * - list=1 → JSON list of YAML documents
- * - otherwise → YAML content for requested doc
+ * - list=1 → JSON list of accessible canvases
+ * - otherwise → YAML content for requested canvas
  */
 async function handleGet(req, res) {
-  const blobToken = ensureBlobToken(res);
-  if (!blobToken) return;
+  try {
+    const auth = await requireAuth(req);
+    const { userId, orgId } = auth;
 
-  const listParam = getQueryParam(req, 'list');
-  if (listParam === '1' || listParam === 'true') {
-    try {
-      const { blobs } = await list({ token: blobToken, limit: 1000 });
-      const documents = blobs
-        .filter(blob => blob.pathname.endsWith('.yaml') || blob.pathname.endsWith('.yml'))
-        .map(blob => ({
-          name: blob.pathname,
-          size: blob.size,
-          updatedAt: blob.uploadedAt
-        }));
+    const listParam = getQueryParam(req, 'list');
+    if (listParam === '1' || listParam === 'true') {
+      const canvases = await getAccessibleCanvases(userId, orgId);
+      const documents = canvases.map(canvas => ({
+        id: canvas.id,
+        name: canvas.slug + '.yaml', // Backward compatibility
+        slug: canvas.slug,
+        title: canvas.title,
+        scope_type: canvas.scope_type,
+        org_id: canvas.org_id,
+        updatedAt: canvas.updated_at,
+        updated_at: canvas.updated_at,
+      }));
 
       json(res, 200, { documents });
-    } catch (error) {
-      console.error('Error listing documents:', error);
-      json(res, 500, { error: 'Failed to list documents' });
-    }
-    return;
-  }
-
-  try {
-    const docName = getDocumentName(req);
-    const yamlText = await fetchDocumentFromBlob(docName, blobToken);
-
-    if (yamlText === null) {
-      json(res, 404, { error: `Document "${docName}" not found` });
       return;
     }
 
+    // Get specific canvas
+    const docId = getDocumentIdentifier(req);
+    if (!docId) {
+      json(res, 400, { error: 'Missing document identifier' });
+      return;
+    }
+
+    const { hasAccess, canvas } = await checkCanvasAccess(userId, orgId, docId);
+    
+    if (!hasAccess || !canvas) {
+      json(res, 404, { error: `Canvas not found or access denied` });
+      return;
+    }
+
+    const docName = canvas.slug + '.yaml'; // Backward compatibility
     res.status(200)
       .setHeader('Content-Type', YAML_CONTENT_TYPE)
       .setHeader('Content-Disposition', `inline; filename="${docName}"`)
       .setHeader('X-Config-Document', docName)
-      .send(yamlText);
+      .send(canvas.yaml_text);
+
   } catch (error) {
+    if (error.message === 'Authentication required') {
+      json(res, 401, { error: 'Authentication required' });
+      return;
+    }
     console.error('Error fetching config:', error);
     json(res, 500, { error: 'Failed to load configuration' });
   }
@@ -162,13 +112,13 @@ async function handleGet(req, res) {
 
 /**
  * POST handler
- * Saves config to Blob Storage
+ * Creates or updates a canvas
  */
 async function handlePost(req, res) {
-  const blobToken = ensureBlobToken(res);
-  if (!blobToken) return;
-
   try {
+    const auth = await requireAuth(req);
+    const { userId, orgId } = auth;
+
     const buffer = await readRawBody(req);
     let yamlText = buffer.toString('utf8');
 
@@ -184,133 +134,231 @@ async function handlePost(req, res) {
       return;
     }
 
-    const docName = getDocumentName(req);
-    const blob = await put(docName, yamlText, {
-      access: 'public',
-      token: blobToken,
-      addRandomSuffix: false,
-      contentType: YAML_CONTENT_TYPE
-    });
+    // Determine scope and title from request
+    const docId = getDocumentIdentifier(req);
+    let scopeType = 'personal';
+    let canvasOrgId = null;
+    
+    // If user is in an org context, default to org canvas
+    // Can be overridden by query param
+    const scopeParam = getQueryParam(req, 'scope');
+    if (scopeParam === 'org' && orgId) {
+      scopeType = 'org';
+      canvasOrgId = orgId;
+    } else if (scopeParam === 'personal') {
+      scopeType = 'personal';
+    } else if (orgId) {
+      // Default to org if in org context
+      scopeType = 'org';
+      canvasOrgId = orgId;
+    }
 
-    json(res, 200, {
-      success: true,
-      document: docName,
-      url: blob.url,
-      size: yamlText.length
-    });
+    // Extract title from YAML if possible, or use slug
+    let title = 'Untitled Canvas';
+    try {
+      // Try to extract title from YAML (simple regex approach to avoid requiring js-yaml)
+      const titleMatch = yamlText.match(/^title:\s*(.+)$/m);
+      if (titleMatch && titleMatch[1]) {
+        title = titleMatch[1].trim().replace(/^["']|["']$/g, '');
+      }
+    } catch (e) {
+      // Ignore errors
+    }
+
+    let slug;
+    if (docId) {
+      slug = sanitizeSlug(docId);
+      if (!slug) {
+        json(res, 400, { error: 'Invalid document identifier' });
+        return;
+      }
+    } else {
+      // Generate slug from title
+      slug = sanitizeSlug(title) || 'canvas-' + Date.now();
+    }
+
+    // Check if canvas exists
+    const existingCanvas = await queryOne(
+      scopeType === 'org'
+        ? `SELECT * FROM canvases WHERE scope_type = $1 AND org_id = $2 AND slug = $3`
+        : `SELECT * FROM canvases WHERE scope_type = $1 AND owner_user_id = $2 AND slug = $3`,
+      scopeType === 'org' ? [scopeType, canvasOrgId, slug] : [scopeType, userId, slug]
+    );
+
+    if (existingCanvas) {
+      // Update existing canvas
+      const { hasAccess } = await checkCanvasWriteAccess(userId, orgId, existingCanvas.id);
+      if (!hasAccess) {
+        json(res, 403, { error: 'Access denied' });
+        return;
+      }
+
+      await query(
+        `UPDATE canvases 
+         SET yaml_text = $1, updated_by_user_id = $2, title = $3, updated_at = now()
+         WHERE id = $4`,
+        [yamlText, userId, title, existingCanvas.id]
+      );
+
+      json(res, 200, {
+        success: true,
+        document: slug + '.yaml',
+        id: existingCanvas.id,
+        slug: slug,
+        size: yamlText.length
+      });
+    } else {
+      // Create new canvas
+      const ownerUserId = userId;
+      
+      const result = await queryOne(
+        `INSERT INTO canvases (scope_type, owner_user_id, org_id, title, slug, yaml_text, created_by_user_id, updated_by_user_id)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+         RETURNING id`,
+        [scopeType, ownerUserId, canvasOrgId, title, slug, yamlText, userId, userId]
+      );
+
+      json(res, 200, {
+        success: true,
+        document: slug + '.yaml',
+        id: result.id,
+        slug: slug,
+        size: yamlText.length
+      });
+    }
 
   } catch (error) {
+    if (error.message === 'Authentication required') {
+      json(res, 401, { error: 'Authentication required' });
+      return;
+    }
     console.error('[api/config POST] Error saving config', { error });
-    json(res, 500, { error: 'Failed to save configuration' });
+    json(res, 500, { error: error.message || 'Failed to save configuration' });
   }
 }
 
 /**
  * PUT handler
- * Renames an existing YAML document
+ * Renames a canvas (updates slug)
  */
 async function handlePut(req, res) {
-  const blobToken = ensureBlobToken(res);
-  if (!blobToken) return;
-
   try {
-    const docName = getDocumentName(req);
+    const auth = await requireAuth(req);
+    const { userId, orgId } = auth;
+
+    const docId = getDocumentIdentifier(req);
+    if (!docId) {
+      json(res, 400, { error: 'Missing document identifier' });
+      return;
+    }
+
     const newDocParam = getQueryParam(req, 'newDoc');
     if (!newDocParam) {
       json(res, 400, { error: 'Missing new document name' });
       return;
     }
 
-    const newDocName = sanitizeDocumentName(newDocParam);
-    if (docName === newDocName) {
-      json(res, 400, { error: 'New document name must be different' });
+    const newSlug = sanitizeSlug(newDocParam);
+    if (!newSlug) {
+      json(res, 400, { error: 'Invalid new document name' });
       return;
     }
 
-    const yamlText = await fetchDocumentFromBlob(docName, blobToken);
-    if (!yamlText) {
-      json(res, 404, { error: `Document "${docName}" not found` });
+    // Check access to existing canvas
+    const { hasAccess, canvas } = await checkCanvasWriteAccess(userId, orgId, docId);
+    if (!hasAccess || !canvas) {
+      json(res, 404, { error: `Canvas not found or access denied` });
       return;
     }
 
-    // Create new document first
-    await put(newDocName, yamlText, {
-      access: 'public',
-      token: blobToken,
-      addRandomSuffix: false,
-      contentType: YAML_CONTENT_TYPE
-    });
+    // Check if new slug already exists in same scope
+    const existing = await queryOne(
+      canvas.scope_type === 'org'
+        ? `SELECT * FROM canvases WHERE scope_type = $1 AND org_id = $2 AND slug = $3 AND id != $4`
+        : `SELECT * FROM canvases WHERE scope_type = $1 AND owner_user_id = $2 AND slug = $3 AND id != $4`,
+      canvas.scope_type === 'org'
+        ? [canvas.scope_type, canvas.org_id, newSlug, canvas.id]
+        : [canvas.scope_type, canvas.owner_user_id, newSlug, canvas.id]
+    );
 
-    // Delete old document - if this fails, rollback by deleting the new document
-    try {
-      await del(docName, { token: blobToken });
-    } catch (deleteError) {
-      // Rollback: delete the newly created document to maintain atomicity
-      try {
-        await del(newDocName, { token: blobToken });
-      } catch (rollbackError) {
-        console.error('Failed to rollback new document after delete failure:', rollbackError);
-        // Log but don't throw - the original delete error is more important
-      }
-      throw deleteError; // Re-throw the original delete error
+    if (existing) {
+      json(res, 400, { error: 'A canvas with this name already exists' });
+      return;
     }
+
+    // Update slug
+    await query(
+      `UPDATE canvases SET slug = $1, updated_by_user_id = $2, updated_at = now() WHERE id = $3`,
+      [newSlug, userId, canvas.id]
+    );
 
     json(res, 200, {
       success: true,
-      document: newDocName,
-      previous: docName
+      document: newSlug + '.yaml',
+      previous: canvas.slug + '.yaml',
+      id: canvas.id
     });
 
   } catch (error) {
+    if (error.message === 'Authentication required') {
+      json(res, 401, { error: 'Authentication required' });
+      return;
+    }
     console.error('Error renaming config:', error);
-    json(res, 500, { error: 'Failed to rename configuration' });
+    json(res, 500, { error: error.message || 'Failed to rename configuration' });
   }
 }
 
 /**
  * DELETE handler
- * Deletes config from Blob Storage
+ * Deletes a canvas
  */
 async function handleDelete(req, res) {
-  const blobToken = ensureBlobToken(res);
-  if (!blobToken) return;
-
   try {
-    const docParam = getQueryParam(req, 'doc');
-    if (!docParam) {
-      json(res, 400, { error: 'Missing document name' });
+    const auth = await requireAuth(req);
+    const { userId, orgId } = auth;
+
+    const docId = getDocumentIdentifier(req);
+    if (!docId) {
+      json(res, 400, { error: 'Missing document identifier' });
       return;
     }
 
-    const docName = sanitizeDocumentName(docParam);
-
-    // Check if document exists
-    const exists = await fetchDocumentFromBlob(docName, blobToken);
-    if (exists === null) {
-      json(res, 404, { error: `Document "${docName}" not found` });
+    // Check access - only owner can delete
+    const { hasAccess, canvas } = await checkCanvasAccess(userId, orgId, docId);
+    if (!hasAccess || !canvas) {
+      json(res, 404, { error: `Canvas not found or access denied` });
       return;
     }
 
-    // Delete from Blob Storage
-    await del(docName, { token: blobToken });
+    // Only owner can delete
+    if (canvas.owner_user_id !== userId) {
+      json(res, 403, { error: 'Only the owner can delete a canvas' });
+      return;
+    }
 
-    json(res, 200, { success: true, deleted: docName });
+    await query(`DELETE FROM canvases WHERE id = $1`, [canvas.id]);
+
+    json(res, 200, { 
+      success: true, 
+      deleted: canvas.slug + '.yaml',
+      id: canvas.id
+    });
 
   } catch (error) {
+    if (error.message === 'Authentication required') {
+      json(res, 401, { error: 'Authentication required' });
+      return;
+    }
     console.error('Error deleting config:', error);
-    json(res, 500, { error: 'Failed to delete configuration' });
+    json(res, 500, { error: error.message || 'Failed to delete configuration' });
   }
 }
 
 /**
- * Main handler - routes to GET or POST
+ * Main handler
  */
 export default async function handler(req, res) {
-  // Check authentication first
-  if (!(await checkAuth(req, res))) {
-    return; // checkAuth already sent the response
-  }
-
   if (req.method === 'GET') {
     return handleGet(req, res);
   } else if (req.method === 'POST') {

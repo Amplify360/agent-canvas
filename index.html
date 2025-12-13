@@ -6,6 +6,7 @@
     <title>AgentCanvas</title>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/js-yaml@4.1.0/dist/js-yaml.min.js"></script>
+    <script src="https://cdn.clerk.com/clerk-js@latest/dist/clerk.browser.js"></script>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -40,10 +41,8 @@
                         <i id="collapseAllIcon" data-lucide="chevrons-down"></i>
                         <span id="collapseAllText">Collapse All</span>
                     </button>
-                    <button type="button" class="btn btn-glass" id="logoutBtn" title="Logout" style="display: none;">
-                        <i data-lucide="log-out"></i>
-                        <span>Logout</span>
-                    </button>
+                    <div id="clerk-org-switcher" style="display: inline-block;"></div>
+                    <div id="clerk-user-button" style="display: inline-block;"></div>
                     <div class="document-controls-compact u-flex u-align-center u-gap-sm u-relative">
                         <select id="documentSelect">
                             <option value="">Loading...</option>
@@ -65,6 +64,10 @@
                             </div>
                             <div class="document-menu-divider menu-divider" data-role="menu-divider"></div>
                             <div class="document-menu-group u-flex u-flex-column u-gap-sm">
+                                <button type="button" class="menu-item" data-action="share">
+                                    <i data-lucide="share-2"></i>
+                                    Share Canvas
+                                </button>
                                 <button type="button" class="menu-item" data-action="rename">
                                     <i data-lucide="edit-3"></i>
                                     Rename Current
@@ -278,6 +281,26 @@
                     </button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- Share Canvas Modal -->
+    <div id="shareModal" class="modal">
+        <div class="surface-card modal-content modal-narrow">
+            <div class="modal-header">
+                <h2>Share Canvas</h2>
+                <button class="modal-close" id="shareModalClose">
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div id="shareModalContent">
+                    <p class="help-text">Loading sharing information...</p>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" id="shareModalCancel">Close</button>
+            </div>
         </div>
     </div>
 

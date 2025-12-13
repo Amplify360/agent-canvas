@@ -30,6 +30,7 @@ import {
     state,
     toArray
 } from './state.js';
+import { initClerk, authenticatedFetch } from './auth-client.js';
 
 // ----- Loading overlay helpers -----
 function showLoadingOverlay(message = 'Loading...') {
@@ -465,10 +466,7 @@ async function logout() {
 async function loadConfig(docName = state.currentDocumentName || DEFAULT_DOCUMENT_NAME) {
     try {
         const url = `/api/config?doc=${encodeURIComponent(docName)}`;
-        const response = await fetch(url);
-        if (handleAuthError(response)) {
-            return null;
-        }
+        const response = await authenticatedFetch(url);
         if (!response.ok) {
             throw new Error(`Config request failed: ${response.status}`);
         }
@@ -492,7 +490,7 @@ async function saveConfig() {
         setDocumentStatusMessage('Saving configuration...');
         const yamlText = window.jsyaml.dump(state.configData);
         const docName = state.currentDocumentName || DEFAULT_DOCUMENT_NAME;
-        const response = await fetch(`/api/config?doc=${encodeURIComponent(docName)}`, {
+        const response = await authenticatedFetch(`/api/config?doc=${encodeURIComponent(docName)}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'text/yaml',
@@ -500,10 +498,6 @@ async function saveConfig() {
             },
             body: yamlText
         });
-
-        if (handleAuthError(response)) {
-            return false;
-        }
 
         if (!response.ok) {
             throw new Error('Failed to save configuration');
@@ -1429,6 +1423,49 @@ document.addEventListener('click', (event) => {
 // Initialize on page load
 async function bootstrapApp() {
     try {
+        // Initialize Clerk first
+        const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY || window.CLERK_PUBLISHABLE_KEY;
+        if (clerkPubKey) {
+            await initClerk();
+            const clerk = window.Clerk;
+            
+            // Mount Clerk components
+            if (clerk.user) {
+                // Mount organization switcher if user is in an org
+                const orgSwitcherEl = document.getElementById('clerk-org-switcher');
+                if (orgSwitcherEl) {
+                    const orgSwitcher = clerk.OrganizationSwitcher({
+                        appearance: {
+                            elements: {
+                                rootBox: 'clerk-org-switcher-root'
+                            }
+                        }
+                    });
+                    orgSwitcher.mount('#clerk-org-switcher');
+                }
+                
+                // Mount user button
+                const userButtonEl = document.getElementById('clerk-user-button');
+                if (userButtonEl) {
+                    const userButton = clerk.UserButton({
+                        appearance: {
+                            elements: {
+                                rootBox: 'clerk-user-button-root'
+                            }
+                        },
+                        afterSignOutUrl: '/login'
+                    });
+                    userButton.mount('#clerk-user-button');
+                }
+            } else {
+                // Not authenticated, redirect to login
+                window.location.href = '/login';
+                return;
+            }
+        } else {
+            console.error('Clerk publishable key not configured');
+        }
+        
         await initializeDocumentControls();
         await loadAgents();
     } catch (error) {
@@ -1611,14 +1648,6 @@ function bindStaticEventHandlers() {
 document.addEventListener('DOMContentLoaded', bindStaticEventHandlers);
 document.addEventListener('DOMContentLoaded', bootstrapApp);
 
-// Logout button handler
-document.addEventListener('DOMContentLoaded', () => {
-    const logoutBtn = document.getElementById('logoutBtn');
-    if (logoutBtn) {
-        logoutBtn.style.display = 'flex';
-        logoutBtn.addEventListener('click', logout);
-        refreshIcons();
-    }
-});
+// Logout is now handled by Clerk UserButton component
 
 // No global window exports; all handlers are bound below.

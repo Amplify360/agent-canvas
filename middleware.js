@@ -1,4 +1,9 @@
-import { isAuthenticated } from './api/lib/session.js';
+/**
+ * Middleware for Clerk authentication
+ * Note: Clerk handles authentication via its own middleware patterns
+ * This middleware is kept minimal for UX redirects only
+ * Actual auth enforcement happens in API routes via Clerk JWT verification
+ */
 
 export const config = {
   runtime: 'edge',
@@ -17,14 +22,13 @@ export default async function middleware(request) {
     return;
   }
 
-  // Check if user is authenticated
-  const authenticated = await isAuthenticated(request);
-
-  if (!authenticated) {
-    // Redirect to login page
-    return Response.redirect(new URL('/login', request.url), 302);
+  // For API routes, let them handle their own auth via Clerk JWT
+  if (pathname.startsWith('/api/')) {
+    return;
   }
 
-  // User is authenticated, continue to the original request
+  // For page routes, Clerk SDK handles redirects client-side
+  // This middleware is kept for backward compatibility but doesn't enforce auth
+  // Actual enforcement happens in API routes
   return;
 }

@@ -1,4 +1,5 @@
 import { BLANK_DOCUMENT_TEMPLATE, DEFAULT_DOCUMENT_NAME, DOCUMENT_STORAGE_KEY, refreshIcons, state } from './state.js';
+import { authenticatedFetch } from './auth-client.js';
 
 let loadAgentsCallback = async () => {};
 
@@ -96,6 +97,9 @@ function handleDocumentMenuAction(action) {
             break;
         case 'blank':
             createBlankDocument();
+            break;
+        case 'share':
+            openShareModal();
             break;
         case 'rename':
             renameCurrentDocument();
@@ -210,14 +214,10 @@ export async function renameCurrentDocument() {
 
     try {
         setDocumentStatusMessage(`Renaming to "${newDocName}"...`);
-        const response = await fetch(
+        const response = await authenticatedFetch(
             `/api/config?doc=${encodeURIComponent(state.currentDocumentName)}&newDoc=${encodeURIComponent(newDocName)}`,
             { method: 'PUT' }
         );
-
-        if (handleAuthError(response)) {
-            return;
-        }
 
         if (!response.ok) {
             throw new Error('Rename failed');
@@ -256,15 +256,18 @@ function updateDocumentControlsUI() {
         } else {
             state.availableDocuments.forEach(doc => {
                 const option = document.createElement('option');
-                option.textContent = doc.name;
-                option.value = doc.name;
+                const docId = doc.id || doc.slug || doc.name;
+                const docTitle = doc.title || doc.name || doc.slug || doc.id;
+                option.textContent = docTitle;
+                option.value = docId;
                 select.appendChild(option);
             });
             select.disabled = false;
-            if (state.currentDocumentName && state.availableDocuments.some(doc => doc.name === state.currentDocumentName)) {
-                select.value = state.currentDocumentName;
-            } else {
-                select.value = state.availableDocuments[0].name;
+            const currentDocId = state.currentDocumentName;
+            if (currentDocId && state.availableDocuments.some(doc => (doc.id || doc.slug || doc.name) === currentDocId)) {
+                select.value = currentDocId;
+            } else if (state.availableDocuments.length > 0) {
+                select.value = state.availableDocuments[0].id || state.availableDocuments[0].slug || state.availableDocuments[0].name;
             }
         }
     }
@@ -275,10 +278,10 @@ function updateDocumentControlsUI() {
         } else if (!state.availableDocuments.length) {
             meta.textContent = 'No YAML documents found. Upload one to get started.';
         } else if (state.currentDocumentName) {
-            const doc = state.availableDocuments.find(d => d.name === state.currentDocumentName);
+            const doc = state.availableDocuments.find(d => (d.id || d.slug || d.name) === state.currentDocumentName);
             if (doc) {
                 const sizeText = typeof doc.size === 'number' ? formatBytes(doc.size) : '';
-                const updatedText = doc.updatedAt ? new Date(doc.updatedAt).toLocaleString() : '';
+                const updatedText = doc.updated_at || doc.updatedAt ? new Date(doc.updated_at || doc.updatedAt).toLocaleString() : '';
                 const details = [
                     updatedText && `Last updated ${updatedText}`,
                     sizeText && sizeText
@@ -354,15 +357,11 @@ export function sanitizeDocumentNameForClient(name) {
 export async function refreshDocumentList(preferredDocName) {
     try {
         setDocumentStatusMessage('Loading documents...');
-        const response = await fetch('/api/config?list=1', {
+        const response = await authenticatedFetch('/api/config?list=1', {
             headers: {
                 'Accept': 'application/json'
             }
         });
-
-        if (handleAuthError(response)) {
-            return;
-        }
 
         if (!response.ok) {
             throw new Error('Failed to fetch document list');
@@ -372,7 +371,7 @@ export async function refreshDocumentList(preferredDocName) {
         state.availableDocuments = Array.isArray(data.documents) ? data.documents : [];
         state.documentListLoaded = true;
 
-        const docNames = state.availableDocuments.map(doc => doc.name);
+        const docNames = state.availableDocuments.map(doc => doc.name || doc.slug || doc.id);
         let nextDoc = preferredDocName || state.currentDocumentName || getStoredDocumentPreference();
 
         if (!nextDoc && docNames.length) {
@@ -500,7 +499,7 @@ export async function uploadDocumentFromContents(docName, yamlText) {
     const payloadSize = typeof yamlText === 'string' ? yamlText.length : 0;
     setDocumentStatusMessage(`Uploading "${docName}"...`);
 
-    const response = await fetch(`/api/config?doc=${encodeURIComponent(docName)}`, {
+    const response = await authenticatedFetch(`/api/config?doc=${encodeURIComponent(docName)}`, {
         method: 'POST',
         headers: {
             'Content-Type': 'text/yaml',
@@ -508,10 +507,6 @@ export async function uploadDocumentFromContents(docName, yamlText) {
         },
         body: yamlText
     });
-
-    if (handleAuthError(response)) {
-        return;
-    }
 
     if (!response.ok) {
         let errorDetail = '';
@@ -551,10 +546,7 @@ export async function downloadCurrentDocument() {
     }
 
     try {
-        const response = await fetch(`/api/config?doc=${encodeURIComponent(state.currentDocumentName)}`);
-        if (handleAuthError(response)) {
-            return;
-        }
+        const response = await authenticatedFetch(`/api/config?doc=${encodeURIComponent(state.currentDocumentName)}`);
         if (!response.ok) {
             throw new Error('Download failed');
         }
@@ -596,14 +588,10 @@ export async function deleteCurrentDocument() {
 
     try {
         setDocumentStatusMessage(`Deleting "${state.currentDocumentName}"...`);
-        const response = await fetch(
+        const response = await authenticatedFetch(
             `/api/config?doc=${encodeURIComponent(state.currentDocumentName)}`,
             { method: 'DELETE' }
         );
-
-        if (handleAuthError(response)) {
-            return;
-        }
 
         if (!response.ok) {
             const data = await response.json().catch(() => ({}));
@@ -612,8 +600,8 @@ export async function deleteCurrentDocument() {
 
         // Store deleted document name before refreshDocumentList changes state.currentDocumentName
         const deletedDocName = state.currentDocumentName;
-        const remainingDocs = state.availableDocuments.filter(doc => doc.name !== deletedDocName);
-        const nextDoc = remainingDocs.length > 0 ? remainingDocs[0].name : null;
+        const remainingDocs = state.availableDocuments.filter(doc => (doc.name || doc.slug || doc.id) !== deletedDocName);
+        const nextDoc = remainingDocs.length > 0 ? (remainingDocs[0].name || remainingDocs[0].slug || remainingDocs[0].id) : null;
 
         await refreshDocumentList(nextDoc);
         if (nextDoc) {
@@ -629,3 +617,226 @@ export async function deleteCurrentDocument() {
         setDocumentStatusMessage('Delete failed.', 'error');
     }
 }
+
+export async function openShareModal() {
+    if (!state.currentDocumentName) {
+        alert('Select a canvas before sharing.');
+        return;
+    }
+
+    const modal = document.getElementById('shareModal');
+    const content = document.getElementById('shareModalContent');
+    if (!modal || !content) return;
+
+    modal.classList.add('show');
+    content.innerHTML = '<p class="help-text">Loading...</p>';
+
+    try {
+        // Get canvas ID (could be slug or ID)
+        const canvasId = state.currentDocumentName.replace(/\.yaml$/, '');
+        
+        // Fetch current shares
+        const sharesResponse = await authenticatedFetch(`/api/canvases/${encodeURIComponent(canvasId)}/shares`);
+        if (!sharesResponse.ok) {
+            throw new Error('Failed to load shares');
+        }
+        const sharesData = await sharesResponse.json();
+        const shares = sharesData.shares || [];
+
+        // Fetch groups if in org context
+        let groups = [];
+        try {
+            const groupsResponse = await authenticatedFetch('/api/groups');
+            if (groupsResponse.ok) {
+                const groupsData = await groupsResponse.json();
+                groups = groupsData.groups || [];
+            }
+        } catch (e) {
+            // Not in org context or groups not available
+        }
+
+        // Build UI
+        let html = '<div class="share-section">';
+        html += '<h3>Current Shares</h3>';
+        
+        if (shares.length === 0) {
+            html += '<p class="help-text">No shares yet. Add users or groups below.</p>';
+        } else {
+            html += '<ul class="share-list">';
+            shares.forEach(share => {
+                const typeLabel = share.principal_type === 'user' ? 'User' : 'Group';
+                html += `<li class="share-item">
+                    <span>${typeLabel}: ${share.principal_id}</span>
+                    <button type="button" class="btn btn-icon btn-danger" data-remove-share="${share.principal_type}:${share.principal_id}" title="Remove share">
+                        <i data-lucide="x"></i>
+                    </button>
+                </li>`;
+            });
+            html += '</ul>';
+        }
+
+        html += '</div>';
+        html += '<div class="share-section" style="margin-top: 20px;">';
+        html += '<h3>Add Share</h3>';
+        html += '<div class="form-group">';
+        html += '<label>Share Type</label>';
+        html += '<select id="sharePrincipalType" class="form-input">';
+        html += '<option value="user">User</option>';
+        if (groups.length > 0) {
+            html += '<option value="group">Group</option>';
+        }
+        html += '</select>';
+        html += '</div>';
+        
+        html += '<div class="form-group" id="shareUserGroup">';
+        html += '<label id="sharePrincipalLabel">User ID</label>';
+        html += '<input type="text" id="sharePrincipalId" class="form-input" placeholder="Enter Clerk User ID">';
+        html += '</div>';
+
+        if (groups.length > 0) {
+            html += '<div class="form-group" id="shareGroupSelect" style="display: none;">';
+            html += '<label>Group</label>';
+            html += '<select id="shareGroupId" class="form-input">';
+            groups.forEach(group => {
+                html += `<option value="${group.id}">${group.name}</option>`;
+            });
+            html += '</select>';
+            html += '</div>';
+        }
+
+        html += '<button type="button" class="btn btn-primary" id="addShareBtn" style="margin-top: 10px;">Add Share</button>';
+        html += '</div>';
+
+        content.innerHTML = html;
+        
+        // Refresh icons
+        if (window.lucide) window.lucide.createIcons();
+
+        // Bind events
+        const principalTypeSelect = document.getElementById('sharePrincipalType');
+        const userGroupDiv = document.getElementById('shareUserGroup');
+        const groupSelectDiv = document.getElementById('shareGroupSelect');
+        const principalLabel = document.getElementById('sharePrincipalLabel');
+
+        if (principalTypeSelect) {
+            principalTypeSelect.addEventListener('change', (e) => {
+                if (e.target.value === 'group' && groupSelectDiv) {
+                    userGroupDiv.style.display = 'none';
+                    groupSelectDiv.style.display = 'block';
+                } else {
+                    userGroupDiv.style.display = 'block';
+                    groupSelectDiv.style.display = 'none';
+                    if (principalLabel) principalLabel.textContent = 'User ID';
+                }
+            });
+        }
+
+        const addShareBtn = document.getElementById('addShareBtn');
+        if (addShareBtn) {
+            addShareBtn.addEventListener('click', async () => {
+                const principalType = principalTypeSelect?.value || 'user';
+                let principalId;
+                
+                if (principalType === 'group' && groupSelectDiv) {
+                    const groupSelect = document.getElementById('shareGroupId');
+                    principalId = groupSelect?.value;
+                } else {
+                    const principalInput = document.getElementById('sharePrincipalId');
+                    principalId = principalInput?.value?.trim();
+                }
+
+                if (!principalId) {
+                    alert('Please enter a user ID or select a group');
+                    return;
+                }
+
+                try {
+                    addShareBtn.disabled = true;
+                    addShareBtn.textContent = 'Adding...';
+
+                    const response = await authenticatedFetch(`/api/canvases/${encodeURIComponent(canvasId)}/shares`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ principalType, principalId }),
+                    });
+
+                    if (!response.ok) {
+                        const error = await response.json().catch(() => ({ error: 'Failed to add share' }));
+                        throw new Error(error.error || 'Failed to add share');
+                    }
+
+                    // Reload modal
+                    await openShareModal();
+                } catch (error) {
+                    alert('Failed to add share: ' + error.message);
+                } finally {
+                    addShareBtn.disabled = false;
+                    addShareBtn.textContent = 'Add Share';
+                }
+            });
+        }
+
+        // Bind remove share buttons
+        content.querySelectorAll('[data-remove-share]').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const shareKey = btn.dataset.removeShare;
+                const [principalType, principalId] = shareKey.split(':');
+
+                if (!confirm(`Remove share for ${principalType} "${principalId}"?`)) {
+                    return;
+                }
+
+                try {
+                    btn.disabled = true;
+
+                    const response = await authenticatedFetch(`/api/canvases/${encodeURIComponent(canvasId)}/shares`, {
+                        method: 'DELETE',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ principalType, principalId }),
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Failed to remove share');
+                    }
+
+                    // Reload modal
+                    await openShareModal();
+                } catch (error) {
+                    alert('Failed to remove share: ' + error.message);
+                    btn.disabled = false;
+                }
+            });
+        });
+
+    } catch (error) {
+        console.error('Error loading shares:', error);
+        content.innerHTML = `<p class="help-text" style="color: var(--text-error);">Failed to load sharing information: ${error.message}</p>`;
+    }
+}
+
+// Bind share modal close handlers
+document.addEventListener('DOMContentLoaded', () => {
+    const shareModal = document.getElementById('shareModal');
+    const shareModalClose = document.getElementById('shareModalClose');
+    const shareModalCancel = document.getElementById('shareModalCancel');
+
+    const closeShareModal = () => {
+        if (shareModal) shareModal.classList.remove('show');
+    };
+
+    if (shareModalClose) shareModalClose.addEventListener('click', closeShareModal);
+    if (shareModalCancel) shareModalCancel.addEventListener('click', closeShareModal);
+
+    // Close on backdrop click
+    if (shareModal) {
+        shareModal.addEventListener('click', (e) => {
+            if (e.target === shareModal) {
+                closeShareModal();
+            }
+        });
+    }
+});
