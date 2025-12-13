@@ -76,18 +76,12 @@ Or use Neon's SQL editor in the dashboard to paste and run `db/schema.sql`.
 
 ### 4. Configure Frontend
 
-The frontend needs access to the Clerk publishable key. You can either:
+The frontend automatically fetches the Clerk publishable key from `/api/clerk-config` endpoint. This endpoint reads `CLERK_PUBLISHABLE_KEY` from Vercel environment variables and exposes it to the frontend (publishable keys are safe to expose publicly).
 
-**Option A: Environment variable (recommended for Vercel)**
-- Set `VITE_CLERK_PUBLISHABLE_KEY` in Vercel (or use `CLERK_PUBLISHABLE_KEY`)
-
-**Option B: Window variable**
-- Add to `index.html` and `login.html`:
-```html
-<script>
-  window.CLERK_PUBLISHABLE_KEY = 'pk_test_...';
-</script>
-```
+**Implementation:**
+- `index.html` and `login.html` include a script that fetches `/api/clerk-config` and sets `window.CLERK_PUBLISHABLE_KEY`
+- The `/api/clerk-config.js` endpoint serves the key from `process.env.CLERK_PUBLISHABLE_KEY`
+- No manual configuration needed - just ensure `CLERK_PUBLISHABLE_KEY` is set in Vercel
 
 ### 5. Migrate Existing Data
 
@@ -157,11 +151,31 @@ If you need to rollback:
 2. Revert environment variables
 3. The old code will still work with Blob Storage
 
+## Setup Status
+
+✅ **Completed:**
+- Neon database created (`agent-canvas-eu` in EU Central)
+- Database schema applied
+- Clerk application created and configured
+- Environment variables set in Vercel v2 project:
+  - `DATABASE_URL` (Production, Preview, Development)
+  - `CLERK_SECRET_KEY` (Production, Preview, Development)
+  - `CLERK_PUBLISHABLE_KEY` (Production, Preview, Development)
+- Frontend code updated to fetch Clerk key from API endpoint
+- Local `.env.local` synced from Vercel
+
+⏳ **Remaining:**
+- Deploy v2 project to production (`vercel --prod`)
+- Test authentication flow (sign in, create canvas, save/load)
+- Connect GitHub integration for auto-deploys (optional)
+- Migrate existing data from Blob Storage (if any exists - see step 5)
+
 ## Troubleshooting
 
 **"Clerk publishable key not found"**
-- Ensure `VITE_CLERK_PUBLISHABLE_KEY` or `CLERK_PUBLISHABLE_KEY` is set
-- Check that Clerk SDK is loaded before initialization
+- Ensure `CLERK_PUBLISHABLE_KEY` is set in Vercel environment variables
+- Check that `/api/clerk-config` endpoint is accessible
+- Verify Clerk SDK is loaded before initialization (check browser console)
 
 **"Authentication required"**
 - Verify Clerk JWT token is being sent in `Authorization` header

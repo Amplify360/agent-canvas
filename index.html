@@ -7,6 +7,22 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/js-yaml@4.1.0/dist/js-yaml.min.js"></script>
     <script src="https://cdn.clerk.com/clerk-js@latest/dist/clerk.browser.js"></script>
+    <script>
+        // Fetch Clerk publishable key from API and set it globally
+        (async function() {
+            try {
+                const response = await fetch('/api/clerk-config');
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.publishableKey) {
+                        window.CLERK_PUBLISHABLE_KEY = data.publishableKey;
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to load Clerk config:', error);
+            }
+        })();
+    </script>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
