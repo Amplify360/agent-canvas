@@ -1449,18 +1449,6 @@ async function bootstrapApp() {
             // Clear redirect loop tracking on successful auth
             sessionStorage.removeItem('clerk_redirect_time');
 
-            // Mount organization switcher if user is in an org
-            const orgSwitcherEl = document.getElementById('clerk-org-switcher');
-            if (orgSwitcherEl) {
-                clerk.mountOrganizationSwitcher(orgSwitcherEl, {
-                    appearance: {
-                        elements: {
-                            rootBox: 'clerk-org-switcher-root'
-                        }
-                    }
-                });
-            }
-
             // Mount user button
             const userButtonEl = document.getElementById('clerk-user-button');
             if (userButtonEl) {
