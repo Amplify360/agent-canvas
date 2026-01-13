@@ -166,4 +166,3 @@ Common issues:
 
 - `docs/MIGRATION-CONVEX-WORKOS.md` - Full migration documentation
 - `.env.example` - Environment variable template
-- `_deprecated/` - Old Clerk/Neon/KV code for reference
