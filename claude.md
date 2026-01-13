@@ -150,13 +150,6 @@ subscribeToAgents(canvasId, (agents) => renderAgentGroups(agents));
 
 ## Debugging
 
-```javascript
-// Browser console
-getCurrentUser()        // Current auth state
-getUserOrgs()          // User's organizations
-getConvex()            // Convex client instance
-```
-
 Common issues:
 - **Auth fails**: Check WORKOS_* env vars, ensure WorkOS dashboard has correct redirect URIs
 - **Convex errors**: Run `npx convex dev` to sync schema, check Convex dashboard logs
