@@ -30,22 +30,8 @@ import {
     state,
     toArray
 } from './state.js';
-import { initAuth, signOut, getCurrentUser, getUserName, getUserEmail, getUserOrgs, getCurrentOrg, setCurrentOrg, isAuthenticated } from './auth-client-workos.js';
+import { initAuth, signOut, getCurrentUser, getUserName, getUserEmail, getUserOrgs, getCurrentOrg, setCurrentOrg, isAuthenticated, authenticatedFetch } from './auth-client-workos.js';
 import { initConvexClient, getConvexClient } from './convex-client.js';
-
-// Compatibility: Create authenticatedFetch wrapper for gradual migration
-async function authenticatedFetch(url, options = {}) {
-    // With WorkOS, we use session cookies - no need for Bearer token
-    const response = await fetch(url, {
-        ...options,
-        credentials: 'include',
-    });
-    if (response.status === 401) {
-        window.location.href = '/login';
-        throw new Error('Unauthorized');
-    }
-    return response;
-}
 
 // Organization/group state (uses WorkOS orgs from auth)
 let currentGroupId = null;
@@ -551,28 +537,6 @@ async function copyYaml(type) {
 }
 async function copyAgentYaml() { return copyYaml('agent'); }
 async function copyGroupYaml() { return copyYaml('group'); }
-
-// ----- Auth helpers -----
-function handleAuthError(response) {
-    if (response.status === 401) {
-        window.location.href = '/login';
-        return true;
-    }
-    return false;
-}
-
-async function logout() {
-    try {
-        const response = await fetch('/api/auth/logout', { method: 'POST' });
-        if (response.ok) {
-            window.location.href = '/login';
-        }
-    } catch (error) {
-        console.error('Logout error:', error);
-        // Still redirect to login even if logout fails
-        window.location.href = '/login';
-    }
-}
 
 // ----- Config load/save -----
 async function loadConfig(docName = state.currentDocumentName || DEFAULT_DOCUMENT_NAME) {
@@ -1786,7 +1750,3 @@ function bindStaticEventHandlers() {
 
 document.addEventListener('DOMContentLoaded', bindStaticEventHandlers);
 document.addEventListener('DOMContentLoaded', bootstrapApp);
-
-// Logout is handled by the user menu dropdown via signOut()
-
-// No global window exports; all handlers are bound below.

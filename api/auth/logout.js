@@ -17,7 +17,7 @@ export default async function handler(request) {
     status: 200,
     headers: {
       'Content-Type': 'application/json',
-      'Set-Cookie': clearSessionCookie(),
-    },
+      'Set-Cookie': clearSessionCookie()
+    }
   });
 }

@@ -1,4 +1,4 @@
-import { QueryCtx, MutationCtx, ActionCtx } from "../_generated/server";
+import { QueryCtx, MutationCtx } from "../_generated/server";
 
 /**
  * Auth context passed to Convex functions

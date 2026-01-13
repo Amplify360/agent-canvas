@@ -8,14 +8,6 @@ export function registerLoadAgents(fn) {
     loadAgentsCallback = typeof fn === 'function' ? fn : loadAgentsCallback;
 }
 
-function handleAuthError(response) {
-    if (response.status === 401) {
-        window.location.href = '/login';
-        return true;
-    }
-    return false;
-}
-
 function getStoredDocumentPreference() {
     try {
         return localStorage.getItem(DOCUMENT_STORAGE_KEY);

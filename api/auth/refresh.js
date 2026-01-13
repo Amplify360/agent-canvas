@@ -60,8 +60,8 @@ export default async function handler(request) {
       status: 200,
       headers: {
         'Content-Type': 'application/json',
-        'Set-Cookie': createSessionCookie(sessionToken),
-      },
+        'Set-Cookie': createSessionCookie(sessionToken)
+      }
     });
   } catch (error) {
     console.error('Token refresh error:', error);

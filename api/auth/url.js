@@ -3,14 +3,9 @@
  * Generate WorkOS authorization URL for login
  */
 
-export const config = { runtime: 'edge' };
+import { json } from '../lib/session-utils.js';
 
-function json(data, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
-}
+export const config = { runtime: 'edge' };
 
 export default async function handler(request) {
   if (request.method !== 'POST') {
