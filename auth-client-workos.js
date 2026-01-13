@@ -247,14 +247,3 @@ export async function authenticatedFetch(url, options = {}) {
   return response;
 }
 
-/**
- * Accept pending organization invites
- * With WorkOS, invites are handled through WorkOS AuthKit UI
- * This is a no-op for backward compatibility
- * @returns {Promise<{processed: number, groups: Array}>}
- */
-export async function acceptPendingInvites() {
-  // WorkOS handles invites through its own UI flow
-  // This function is kept for backward compatibility
-  return { processed: 0, groups: [] };
-}

@@ -47,16 +47,20 @@ async function authenticatedFetch(url, options = {}) {
     return response;
 }
 
-// Placeholder group functions until groups-ui.js is updated
+// Organization/group state (uses WorkOS orgs from auth)
 let currentGroupId = null;
 let userGroups = [];
 let isSuperAdmin = false;
 
-function getCurrentGroupId() {
+export function getCurrentGroupId() {
     return currentGroupId;
 }
 
-function canManageCanvasesInCurrentGroup() {
+export function getUserGroups() {
+    return userGroups;
+}
+
+export function canManageCanvasesInCurrentGroup() {
     if (isSuperAdmin) return true;
     const group = userGroups.find(g => g.id === currentGroupId);
     return group?.role === 'admin';
