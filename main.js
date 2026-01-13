@@ -30,8 +30,76 @@ import {
     state,
     toArray
 } from './state.js';
-import { initClerk, authenticatedFetch, acceptPendingInvites } from './auth-client.js';
-import { initializeGroups, getCurrentGroupId, canManageCanvasesInCurrentGroup, renderGroupSwitcher, getCurrentGroupRole } from './groups-ui.js';
+import { initAuth, signOut, getCurrentUser, getUserName, getUserEmail, getUserOrgs, getCurrentOrg, setCurrentOrg, isAuthenticated, authenticatedFetch } from './auth-client-workos.js';
+import { initConvexClient, getConvexClient } from './convex-client.js';
+
+// Organization/group state (uses WorkOS orgs from auth)
+let currentGroupId = null;
+let userGroups = [];
+let isSuperAdmin = false;
+
+export function getCurrentGroupId() {
+    return currentGroupId;
+}
+
+export function getUserGroups() {
+    return userGroups;
+}
+
+export function canManageCanvasesInCurrentGroup() {
+    if (isSuperAdmin) return true;
+    const group = userGroups.find(g => g.id === currentGroupId);
+    return group?.role === 'admin';
+}
+
+function getCurrentGroupRole() {
+    if (isSuperAdmin) return 'admin';
+    const group = userGroups.find(g => g.id === currentGroupId);
+    return group?.role || 'viewer';
+}
+
+async function initializeGroups() {
+    const orgs = getUserOrgs();
+    userGroups = orgs.map(org => ({
+        id: org.id,
+        name: org.name || org.id,
+        role: org.role || 'member',
+    }));
+
+    // Check for super_admin role
+    isSuperAdmin = orgs.some(org => org.role === 'super_admin');
+
+    // Set current group from preference or first available
+    const currentOrg = getCurrentOrg();
+    currentGroupId = currentOrg?.id || (orgs[0]?.id || null);
+
+    // Render group switcher (simplified)
+    renderGroupSwitcher();
+
+    return userGroups;
+}
+
+function renderGroupSwitcher() {
+    const container = document.getElementById('groupSwitcherContainer');
+    if (!container || userGroups.length <= 1) return;
+
+    container.innerHTML = `
+        <select id="groupSelect" class="group-select">
+            ${userGroups.map(g => `
+                <option value="${g.id}" ${g.id === currentGroupId ? 'selected' : ''}>
+                    ${g.name}
+                </option>
+            `).join('')}
+        </select>
+    `;
+
+    const select = container.querySelector('#groupSelect');
+    select?.addEventListener('change', (e) => {
+        currentGroupId = e.target.value;
+        setCurrentOrg(currentGroupId);
+        window.dispatchEvent(new CustomEvent('groupChanged', { detail: { groupId: currentGroupId } }));
+    });
+}
 
 // ----- Role-based UI visibility -----
 function updateRoleBasedUI() {
@@ -469,28 +537,6 @@ async function copyYaml(type) {
 }
 async function copyAgentYaml() { return copyYaml('agent'); }
 async function copyGroupYaml() { return copyYaml('group'); }
-
-// ----- Auth helpers -----
-function handleAuthError(response) {
-    if (response.status === 401) {
-        window.location.href = '/login';
-        return true;
-    }
-    return false;
-}
-
-async function logout() {
-    try {
-        const response = await fetch('/api/auth/logout', { method: 'POST' });
-        if (response.ok) {
-            window.location.href = '/login';
-        }
-    } catch (error) {
-        console.error('Logout error:', error);
-        // Still redirect to login even if logout fails
-        window.location.href = '/login';
-    }
-}
 
 // ----- Config load/save -----
 async function loadConfig(docName = state.currentDocumentName || DEFAULT_DOCUMENT_NAME) {
@@ -1453,46 +1499,28 @@ document.addEventListener('click', (event) => {
 // Initialize on page load
 async function bootstrapApp() {
     try {
-        // Wait for Clerk config to be loaded (if available)
-        if (window.clerkConfigReady) {
-            const configLoaded = await window.clerkConfigReady;
-            if (!configLoaded) {
-                console.error('Failed to load Clerk configuration');
-                // Still try to proceed - maybe key is set another way
-            }
+        // Initialize Convex client
+        if (window.CONVEX_URL) {
+            initConvexClient(window.CONVEX_URL);
         }
-        
-        // Initialize Clerk first
-        const clerkPubKey = window.CLERK_PUBLISHABLE_KEY;
-        if (!clerkPubKey) {
-            console.error('Clerk publishable key not configured');
-            // Redirect to login if we can't initialize auth
-            window.location.href = '/login';
-            return;
-        }
-        
-        await initClerk();
-        const clerk = window.Clerk;
 
-        // Mount Clerk components
-        if (clerk.user) {
+        // Initialize authentication (WorkOS)
+        const { authenticated, user } = await initAuth();
+
+        if (authenticated && user) {
             // Clear redirect loop tracking on successful auth
-            sessionStorage.removeItem('clerk_redirect_time');
+            sessionStorage.removeItem('auth_redirect_time');
 
-            // Mount user button
-            const userButtonEl = document.getElementById('clerk-user-button');
-            if (userButtonEl) {
-                clerk.mountUserButton(userButtonEl, {
-                    appearance: {
-                        elements: {
-                            rootBox: 'clerk-user-button-root'
-                        }
-                    },
-                    afterSignOutUrl: '/login'
-                });
-            }
+            // Update user menu UI
+            const userDisplayName = document.getElementById('userDisplayName');
+            const userEmail = document.getElementById('userEmail');
+            if (userDisplayName) userDisplayName.textContent = getUserName() || 'User';
+            if (userEmail) userEmail.textContent = getUserEmail() || '';
 
-            // Initialize groups (also accepts pending invites)
+            // Bind user menu events
+            bindUserMenuEvents();
+
+            // Initialize groups/orgs
             await initializeGroups();
 
             // Update role-based UI visibility
@@ -1503,23 +1531,48 @@ async function bootstrapApp() {
         } else {
             // Not authenticated, redirect to login
             // Prevent redirect loops using sessionStorage
-            const lastRedirect = sessionStorage.getItem('clerk_redirect_time');
+            const lastRedirect = sessionStorage.getItem('auth_redirect_time');
             const now = Date.now();
             if (lastRedirect && (now - parseInt(lastRedirect)) < 5000) {
                 console.error('Redirect loop detected! Stopping redirect.');
                 document.body.innerHTML = '<div style="padding: 40px; text-align: center;"><h2>Authentication Error</h2><p>Unable to verify authentication. Please <a href="/login">try logging in again</a>.</p></div>';
                 return;
             }
-            sessionStorage.setItem('clerk_redirect_time', now.toString());
+            sessionStorage.setItem('auth_redirect_time', now.toString());
             console.log('No user found, redirecting to login...');
             window.location.href = '/login';
             return;
         }
-        
+
         await initializeDocumentControls();
         await loadAgents();
     } catch (error) {
         console.error('Initialization failed:', error);
+    }
+}
+
+// Bind user menu dropdown events
+function bindUserMenuEvents() {
+    const userMenuBtn = document.getElementById('userMenuBtn');
+    const userMenuDropdown = document.getElementById('userMenuDropdown');
+    const signOutBtn = document.getElementById('signOutBtn');
+
+    if (userMenuBtn && userMenuDropdown) {
+        userMenuBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            userMenuDropdown.classList.toggle('show');
+        });
+
+        // Close on click outside
+        document.addEventListener('click', () => {
+            userMenuDropdown.classList.remove('show');
+        });
+    }
+
+    if (signOutBtn) {
+        signOutBtn.addEventListener('click', async () => {
+            await signOut();
+        });
     }
 }
 
@@ -1697,7 +1750,3 @@ function bindStaticEventHandlers() {
 
 document.addEventListener('DOMContentLoaded', bindStaticEventHandlers);
 document.addEventListener('DOMContentLoaded', bootstrapApp);
-
-// Logout is now handled by Clerk UserButton component
-
-// No global window exports; all handlers are bound below.

@@ -7,57 +7,8 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/js-yaml@4.1.0/dist/js-yaml.min.js"></script>
     <script>
-        // Fetch Clerk publishable key from API and dynamically inject the SDK script
-        window.clerkConfigReady = (async function() {
-            try {
-                const response = await fetch('/api/clerk-config');
-                if (!response.ok) {
-                    console.error('Clerk config API returned', response.status);
-                    return false;
-                }
-                const data = await response.json();
-                if (!data.publishableKey) {
-                    console.error('Clerk publishable key not found in API response');
-                    return false;
-                }
-
-                window.CLERK_PUBLISHABLE_KEY = data.publishableKey;
-
-                // Dynamically inject Clerk script with the publishable key
-                const script = document.createElement('script');
-                script.src = 'https://cdn.jsdelivr.net/npm/@clerk/clerk-js@5/dist/clerk.browser.js';
-                script.async = true;
-                script.crossOrigin = 'anonymous';
-                script.dataset.clerkPublishableKey = data.publishableKey;
-
-                // Wait for script to load
-                await new Promise((resolve, reject) => {
-                    script.onload = resolve;
-                    script.onerror = () => reject(new Error('Failed to load Clerk SDK'));
-                    document.head.appendChild(script);
-                });
-
-                // Wait for window.Clerk to be available
-                let attempts = 0;
-                while (!window.Clerk && attempts < 50) {
-                    await new Promise(r => setTimeout(r, 100));
-                    attempts++;
-                }
-
-                if (!window.Clerk) {
-                    console.error('window.Clerk not available after script load');
-                    return false;
-                }
-
-                // Load Clerk immediately
-                await window.Clerk.load();
-
-                return true;
-            } catch (error) {
-                console.error('Failed to load Clerk config:', error);
-                return false;
-            }
-        })();
+        // Convex configuration - set by environment or build process
+        window.CONVEX_URL = window.CONVEX_URL || 'https://your-deployment.convex.cloud';
     </script>
     <link rel="stylesheet" href="styles.css">
 </head>
@@ -94,7 +45,23 @@
                         <i id="collapseAllIcon" data-lucide="chevrons-down"></i>
                         <span id="collapseAllText">Collapse All</span>
                     </button>
-                    <div id="clerk-user-button" style="display: inline-block;"></div>
+                    <div id="user-menu" class="user-menu">
+                        <button type="button" class="btn btn-glass user-menu-btn" id="userMenuBtn" title="User menu">
+                            <i data-lucide="user"></i>
+                            <span id="userDisplayName">User</span>
+                            <i data-lucide="chevron-down" class="user-menu-chevron"></i>
+                        </button>
+                        <div class="menu-panel user-menu-dropdown" id="userMenuDropdown">
+                            <div class="user-menu-header">
+                                <span id="userEmail">user@example.com</span>
+                            </div>
+                            <div class="menu-divider"></div>
+                            <button type="button" class="menu-item" id="signOutBtn">
+                                <i data-lucide="log-out"></i>
+                                Sign out
+                            </button>
+                        </div>
+                    </div>
                     <div class="document-controls-compact u-flex u-align-center u-gap-sm u-relative">
                         <select id="documentSelect">
                             <option value="">Loading...</option>
@@ -336,26 +303,6 @@
         </div>
     </div>
 
-    <!-- Share Canvas Modal -->
-    <div id="shareModal" class="modal">
-        <div class="surface-card modal-content modal-narrow">
-            <div class="modal-header">
-                <h2>Share Canvas</h2>
-                <button class="modal-close" id="shareModalClose">
-                    <i data-lucide="x"></i>
-                </button>
-            </div>
-            <div class="modal-body">
-                <div id="shareModalContent">
-                    <p class="help-text">Loading sharing information...</p>
-                </div>
-            </div>
-            <div class="modal-actions">
-                <button type="button" class="btn btn-secondary" id="shareModalCancel">Close</button>
-            </div>
-        </div>
-    </div>
-
     <!-- Edit Full YAML Modal -->
     <div id="fullYamlModal" class="modal">
         <div class="surface-card modal-content modal-large">
@@ -377,24 +324,6 @@
                 <button type="button" class="btn btn-primary" id="fullYamlSave">
                     <i data-lucide="save"></i> Save Full Config
                 </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Group Management Modal -->
-    <div id="groupManagementModal" class="modal">
-        <div class="surface-card modal-content">
-            <div class="modal-header">
-                <h2>Group Settings</h2>
-                <button class="modal-close" id="groupManagementModalClose">
-                    <i data-lucide="x"></i>
-                </button>
-            </div>
-            <div class="modal-body" id="groupManagementContent">
-                <p class="help-text">Loading...</p>
-            </div>
-            <div class="modal-actions">
-                <button type="button" class="btn btn-secondary" id="groupManagementModalCancel">Close</button>
             </div>
         </div>
     </div>

@@ -376,6 +376,100 @@ body {
     margin: 10px 0;
 }
 
+/* User Menu Dropdown */
+.user-menu {
+    position: relative;
+}
+
+.user-menu-trigger {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--glass-border-light);
+    background: var(--overlay-dark);
+    color: var(--text-inverse);
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.user-menu-trigger:hover {
+    background: var(--overlay-dark-strong);
+}
+
+.user-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--brand-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75em;
+    font-weight: 600;
+    color: var(--text-inverse);
+    text-transform: uppercase;
+}
+
+.user-name {
+    font-size: 0.9em;
+    font-weight: 500;
+    max-width: 150px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.user-menu-dropdown {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    min-width: 220px;
+    --menu-bg: var(--surface-contrast);
+    --menu-text: var(--text-inverse);
+    --menu-border: var(--context-menu-border);
+    --menu-hover-bg: var(--glass-overlay);
+    --menu-divider-color: var(--context-menu-divider);
+}
+
+.user-menu-header {
+    padding: 12px 10px;
+    border-bottom: 1px solid var(--menu-divider-color, var(--border-strong));
+    margin-bottom: 8px;
+}
+
+.user-menu-email {
+    font-size: 0.8em;
+    color: var(--text-glass-muted);
+    word-break: break-all;
+}
+
+.user-menu-org {
+    font-size: 0.85em;
+    font-weight: 500;
+    margin-top: 4px;
+}
+
+.org-selector {
+    margin-top: 8px;
+}
+
+.org-selector select {
+    width: 100%;
+    padding: 6px 8px;
+    border-radius: 6px;
+    border: 1px solid var(--glass-border-light);
+    background: var(--overlay-dark);
+    color: var(--text-inverse);
+    font-size: 0.85em;
+    cursor: pointer;
+}
+
+.org-selector select:hover {
+    background: var(--overlay-dark-strong);
+}
+
 .header-meta {
     margin-top: 10px;
     display: flex;
