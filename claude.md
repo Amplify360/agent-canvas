@@ -157,5 +157,6 @@ Common issues:
 
 ## Related Files
 
-- `docs/MIGRATION-CONVEX-WORKOS.md` - Full migration documentation
 - `.env.example` - Environment variable template
+- `docs/DEPLOYMENT_GUIDE.md` - Vercel deployment instructions
+- `docs/VERCEL_PROJECTS.md` - Project IDs and URLs
