@@ -1,10 +1,32 @@
 // Shared application state and low-level utilities
 export const state = {
+    // Auth state
+    user: null,
+    isAuthenticated: false,
+
+    // Organization state (from WorkOS)
+    currentOrgId: null,
+    userOrgs: [],
+
+    // Canvas state (Convex)
+    currentCanvasId: null,
+    currentCanvas: null,
+    canvases: [],
+
+    // Agent state (Convex) - replaces configData.agentGroups
+    agents: [],
+
+    // Org settings (Convex)
+    orgSettings: null,
+
+    // Legacy - kept for backward compatibility during migration
     configData: null,
     dynamicStyleElement: null,
     currentDocumentName: null,
     availableDocuments: [],
     documentListLoaded: false,
+
+    // Modal state
     agentModalViewMode: 'form',
     groupModalViewMode: 'form',
     agentModalOriginal: null,
@@ -16,6 +38,8 @@ export const state = {
 export const DEFAULT_DOCUMENT_NAME = 'config.yaml';
 export const DOCUMENT_STORAGE_KEY = 'agentcanvas-active-doc';
 export const COLLAPSED_SECTIONS_KEY = 'agentcanvas-collapsed-sections';
+export const CURRENT_ORG_KEY = 'agentcanvas-current-org';
+export const CURRENT_CANVAS_KEY = 'agentcanvas-current-canvas';
 
 export const BLANK_DOCUMENT_TEMPLATE = [
     '# AgentCanvas configuration',
@@ -179,4 +203,79 @@ export function saveCollapsedState() {
     } catch (error) {
         console.warn('Unable to save collapsed sections:', error);
     }
+}
+
+// Organization preference helpers
+export function loadOrgPreference() {
+    try {
+        return localStorage.getItem(CURRENT_ORG_KEY) || null;
+    } catch (error) {
+        console.warn('Unable to read org preference:', error);
+        return null;
+    }
+}
+
+export function saveOrgPreference(orgId) {
+    try {
+        if (orgId) {
+            localStorage.setItem(CURRENT_ORG_KEY, orgId);
+        } else {
+            localStorage.removeItem(CURRENT_ORG_KEY);
+        }
+        state.currentOrgId = orgId;
+    } catch (error) {
+        console.warn('Unable to save org preference:', error);
+    }
+}
+
+// Canvas preference helpers
+export function loadCanvasPreference() {
+    try {
+        return localStorage.getItem(CURRENT_CANVAS_KEY) || null;
+    } catch (error) {
+        console.warn('Unable to read canvas preference:', error);
+        return null;
+    }
+}
+
+export function saveCanvasPreference(canvasId) {
+    try {
+        if (canvasId) {
+            localStorage.setItem(CURRENT_CANVAS_KEY, canvasId);
+        } else {
+            localStorage.removeItem(CURRENT_CANVAS_KEY);
+        }
+        state.currentCanvasId = canvasId;
+    } catch (error) {
+        console.warn('Unable to save canvas preference:', error);
+    }
+}
+
+// Group agents by phase for rendering
+export function groupAgentsByPhase(agents = state.agents) {
+    const phases = new Map();
+
+    for (const agent of agents) {
+        const phase = agent.phase || 'Uncategorized';
+        if (!phases.has(phase)) {
+            phases.set(phase, {
+                phase,
+                phaseOrder: agent.phaseOrder || 0,
+                agents: []
+            });
+        }
+        phases.get(phase).agents.push(agent);
+    }
+
+    // Sort phases by phaseOrder
+    const sortedPhases = Array.from(phases.values()).sort(
+        (a, b) => a.phaseOrder - b.phaseOrder
+    );
+
+    // Sort agents within each phase by agentOrder
+    for (const phaseGroup of sortedPhases) {
+        phaseGroup.agents.sort((a, b) => (a.agentOrder || 0) - (b.agentOrder || 0));
+    }
+
+    return sortedPhases;
 }

@@ -7,11 +7,10 @@
     {
       "source": "/login/:path*",
       "destination": "/login.html"
+    },
+    {
+      "source": "/callback",
+      "destination": "/callback.html"
     }
   ]
 }
-
-
-
-
-
