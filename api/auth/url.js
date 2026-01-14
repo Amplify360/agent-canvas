@@ -3,7 +3,7 @@
  * Generate WorkOS authorization URL for login
  */
 
-import { json } from '../lib/session-utils.js';
+import { json, createOAuthStateCookie } from '../lib/session-utils.js';
 
 export const config = { runtime: 'edge' };
 
@@ -31,7 +31,7 @@ export default async function handler(request) {
     status: 200,
     headers: {
       'Content-Type': 'application/json',
-      'Set-Cookie': `oauth_state=${state}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=600`,
+      'Set-Cookie': createOAuthStateCookie(state),
     },
   });
 }

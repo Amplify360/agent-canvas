@@ -45,18 +45,25 @@ export default async function handler(request) {
     }
 
     const tokenData = await response.json();
-    const { access_token, refresh_token } = tokenData;
+    const { access_token, refresh_token, id_token } = tokenData;
+
+    // WorkOS access tokens typically expire in 15-60 minutes
+    // Update expiration time for proactive refresh (refresh at 50 minutes)
+    const accessTokenExpiresAt = Date.now() + 50 * 60 * 1000;
 
     // Update session with new tokens, preserve user and org data
     const newSession = {
       ...session,
       accessToken: access_token,
       refreshToken: refresh_token || session.refreshToken, // Keep old if not rotated
+      idToken: id_token || session.idToken, // Update id_token if provided, otherwise keep existing
+      accessTokenExpiresAt, // Update expiration time
     };
 
     const sessionToken = await encryptSession(newSession);
 
-    return new Response(JSON.stringify({ success: true }), {
+    // Return idToken in response to avoid requiring a second fetch
+    return new Response(JSON.stringify({ success: true, idToken: newSession.idToken }), {
       status: 200,
       headers: {
         'Content-Type': 'application/json',

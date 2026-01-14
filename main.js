@@ -30,8 +30,9 @@ import {
     state,
     toArray
 } from './state.js';
-import { initAuth, signOut, getCurrentUser, getUserName, getUserEmail, getUserOrgs, getCurrentOrg, setCurrentOrg, isAuthenticated, authenticatedFetch } from './auth-client-workos.js';
-import { initConvexClient, getConvexClient } from './convex-client.js';
+import { initAuth, signOut, getCurrentUser, getUserName, getUserEmail, getUserOrgs, getCurrentOrg, setCurrentOrg, isAuthenticated, getIdToken } from './auth-client-workos.js';
+import { initConvexClient, getConvexClient, updateConvexAuth, getDocument } from './convex-client.js';
+import { convexToYaml, yamlToConvexAgents } from './yaml-converter.js';
 
 // Organization/group state (uses WorkOS orgs from auth)
 let currentGroupId = null;
@@ -541,17 +542,29 @@ async function copyGroupYaml() { return copyYaml('group'); }
 // ----- Config load/save -----
 async function loadConfig(docName = state.currentDocumentName || DEFAULT_DOCUMENT_NAME) {
     try {
-        const url = `/api/config?doc=${encodeURIComponent(docName)}`;
-        const response = await authenticatedFetch(url);
-        if (!response.ok) {
-            throw new Error(`Config request failed: ${response.status}`);
+        const currentOrg = getCurrentOrg();
+        if (!currentOrg) {
+            throw new Error('No organization selected');
         }
-        const yamlText = await response.text();
-        state.configData = window.jsyaml.load(yamlText);
-        const resolvedDoc = response.headers.get('X-Config-Document');
-        if (resolvedDoc) {
-            setActiveDocumentName(resolvedDoc);
+
+        // Get canvas from Convex
+        const canvas = await getDocument(currentOrg.id, docName);
+        if (!canvas) {
+            throw new Error(`Document "${docName}" not found`);
         }
+
+        // Get agents for this canvas
+        const agents = await getConvexClient().query("agents:list", { canvasId: canvas._id });
+        
+        // Get org settings for toolsConfig and sectionDefaults
+        const orgSettings = await getConvexClient().query("orgSettings:get", { workosOrgId: currentOrg.id }).catch(() => null);
+
+        // Convert Convex data to YAML format
+        state.configData = convexToYaml(canvas, agents, orgSettings);
+        
+        // Store canvas ID for future operations
+        state.currentCanvasId = canvas._id;
+        
         return state.configData;
     } catch (error) {
         console.error('Error loading config:', error);
@@ -564,23 +577,45 @@ async function loadConfig(docName = state.currentDocumentName || DEFAULT_DOCUMEN
 async function saveConfig() {
     try {
         setDocumentStatusMessage('Saving configuration...');
-        const yamlText = window.jsyaml.dump(state.configData);
         const docName = state.currentDocumentName || DEFAULT_DOCUMENT_NAME;
-        const response = await authenticatedFetch(`/api/config?doc=${encodeURIComponent(docName)}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'text/yaml',
-                'X-Config-Name': docName
-            },
-            body: yamlText
-        });
-
-        if (!response.ok) {
-            throw new Error('Failed to save configuration');
+        const currentOrg = getCurrentOrg();
+        if (!currentOrg) {
+            throw new Error('No organization selected');
         }
 
-        const result = await response.json();
-        console.log('Config saved:', result);
+        // Convert YAML to Convex agents format
+        const agents = yamlToConvexAgents(state.configData);
+        
+        // Get or create canvas
+        let canvas = await getDocument(currentOrg.id, docName);
+        const title = state.configData.documentTitle || docName;
+        const yamlText = window.jsyaml.dump(state.configData);
+
+        if (!canvas) {
+            // Create new canvas
+            const canvasId = await getConvexClient().mutation("canvases:create", {
+                workosOrgId: currentOrg.id,
+                title,
+                slug: docName,
+                sourceYaml: yamlText,
+            });
+            canvas = await getConvexClient().query("canvases:get", { canvasId });
+        } else {
+            // Update existing canvas
+            await getConvexClient().mutation("canvases:update", {
+                canvasId: canvas._id,
+                title,
+                sourceYaml: yamlText,
+            });
+        }
+
+        // Atomically replace all agents for this canvas
+        await getConvexClient().mutation("agents:bulkReplace", {
+            canvasId: canvas._id,
+            agents,
+        });
+
+        state.currentCanvasId = canvas._id;
         setDocumentStatusMessage('Saved.', 'success');
         await refreshDocumentList(docName);
         return true;
@@ -1499,15 +1534,15 @@ document.addEventListener('click', (event) => {
 // Initialize on page load
 async function bootstrapApp() {
     try {
-        // Initialize Convex client
-        if (window.CONVEX_URL) {
-            initConvexClient(window.CONVEX_URL);
-        }
-
-        // Initialize authentication (WorkOS)
+        // Initialize authentication (WorkOS) first
         const { authenticated, user } = await initAuth();
 
         if (authenticated && user) {
+            // Initialize Convex client with auth
+            if (window.CONVEX_URL) {
+                initConvexClient(window.CONVEX_URL, getIdToken);
+            }
+
             // Clear redirect loop tracking on successful auth
             sessionStorage.removeItem('auth_redirect_time');
 
@@ -1571,6 +1606,8 @@ function bindUserMenuEvents() {
 
     if (signOutBtn) {
         signOutBtn.addEventListener('click', async () => {
+            // Clear Convex auth before signing out
+            updateConvexAuth(null);
             await signOut();
         });
     }

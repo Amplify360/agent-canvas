@@ -5,12 +5,13 @@
 
 let currentUser = null;
 let currentOrgs = [];
+let currentIdToken = null; // WorkOS OIDC id_token for Convex authentication
 let isInitialized = false;
 let refreshPromise = null;
 
 /**
  * Refresh the access token if needed
- * @returns {Promise<boolean>} True if refresh succeeded or wasn't needed
+ * @returns {Promise<{success: boolean, idToken: string|null}>} Refresh result with new idToken
  */
 async function refreshTokenIfNeeded() {
   // Prevent concurrent refresh attempts
@@ -21,10 +22,14 @@ async function refreshTokenIfNeeded() {
   refreshPromise = (async () => {
     try {
       const response = await fetch("/api/auth/refresh", { method: "POST" });
-      return response.ok;
+      if (!response.ok) {
+        return { success: false, idToken: null };
+      }
+      const data = await response.json();
+      return { success: true, idToken: data.idToken || null };
     } catch (error) {
       console.error("Token refresh failed:", error);
-      return false;
+      return { success: false, idToken: null };
     } finally {
       refreshPromise = null;
     }
@@ -49,10 +54,14 @@ export async function initAuth() {
     if (data.authenticated && data.user) {
       currentUser = data.user;
       currentOrgs = data.orgs || [];
+      currentIdToken = data.idToken || null; // Store id_token for Convex
 
       // Proactively refresh token if needed
       if (data.needsRefresh) {
-        await refreshTokenIfNeeded();
+        const refreshResult = await refreshTokenIfNeeded();
+        if (refreshResult.success && refreshResult.idToken) {
+          currentIdToken = refreshResult.idToken;
+        }
       }
 
       // Fetch additional org details if needed
@@ -164,18 +173,35 @@ export async function signIn(options = {}) {
 }
 
 /**
+ * Get the current id_token for Convex authentication
+ * @returns {string|null}
+ */
+export function getIdToken() {
+  return currentIdToken;
+}
+
+/**
+ * Clear all auth state (helper for signOut)
+ */
+function clearAuthState() {
+  currentUser = null;
+  currentOrgs = [];
+  currentIdToken = null;
+  isInitialized = false;
+}
+
+/**
  * Sign out the current user
  */
 export async function signOut() {
   try {
     await fetch("/api/auth/logout", { method: "POST" });
-    currentUser = null;
-    currentOrgs = [];
-    isInitialized = false;
-    window.location.href = "/login";
   } catch (error) {
     console.error("Sign out error:", error);
-    // Force redirect even on error
+    // Continue with cleanup even if logout request fails
+  } finally {
+    // Always clear state and redirect
+    clearAuthState();
     window.location.href = "/login";
   }
 }
@@ -228,8 +254,12 @@ export async function authenticatedFetch(url, options = {}) {
 
   // On 401, try refreshing the token once
   if (response.status === 401) {
-    const refreshed = await refreshTokenIfNeeded();
-    if (refreshed) {
+    const refreshResult = await refreshTokenIfNeeded();
+    if (refreshResult.success) {
+      // Update idToken if provided
+      if (refreshResult.idToken) {
+        currentIdToken = refreshResult.idToken;
+      }
       // Retry the original request
       response = await fetch(url, {
         ...options,

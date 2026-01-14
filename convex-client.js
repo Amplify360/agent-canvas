@@ -8,20 +8,52 @@ import { state } from "./state.js";
 
 let client = null;
 const subscriptions = new Map();
+let getIdTokenFn = null; // Function to get current id_token
+
+/**
+ * Create auth callback function from token getter
+ * @param {Function} getIdToken - Function that returns the current WorkOS id_token
+ * @returns {Function|null} Auth callback or null if no getter provided
+ */
+function createAuthCallback(getIdToken) {
+  if (!getIdToken) return null;
+  return async () => {
+    const token = getIdToken();
+    if (!token) {
+      throw new Error("No authentication token available");
+    }
+    return token;
+  };
+}
 
 /**
  * Initialize the Convex client
  * @param {string} url - Convex deployment URL
+ * @param {Function} getIdToken - Function that returns the current WorkOS id_token
  * @returns {ConvexClient}
  */
-export function initConvexClient(url) {
-  if (client) return client;
+export function initConvexClient(url, getIdToken) {
+  if (client && getIdTokenFn === getIdToken) return client;
 
   const convexUrl = url || window.CONVEX_URL;
   if (!convexUrl) throw new Error("CONVEX_URL not configured");
 
   client = new ConvexClient(convexUrl);
+  getIdTokenFn = getIdToken;
+  client.setAuth(createAuthCallback(getIdToken));
+
   return client;
+}
+
+/**
+ * Update Convex authentication with a new id_token getter
+ * @param {Function} getIdToken - Function that returns the current WorkOS id_token
+ */
+export function updateConvexAuth(getIdToken) {
+  if (!client) return;
+
+  getIdTokenFn = getIdToken;
+  client.setAuth(createAuthCallback(getIdToken));
 }
 
 /**
@@ -183,4 +215,71 @@ export async function getAgentHistory(agentId) {
 
 export async function getRecentHistory(workosOrgId, limit = 50) {
   return requireClient().query("agentHistory:listRecent", { workosOrgId, limit });
+}
+
+// Document operations (replacing /api/config)
+
+/**
+ * List all documents (canvases) for an org
+ */
+export async function listDocuments(workosOrgId) {
+  return requireClient().query("canvases:list", { workosOrgId });
+}
+
+/**
+ * Get a document (canvas) by slug
+ */
+export async function getDocument(workosOrgId, slug) {
+  return requireClient().query("canvases:getBySlug", { workosOrgId, slug });
+}
+
+/**
+ * Create or update a document (canvas)
+ */
+export async function saveDocument(workosOrgId, slug, title, sourceYaml) {
+  // Try to get existing canvas
+  const existing = await requireClient().query("canvases:getBySlug", { workosOrgId, slug });
+  
+  if (existing) {
+    // Update existing
+    await requireClient().mutation("canvases:update", {
+      canvasId: existing._id,
+      title,
+      sourceYaml,
+    });
+    return existing._id;
+  } else {
+    // Create new
+    return await requireClient().mutation("canvases:create", {
+      workosOrgId,
+      title: title || slug,
+      slug,
+      sourceYaml,
+    });
+  }
+}
+
+/**
+ * Delete a document (canvas)
+ */
+export async function deleteDocument(workosOrgId, slug) {
+  const canvas = await requireClient().query("canvases:getBySlug", { workosOrgId, slug });
+  if (!canvas) {
+    throw new Error("Document not found");
+  }
+  await requireClient().mutation("canvases:remove", { canvasId: canvas._id });
+}
+
+/**
+ * Rename a document (canvas)
+ */
+export async function renameDocument(workosOrgId, oldSlug, newSlug) {
+  const canvas = await requireClient().query("canvases:getBySlug", { workosOrgId, oldSlug });
+  if (!canvas) {
+    throw new Error("Document not found");
+  }
+  await requireClient().mutation("canvases:update", {
+    canvasId: canvas._id,
+    slug: newSlug,
+  });
 }

@@ -1,6 +1,8 @@
+import { getCurrentOrg } from './auth-client-workos.js';
+import { deleteDocument, getConvexClient, getDocument, listDocuments, renameDocument, saveDocument } from './convex-client.js';
+import { canManageCanvasesInCurrentGroup, getCurrentGroupId, getUserGroups } from './main.js';
 import { BLANK_DOCUMENT_TEMPLATE, DEFAULT_DOCUMENT_NAME, DOCUMENT_STORAGE_KEY, refreshIcons, state } from './state.js';
-import { authenticatedFetch } from './auth-client-workos.js';
-import { getCurrentGroupId, getUserGroups, canManageCanvasesInCurrentGroup } from './main.js';
+import { convexToYaml } from './yaml-converter.js';
 
 let loadAgentsCallback = async () => {};
 
@@ -243,30 +245,23 @@ export async function renameCurrentDocument() {
         return;
     }
 
-    // Find current document to get its group_id
-    const currentDoc = state.availableDocuments.find(
-        doc => (doc.name || doc.slug || doc.id) === state.currentDocumentName
-    );
-    const currentGroupId = currentDoc?.group_id;
+    const currentOrg = getCurrentOrg();
+    if (!currentOrg) {
+        alert('No organization selected');
+        return;
+    }
 
-    // Only check for duplicates within the same group
+    // Check for duplicates within the same org
     if (state.availableDocuments.some(doc =>
-        doc.name === newDocName && doc.group_id === currentGroupId
+        (doc.name === newDocName || doc.slug === newDocName) && doc.group_id === currentOrg.id
     )) {
-        alert(`A document named "${newDocName}" already exists in this group. Choose a different name.`);
+        alert(`A document named "${newDocName}" already exists in this organization. Choose a different name.`);
         return;
     }
 
     try {
         setDocumentStatusMessage(`Renaming to "${newDocName}"...`);
-        const response = await authenticatedFetch(
-            `/api/config?doc=${encodeURIComponent(state.currentDocumentName)}&newDoc=${encodeURIComponent(newDocName)}`,
-            { method: 'PUT' }
-        );
-
-        if (!response.ok) {
-            throw new Error('Rename failed');
-        }
+        await renameDocument(currentOrg.id, state.currentDocumentName, newDocName);
 
         await refreshDocumentList(newDocName);
         await loadAgentsCallback(newDocName);
@@ -450,18 +445,27 @@ export function sanitizeDocumentNameForClient(name) {
 export async function refreshDocumentList(preferredDocName) {
     try {
         setDocumentStatusMessage('Loading documents...');
-        const response = await authenticatedFetch('/api/config?list=1', {
-            headers: {
-                'Accept': 'application/json'
-            }
-        });
-
-        if (!response.ok) {
-            throw new Error('Failed to fetch document list');
+        
+        const currentOrg = getCurrentOrg();
+        if (!currentOrg) {
+            throw new Error('No organization selected');
         }
 
-        const data = await response.json();
-        state.availableDocuments = Array.isArray(data.documents) ? data.documents : [];
+        const canvases = await listDocuments(currentOrg.id);
+        
+        // Transform canvas objects to document format expected by UI
+        state.availableDocuments = canvases.map(canvas => ({
+            id: canvas._id,
+            slug: canvas.slug,
+            name: canvas.slug, // Use slug as name
+            title: canvas.title,
+            updated_at: canvas.updatedAt,
+            updatedAt: canvas.updatedAt,
+            createdAt: canvas.createdAt,
+            group_id: canvas.workosOrgId,
+            group_name: currentOrg.name || currentOrg.id,
+        }));
+        
         state.documentListLoaded = true;
 
         const docNames = state.availableDocuments.map(doc => doc.name || doc.slug || doc.id);
@@ -589,49 +593,27 @@ async function handleDocumentFileSelected(event) {
 }
 
 export async function uploadDocumentFromContents(docName, yamlText, groupId = null) {
-    const payloadSize = typeof yamlText === 'string' ? yamlText.length : 0;
     setDocumentStatusMessage(`Uploading "${docName}"...`);
 
-    // Use provided groupId or current group
-    const targetGroupId = groupId || getCurrentGroupId();
-    let url = `/api/config?doc=${encodeURIComponent(docName)}`;
-    if (targetGroupId) {
-        url += `&group_id=${encodeURIComponent(targetGroupId)}`;
+    // Use provided groupId or current org
+    const currentOrg = getCurrentOrg();
+    const targetOrgId = groupId || currentOrg?.id;
+    if (!targetOrgId) {
+        throw new Error('No organization selected');
     }
 
-    const response = await authenticatedFetch(url, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'text/yaml',
-            'X-Config-Name': docName,
-            ...(targetGroupId ? { 'X-Group-Id': targetGroupId } : {})
-        },
-        body: yamlText
-    });
-
-    if (!response.ok) {
-        let errorDetail = '';
-        try {
-            const contentType = response.headers.get('content-type') || '';
-            if (contentType.includes('application/json')) {
-                const data = await response.json();
-                errorDetail = data?.error || JSON.stringify(data);
-            } else {
-                errorDetail = await response.text();
-            }
-        } catch (parseError) {
-            errorDetail = `Unable to parse error body: ${parseError.message}`;
+    // Parse YAML to get title
+    let title = docName;
+    try {
+        const parsed = window.jsyaml.load(yamlText);
+        if (parsed && parsed.documentTitle) {
+            title = parsed.documentTitle;
         }
-
-        console.error('[documents] Upload failed', {
-            docName,
-            status: response.status,
-            statusText: response.statusText,
-            errorDetail
-        });
-
-        throw new Error(errorDetail || `Upload failed with status ${response.status}`);
+    } catch (e) {
+        // Use docName as title if parsing fails
     }
+
+    await saveDocument(targetOrgId, docName, title, yamlText);
 
     await refreshDocumentList(docName);
     setActiveDocumentName(docName);
@@ -647,12 +629,33 @@ export async function downloadCurrentDocument() {
     }
 
     try {
-        const response = await authenticatedFetch(`/api/config?doc=${encodeURIComponent(state.currentDocumentName)}`);
-        if (!response.ok) {
-            throw new Error('Download failed');
+        const currentOrg = getCurrentOrg();
+        if (!currentOrg) {
+            throw new Error('No organization selected');
         }
 
-        const blob = await response.blob();
+        const canvas = await getDocument(currentOrg.id, state.currentDocumentName);
+        if (!canvas) {
+            throw new Error('Document not found');
+        }
+
+        // Use sourceYaml if available, otherwise regenerate from agents
+        let yamlText = canvas.sourceYaml;
+        
+        if (!yamlText) {
+            // Regenerate YAML from agents and org settings
+            const agents = await getConvexClient().query("agents:list", { canvasId: canvas._id });
+            const orgSettings = await getConvexClient().query("orgSettings:get", { workosOrgId: currentOrg.id }).catch(() => null);
+            
+            const yamlDoc = convexToYaml(canvas, agents, orgSettings);
+            yamlText = window.jsyaml.dump(yamlDoc);
+        }
+        
+        if (!yamlText || yamlText.trim() === '') {
+            throw new Error('Document has no content to download');
+        }
+        
+        const blob = new Blob([yamlText], { type: 'text/yaml' });
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
@@ -687,17 +690,15 @@ export async function deleteCurrentDocument() {
         return;
     }
 
+    const currentOrg = getCurrentOrg();
+    if (!currentOrg) {
+        alert('No organization selected');
+        return;
+    }
+
     try {
         setDocumentStatusMessage(`Deleting "${state.currentDocumentName}"...`);
-        const response = await authenticatedFetch(
-            `/api/config?doc=${encodeURIComponent(state.currentDocumentName)}`,
-            { method: 'DELETE' }
-        );
-
-        if (!response.ok) {
-            const data = await response.json().catch(() => ({}));
-            throw new Error(data.error || 'Delete failed');
-        }
+        await deleteDocument(currentOrg.id, state.currentDocumentName);
 
         // Store deleted document name before refreshDocumentList changes state.currentDocumentName
         const deletedDocName = state.currentDocumentName;
