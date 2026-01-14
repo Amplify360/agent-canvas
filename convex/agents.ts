@@ -5,6 +5,27 @@ import { Id, Doc } from "./_generated/dataModel";
 import { QueryCtx, MutationCtx } from "./_generated/server";
 import { AuthContext } from "./lib/auth";
 
+// Shared agent input validator for bulk operations
+const agentInputValidator = v.object({
+  phase: v.string(),
+  phaseOrder: v.number(),
+  agentOrder: v.number(),
+  name: v.string(),
+  objective: v.optional(v.string()),
+  description: v.optional(v.string()),
+  tools: v.array(v.string()),
+  journeySteps: v.array(v.string()),
+  demoLink: v.optional(v.string()),
+  videoLink: v.optional(v.string()),
+  metrics: v.optional(
+    v.object({
+      adoption: v.number(),
+      satisfaction: v.number(),
+    })
+  ),
+  payload: v.optional(v.any()),
+});
+
 // Helper to verify canvas access and return canvas
 async function getCanvasWithAccess(
   ctx: QueryCtx | MutationCtx,
@@ -92,6 +113,7 @@ export const create = mutation({
         satisfaction: v.number(),
       })
     ),
+    payload: v.optional(v.any()), // Portable JSON payload
   },
   handler: async (ctx, args) => {
     const auth = await requireAuth(ctx);
@@ -140,6 +162,7 @@ export const update = mutation({
         satisfaction: v.number(),
       })
     ),
+    payload: v.optional(v.any()), // Portable JSON payload
   },
   handler: async (ctx, { agentId, ...updates }) => {
     const auth = await requireAuth(ctx);
@@ -223,26 +246,7 @@ export const reorder = mutation({
 export const bulkCreate = mutation({
   args: {
     canvasId: v.id("canvases"),
-    agents: v.array(
-      v.object({
-        phase: v.string(),
-        phaseOrder: v.number(),
-        agentOrder: v.number(),
-        name: v.string(),
-        objective: v.optional(v.string()),
-        description: v.optional(v.string()),
-        tools: v.array(v.string()),
-        journeySteps: v.array(v.string()),
-        demoLink: v.optional(v.string()),
-        videoLink: v.optional(v.string()),
-        metrics: v.optional(
-          v.object({
-            adoption: v.number(),
-            satisfaction: v.number(),
-          })
-        ),
-      })
-    ),
+    agents: v.array(agentInputValidator),
   },
   handler: async (ctx, { canvasId, agents }) => {
     const auth = await requireAuth(ctx);
@@ -251,6 +255,70 @@ export const bulkCreate = mutation({
     const now = Date.now();
     const createdIds: Id<"agents">[] = [];
 
+    for (const agentData of agents) {
+      const agentId = await ctx.db.insert("agents", {
+        canvasId,
+        ...agentData,
+        createdBy: auth.workosUserId,
+        updatedBy: auth.workosUserId,
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      await ctx.db.insert("agentHistory", {
+        agentId,
+        changedBy: auth.workosUserId,
+        changedAt: now,
+        changeType: "create",
+        previousData: undefined,
+      });
+
+      createdIds.push(agentId);
+    }
+
+    return createdIds;
+  },
+});
+
+/**
+ * Atomically replace all agents for a canvas
+ * Deletes existing agents and creates new ones in a single transaction
+ */
+export const bulkReplace = mutation({
+  args: {
+    canvasId: v.id("canvases"),
+    agents: v.array(agentInputValidator),
+  },
+  handler: async (ctx, { canvasId, agents }) => {
+    const auth = await requireAuth(ctx);
+    await getCanvasWithAccess(ctx, auth, canvasId);
+
+    const now = Date.now();
+
+    // Get existing agents and record their deletion in history
+    const existingAgents = await ctx.db
+      .query("agents")
+      .withIndex("by_canvas", (q) => q.eq("canvasId", canvasId))
+      .collect();
+
+    // Record history for deletions
+    for (const agent of existingAgents) {
+      await ctx.db.insert("agentHistory", {
+        agentId: agent._id,
+        changedBy: auth.workosUserId,
+        changedAt: now,
+        changeType: "delete",
+        previousData: getAgentSnapshot(agent),
+      });
+    }
+
+    // Delete existing agents
+    for (const agent of existingAgents) {
+      await ctx.db.delete(agent._id);
+    }
+
+    // Create new agents
+    const createdIds: Id<"agents">[] = [];
     for (const agentData of agents) {
       const agentId = await ctx.db.insert("agents", {
         canvasId,

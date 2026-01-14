@@ -3,12 +3,14 @@
  * Handle WorkOS OAuth callback
  */
 
-import { encryptSession, createSessionCookie } from '../lib/session-utils.js';
+import { encryptSession, createSessionCookie, clearOAuthStateCookie } from '../lib/session-utils.js';
 
 export const config = { runtime: 'edge' };
 
 function redirect(baseUrl, error) {
-  return Response.redirect(`${baseUrl}/login?error=${error}`, 302);
+  // Encode error to prevent query string injection
+  const encodedError = encodeURIComponent(error);
+  return Response.redirect(`${baseUrl}/login?error=${encodedError}`, 302);
 }
 
 async function exchangeCodeForTokens(code, apiKey, clientId) {
@@ -67,7 +69,7 @@ export default async function handler(request) {
     const tokenData = await exchangeCodeForTokens(code, workosApiKey, workosClientId);
     if (!tokenData) return redirect(baseUrl, 'auth_failed');
 
-    const { user, access_token, refresh_token } = tokenData;
+    const { user, access_token, refresh_token, id_token } = tokenData;
     const orgs = await fetchUserOrgs(user.id, workosApiKey);
 
     if (orgs.length === 0) {
@@ -81,6 +83,7 @@ export default async function handler(request) {
     const sessionData = {
       accessToken: access_token,
       refreshToken: refresh_token,
+      idToken: id_token, // OIDC id_token for Convex authentication
       accessTokenExpiresAt,
       user: {
         id: user.id,
@@ -98,13 +101,15 @@ export default async function handler(request) {
     // Encrypt session data
     const sessionToken = await encryptSession(sessionData);
 
+    // Use Headers object to properly handle multiple Set-Cookie headers
+    const headers = new Headers();
+    headers.set('Location', baseUrl);
+    headers.append('Set-Cookie', createSessionCookie(sessionToken));
+    headers.append('Set-Cookie', clearOAuthStateCookie());
+
     return new Response(null, {
       status: 302,
-      headers: [
-        ['Location', baseUrl],
-        ['Set-Cookie', createSessionCookie(sessionToken)],
-        ['Set-Cookie', 'oauth_state=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0'],
-      ],
+      headers,
     });
   } catch (err) {
     console.error('Auth callback error:', err);

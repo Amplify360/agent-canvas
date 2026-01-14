@@ -102,17 +102,48 @@ export async function parseSession(request) {
 }
 
 /**
+ * Check if we're in a secure context (HTTPS or production)
+ */
+function isSecureContext() {
+  const baseUrl = process.env.BASE_URL || '';
+  const isProduction = process.env.NODE_ENV === 'production';
+  return baseUrl.startsWith('https://') || isProduction;
+}
+
+/**
+ * Build cookie flags string with security attributes
+ */
+function buildCookieFlags() {
+  const secureFlag = isSecureContext() ? 'Secure' : '';
+  return ['HttpOnly', secureFlag, 'SameSite=Lax'].filter(Boolean).join('; ');
+}
+
+/**
  * Create Set-Cookie header value for session
  */
 export function createSessionCookie(token) {
-  return `${COOKIE_NAME}=${token}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=${SESSION_MAX_AGE}`;
+  return `${COOKIE_NAME}=${token}; ${buildCookieFlags()}; Path=/; Max-Age=${SESSION_MAX_AGE}`;
 }
 
 /**
  * Create Set-Cookie header value to clear session
  */
 export function clearSessionCookie() {
-  return `${COOKIE_NAME}=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0`;
+  return `${COOKIE_NAME}=; ${buildCookieFlags()}; Path=/; Max-Age=0`;
+}
+
+/**
+ * Create Set-Cookie header value for OAuth state
+ */
+export function createOAuthStateCookie(state) {
+  return `oauth_state=${state}; ${buildCookieFlags()}; Path=/; Max-Age=600`;
+}
+
+/**
+ * Create Set-Cookie header value to clear OAuth state
+ */
+export function clearOAuthStateCookie() {
+  return `oauth_state=; ${buildCookieFlags()}; Path=/; Max-Age=0`;
 }
 
 /**

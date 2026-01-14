@@ -67,8 +67,9 @@ export const create = mutation({
     workosOrgId: v.string(),
     title: v.string(),
     slug: v.string(),
+    sourceYaml: v.optional(v.string()), // Optional YAML for import
   },
-  handler: async (ctx, { workosOrgId, title, slug }) => {
+  handler: async (ctx, { workosOrgId, title, slug, sourceYaml }) => {
     const auth = await requireAuth(ctx);
     requireOrgAccess(auth, workosOrgId);
 
@@ -90,6 +91,7 @@ export const create = mutation({
       workosOrgId,
       title,
       slug,
+      sourceYaml: sourceYaml || undefined,
       createdBy: auth.workosUserId,
       updatedBy: auth.workosUserId,
       createdAt: now,
@@ -106,8 +108,9 @@ export const update = mutation({
     canvasId: v.id("canvases"),
     title: v.optional(v.string()),
     slug: v.optional(v.string()),
+    sourceYaml: v.optional(v.string()),
   },
-  handler: async (ctx, { canvasId, title, slug }) => {
+  handler: async (ctx, { canvasId, title, slug, sourceYaml }) => {
     const auth = await requireAuth(ctx);
 
     const canvas = await ctx.db.get(canvasId);
@@ -131,12 +134,16 @@ export const update = mutation({
       }
     }
 
-    await ctx.db.patch(canvasId, {
-      ...(title && { title }),
-      ...(slug && { slug }),
+    const updates: Record<string, unknown> = {
       updatedBy: auth.workosUserId,
       updatedAt: Date.now(),
-    });
+    };
+    if (title !== undefined) updates.title = title;
+    if (slug !== undefined) updates.slug = slug;
+    // Allow explicitly setting empty string to clear sourceYaml
+    if (sourceYaml !== undefined) updates.sourceYaml = sourceYaml || undefined;
+
+    await ctx.db.patch(canvasId, updates);
   },
 });
 

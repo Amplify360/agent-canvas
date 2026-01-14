@@ -17,7 +17,8 @@ export default defineSchema({
   canvases: defineTable({
     workosOrgId: v.string(),
     title: v.string(),
-    slug: v.string(),
+    slug: v.string(), // Document name/identifier
+    sourceYaml: v.optional(v.string()), // Optional original YAML for import/export
     createdBy: v.string(), // WorkOS user ID
     updatedBy: v.string(),
     createdAt: v.number(),
@@ -46,6 +47,7 @@ export default defineSchema({
         satisfaction: v.number(),
       })
     ),
+    payload: v.optional(v.any()), // Portable JSON payload for round-trip fidelity and extensibility
     createdBy: v.string(),
     updatedBy: v.string(),
     createdAt: v.number(),

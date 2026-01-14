@@ -22,6 +22,7 @@ export default async function handler(request) {
     authenticated: true,
     user: session.user,
     orgs: session.orgs || [],
+    idToken: session.idToken, // Expose id_token for Convex authentication
     needsRefresh,
   });
 }
