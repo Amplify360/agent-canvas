@@ -1,39 +1,38 @@
+import { getIdToken, getUserEmail, getUserName, initAuth, signOut } from './auth-client-workos.js';
 import {
+    TAG_TYPES, getAgentTagDisplay,
     getAvailableTools,
-    getSectionColor
+    getSectionColor,
+    getToolDisplay
 } from './config.js';
+import { createAgent as createAgentMutation, deleteAgent as deleteAgentMutation, getConvexClient, initConvexClientAsync, syncOrgMemberships, unsubscribeAll, updateAgent as updateAgentMutation, updateConvexAuth } from './convex-client.js';
 import {
     handleDocumentSelection,
     initializeDocumentControls,
     refreshDocumentList,
     registerLoadAgents,
-    setActiveDocumentName,
     setDocumentStatusMessage
 } from './documents.js';
+import { filterAgents, groupAgentsByTag, searchAgents } from './grouping.js';
 import { bindToggleMenu } from './menu-utils.js';
 import {
+    canManageCanvases,
     deepClone,
-    slugifyIdentifier,
     getAgentMetrics,
+    getCurrentOrg,
+    getCurrentOrgId,
+    getCurrentOrgRole,
+    getGroupingTagType,
+    getUserOrgs as getUserOrgsFromState,
     loadCollapsedState,
+    loadGroupingPreference,
     refreshIcons,
     saveCollapsedState,
-    state,
-    toArray,
-    getCurrentOrgId,
-    getUserOrgs as getUserOrgsFromState,
     setCurrentOrgId,
-    getCurrentOrg,
-    canManageCanvases,
-    getCurrentOrgRole,
-    loadGroupingPreference,
     setGroupingTagType,
-    getGroupingTagType
+    state,
+    toArray
 } from './state.js';
-import { initAuth, signOut, getCurrentUser, getUserName, getUserEmail, isAuthenticated, getIdToken } from './auth-client-workos.js';
-import { createAgent as createAgentMutation, deleteAgent as deleteAgentMutation, getConvexClient, initConvexClient, initConvexClientAsync, syncOrgMemberships, unsubscribeAll, updateAgent as updateAgentMutation, updateConvexAuth } from './convex-client.js';
-import { groupAgentsByTag, filterAgents, searchAgents } from './grouping.js';
-import { TAG_TYPES, getAgentTagDisplay, getToolDisplay } from './config.js';
 
 // Tag type to DOM container ID mapping (only department and status remain)
 const TAG_SELECTOR_IDS = {
