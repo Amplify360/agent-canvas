@@ -113,3 +113,97 @@ export const SECTION_COLOR_PALETTE = [
 export function getSectionColor(groupIndex) {
     return SECTION_COLOR_PALETTE[groupIndex % SECTION_COLOR_PALETTE.length];
 }
+
+/**
+ * Fixed agent fields used for grouping/filtering (UI metadata).
+ * These are not DB “tags”; they’re first-class agent properties (phase/department/status).
+ */
+export const TAG_TYPES = {
+  phase: {
+    id: 'phase',
+    label: 'Phase',
+    description: 'Business process phase',
+    isGroupable: true,
+    icon: 'layers',
+    values: [],
+  },
+
+  department: {
+    id: 'department',
+    label: 'Department',
+    description: 'Organizational department',
+    isGroupable: true,
+    icon: 'building-2',
+    values: [
+      { id: 'sales', label: 'Sales', color: '#3B82F6', icon: 'trending-up' },
+      { id: 'engineering', label: 'Engineering', color: '#8B5CF6', icon: 'code-2' },
+      { id: 'marketing', label: 'Marketing', color: '#EC4899', icon: 'megaphone' },
+      { id: 'operations', label: 'Operations', color: '#F59E0B', icon: 'settings' },
+      { id: 'support', label: 'Support', color: '#10B981', icon: 'headphones' },
+      { id: 'finance', label: 'Finance', color: '#06B6D4', icon: 'wallet' },
+      { id: 'hr', label: 'HR', color: '#F472B6', icon: 'users' },
+      { id: 'legal', label: 'Legal', color: '#6366F1', icon: 'scale' },
+    ],
+  },
+
+  status: {
+    id: 'status',
+    label: 'Status',
+    description: 'Agent lifecycle status',
+    isGroupable: true,
+    icon: 'activity',
+    values: [
+      { id: 'active', label: 'Active', color: '#10B981', icon: 'check-circle' },
+      { id: 'draft', label: 'Draft', color: '#6B7280', icon: 'edit-3' },
+      { id: 'review', label: 'In Review', color: '#F59E0B', icon: 'eye' },
+      { id: 'deprecated', label: 'Deprecated', color: '#EF4444', icon: 'archive' },
+    ],
+  },
+};
+
+export const DEFAULT_GROUPING_TAG = 'phase';
+
+export function getTagValue(tagType, valueId) {
+  const tagDef = TAG_TYPES[tagType];
+  if (!tagDef) return null;
+  return tagDef.values.find((v) => v.id === valueId) || null;
+}
+
+export function getAgentTagDisplay(agent, tagType) {
+  if (tagType === 'phase') {
+    return {
+      value: agent.phase,
+      label: agent.phase,
+      color: null, // Phase colors come from section palette
+      icon: 'layers',
+    };
+  }
+
+  let tagValue;
+  if (tagType === 'department') {
+    tagValue = agent.department;
+  } else if (tagType === 'status') {
+    tagValue = agent.status;
+  } else {
+    return null;
+  }
+
+  if (!tagValue) return null;
+
+  const tagMeta = getTagValue(tagType, tagValue);
+  if (!tagMeta) {
+    return {
+      value: tagValue,
+      label: tagValue,
+      color: '#6B7280',
+      icon: TAG_TYPES[tagType]?.icon || 'tag',
+    };
+  }
+
+  return {
+    value: tagValue,
+    label: tagMeta.label,
+    color: tagMeta.color,
+    icon: tagMeta.icon,
+  };
+}

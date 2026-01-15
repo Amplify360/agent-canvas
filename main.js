@@ -33,7 +33,7 @@ import {
 import { initAuth, signOut, getCurrentUser, getUserName, getUserEmail, isAuthenticated, getIdToken } from './auth-client-workos.js';
 import { createAgent as createAgentMutation, deleteAgent as deleteAgentMutation, getConvexClient, initConvexClient, initConvexClientAsync, syncOrgMemberships, unsubscribeAll, updateAgent as updateAgentMutation, updateConvexAuth } from './convex-client.js';
 import { groupAgentsByTag, filterAgents, searchAgents } from './grouping.js';
-import { TAG_TYPES, getAgentTagDisplay, getToolDisplay } from './types/tags.js';
+import { TAG_TYPES, getAgentTagDisplay, getToolDisplay } from './config.js';
 
 // Tag type to DOM container ID mapping (only department and status remain)
 const TAG_SELECTOR_IDS = {

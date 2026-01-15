@@ -3,8 +3,7 @@
  * Groups agents by any tag type with filtering support
  */
 
-import { TAG_TYPES, getTagValue, DEFAULT_GROUPING_TAG } from './types/tags.js';
-import { SECTION_COLOR_PALETTE } from './config.js';
+import { DEFAULT_GROUPING_TAG, getTagValue, SECTION_COLOR_PALETTE, TAG_TYPES } from './config.js';
 
 /**
  * Group agents by the specified tag type
