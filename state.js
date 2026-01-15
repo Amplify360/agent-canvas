@@ -46,24 +46,10 @@ export const state = {
     computedGroups: []
 };
 
-export const DEFAULT_DOCUMENT_NAME = 'config.yaml';
-export const DOCUMENT_STORAGE_KEY = 'agentcanvas-active-doc';
 export const COLLAPSED_SECTIONS_KEY = 'agentcanvas-collapsed-sections';
 export const CURRENT_ORG_KEY = 'agentcanvas-current-org';
 export const CURRENT_CANVAS_KEY = 'agentcanvas-current-canvas';
 export const GROUPING_PREFERENCE_KEY = 'agentcanvas-grouping-pref';
-
-export const BLANK_DOCUMENT_TEMPLATE = [
-    '# AgentCanvas configuration',
-    'sectionDefaults:',
-    '  iconType: target',
-    '  showInFlow: true',
-    '  isSupport: false',
-    'agentGroups:',
-    '  - groupName: New Section',
-    '    agents: []',
-    ''
-].join('\n');
 
 const defaultAgentMetrics = {
     usageThisWeek: '0',
@@ -80,7 +66,25 @@ const COLLAPSED_PILL_CLASSES = [
 ];
 
 export function getAgentMetrics(agent = {}) {
-    return { ...defaultAgentMetrics, ...(agent.metrics || {}) };
+    const metrics = agent?.metrics || {};
+    const payloadMetrics = agent?.payload?.metrics || {};
+
+    // Convex-native numeric metrics: { adoption, satisfaction }
+    if (
+        metrics &&
+        typeof metrics === 'object' &&
+        (typeof metrics.adoption === 'number' || typeof metrics.satisfaction === 'number')
+    ) {
+        return {
+            ...defaultAgentMetrics,
+            usageThisWeek: String(metrics.adoption ?? defaultAgentMetrics.usageThisWeek),
+            timeSaved: String(metrics.satisfaction ?? defaultAgentMetrics.timeSaved),
+            roiContribution: payloadMetrics.roiContribution || defaultAgentMetrics.roiContribution
+        };
+    }
+
+    // Legacy/UI metrics shape: { usageThisWeek, timeSaved, roiContribution }
+    return { ...defaultAgentMetrics, ...payloadMetrics, ...(metrics || {}) };
 }
 
 export function toArray(value) {
@@ -289,16 +293,6 @@ export function loadCanvasPreference() {
 export function saveCanvasPreference(canvasId) {
     setStoredValue(CURRENT_CANVAS_KEY, canvasId);
     state.currentCanvasId = canvasId;
-}
-
-// Document preference helpers
-export function loadDocumentPreference() {
-    return getStoredValue(DOCUMENT_STORAGE_KEY);
-}
-
-export function saveDocumentPreference(name) {
-    setStoredValue(DOCUMENT_STORAGE_KEY, name);
-    state.currentDocumentName = name;
 }
 
 // Group agents by phase for rendering (legacy - use grouping.js for dynamic grouping)

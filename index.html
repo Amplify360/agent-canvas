@@ -13,169 +13,198 @@
         }
     </script>
     <script src="https://unpkg.com/lucide@latest"></script>
-    <script src="https://cdn.jsdelivr.net/npm/js-yaml@4.1.0/dist/js-yaml.min.js"></script>
     <script>
         // Convex configuration is fetched by convex-client.js from /api/config
     </script>
     <link rel="stylesheet" href="styles.css">
 </head>
-<body>
-    <!-- Header -->
-    <header class="header">
-        <div class="header-container">
-            <!-- Left: Title and count -->
-            <div class="header-left">
-                <div class="document-title">
-                    <span id="documentTitle" class="document-title-text">AgentCanvas</span>
-                    <button type="button" class="icon-btn" id="boardMenuTrigger" title="Board options">
+<body class="app-layout">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+        <!-- Logo -->
+        <div class="sidebar__logo">
+            <div class="sidebar__logo-icon">
+                <i data-lucide="workflow"></i>
+            </div>
+            <span class="sidebar__logo-text">AgentCanvas</span>
+        </div>
+
+        <!-- Organization Switcher -->
+        <div class="sidebar__section">
+            <div class="sidebar__org-switcher" id="orgSwitcher">
+                <button type="button" class="sidebar__org-trigger" id="orgSwitcherTrigger">
+                    <div class="sidebar__org-icon">
+                        <i data-lucide="building-2"></i>
+                    </div>
+                    <div class="sidebar__org-info">
+                        <span class="sidebar__org-label">Organization</span>
+                        <span class="sidebar__org-name" id="currentOrgName">Select org...</span>
+                    </div>
+                    <i data-lucide="chevrons-up-down" class="sidebar__org-chevron"></i>
+                </button>
+                <div class="sidebar__dropdown" id="orgDropdown">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Canvas Section -->
+        <div class="sidebar__section sidebar__section--grow">
+            <div class="sidebar__section-header">
+                <span class="sidebar__section-title">Canvases</span>
+                <button type="button" class="sidebar__action-btn" id="newCanvasBtn" title="New Canvas">
+                    <i data-lucide="plus"></i>
+                </button>
+            </div>
+            <div class="sidebar__canvas-list" id="canvasList">
+                <!-- Populated dynamically -->
+            </div>
+        </div>
+
+        <!-- Canvas Actions -->
+        <div class="sidebar__section">
+            <button type="button" class="sidebar__menu-item" id="importCanvasBtn">
+                <i data-lucide="upload"></i>
+                <span>Import Canvas</span>
+            </button>
+        </div>
+
+        <!-- User Profile -->
+        <div class="sidebar__user" id="userMenuTrigger">
+            <div class="sidebar__user-avatar" id="userAvatar">U</div>
+            <div class="sidebar__user-info">
+                <span class="sidebar__user-name" id="userDisplayName">User</span>
+                <span class="sidebar__user-email" id="userEmail">user@example.com</span>
+            </div>
+            <button type="button" class="sidebar__user-menu-btn" id="userMenuBtn">
+                <i data-lucide="more-vertical"></i>
+            </button>
+            <div class="sidebar__dropdown sidebar__dropdown--up" id="userMenuDropdown">
+                <div class="sidebar__dropdown-item" id="signOutBtn" data-action="signout">
+                    <i data-lucide="log-out"></i>
+                    <span>Sign out</span>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <div class="main-wrapper">
+        <!-- Top Toolbar -->
+        <header class="toolbar">
+            <div class="toolbar__left">
+                <!-- Mobile menu toggle -->
+                <button type="button" class="toolbar__menu-toggle" id="sidebarToggle">
+                    <i data-lucide="menu"></i>
+                </button>
+
+                <!-- Canvas Title -->
+                <div class="toolbar__title-group">
+                    <h1 class="toolbar__title" id="documentTitle">AgentCanvas</h1>
+                    <button type="button" class="toolbar__title-btn" id="boardMenuTrigger" title="Canvas options">
                         <i data-lucide="chevron-down"></i>
                     </button>
                     <!-- Board Menu -->
-                    <div class="context-menu" id="board-menu">
-                        <div class="context-menu__item" data-board-action="edit-title">
+                    <div class="toolbar__dropdown" id="board-menu">
+                        <div class="toolbar__dropdown-item" data-board-action="edit-title">
                             <i data-lucide="edit-3"></i>
                             <span>Edit Title</span>
                         </div>
-                        <div class="context-menu__divider"></div>
-                        <div class="context-menu__item" data-board-action="edit-full-yaml">
-                            <i data-lucide="file-code"></i>
-                            <span>Edit Raw Data</span>
-                        </div>
-                        <div class="context-menu__divider"></div>
-                        <div class="context-menu__item" data-board-action="add-section">
+                        <div class="toolbar__dropdown-divider"></div>
+                        <div class="toolbar__dropdown-item" data-board-action="add-section">
                             <i data-lucide="plus"></i>
                             <span>Add Section</span>
                         </div>
                     </div>
                 </div>
-                <span id="agent-count" class="agent-count-badge">
+
+                <span id="agent-count" class="toolbar__badge">
                     <i data-lucide="bot"></i>
                     <span>0 Agents</span>
                 </span>
             </div>
 
-            <!-- Center: Grouping control -->
-            <div class="header-center">
-                <div class="grouping-control u-relative" id="groupingControl">
-                    <span class="grouping-control__label">Group by</span>
-                    <span class="grouping-control__value" id="groupingValue">
+            <div class="toolbar__right">
+                <!-- Grouping control -->
+                <div class="toolbar__control" id="groupingControl">
+                    <span class="toolbar__control-label">Group by</span>
+                    <button type="button" class="toolbar__control-btn" id="groupingValue">
                         <span>Phase</span>
                         <i data-lucide="chevron-down"></i>
-                    </span>
+                    </button>
                     <!-- Grouping Dropdown -->
-                    <div class="grouping-dropdown" id="groupingDropdown">
-                        <div class="grouping-dropdown__item is-active" data-tag-type="phase">
+                    <div class="toolbar__dropdown" id="groupingDropdown">
+                        <div class="toolbar__dropdown-item is-active" data-tag-type="phase">
                             <i data-lucide="layers"></i>
                             <span>Phase</span>
                         </div>
-                        <div class="grouping-dropdown__item" data-tag-type="department">
+                        <div class="toolbar__dropdown-item" data-tag-type="department">
                             <i data-lucide="building-2"></i>
                             <span>Department</span>
                         </div>
-                        <div class="grouping-dropdown__item" data-tag-type="status">
+                        <div class="toolbar__dropdown-item" data-tag-type="status">
                             <i data-lucide="activity"></i>
                             <span>Status</span>
                         </div>
-                        <div class="grouping-dropdown__item" data-tag-type="implementationStatus">
+                        <div class="toolbar__dropdown-item" data-tag-type="implementationStatus">
                             <i data-lucide="git-branch"></i>
                             <span>Implementation</span>
                         </div>
-                        <div class="grouping-dropdown__item" data-tag-type="priority">
+                        <div class="toolbar__dropdown-item" data-tag-type="priority">
                             <i data-lucide="flag"></i>
                             <span>Priority</span>
                         </div>
                     </div>
                 </div>
 
-                <button type="button" class="header-btn" id="collapseAllBtn" title="Collapse/Expand All">
+                <button type="button" class="toolbar__btn" id="collapseAllBtn" title="Collapse/Expand All">
                     <i id="collapseAllIcon" data-lucide="chevrons-down"></i>
                     <span id="collapseAllText">Collapse</span>
                 </button>
-            </div>
 
-            <!-- Right: Org, User, Documents -->
-            <div class="header-right">
-                <!-- Org Switcher -->
-                <div class="org-switcher u-relative" id="orgSwitcher">
-                    <div class="org-switcher__trigger" id="orgSwitcherTrigger">
-                        <div class="org-switcher__icon">
-                            <i data-lucide="building"></i>
-                        </div>
-                        <span class="org-switcher__name" id="currentOrgName">Organization</span>
-                        <i data-lucide="chevron-down"></i>
-                    </div>
-                    <div class="grouping-dropdown" id="orgDropdown">
-                        <!-- Populated dynamically -->
-                    </div>
-                </div>
-
-                <!-- Document Selector -->
-                <div class="u-relative">
-                    <select id="documentSelect" class="form-select" style="min-width: 160px;">
-                        <option value="">Loading...</option>
-                    </select>
-                </div>
-
-                <!-- Document Menu -->
-                <button type="button" class="header-btn" id="documentMenuBtn" title="Document actions">
-                    <i data-lucide="sliders-horizontal"></i>
+                <!-- Canvas menu (download, etc) -->
+                <button type="button" class="toolbar__btn toolbar__btn--icon" id="documentMenuBtn" title="Canvas actions">
+                    <i data-lucide="more-horizontal"></i>
                 </button>
-                <div class="context-menu" id="documentMenu">
-                    <div class="context-menu__item" data-action="upload">
-                        <i data-lucide="upload"></i>
-                        <span>Import</span>
-                    </div>
-                    <div class="context-menu__item" data-action="blank">
-                        <i data-lucide="file-plus"></i>
-                        <span>New Canvas</span>
-                    </div>
-                    <div class="context-menu__divider"></div>
-                    <div class="context-menu__item" data-action="rename">
+                <div class="toolbar__dropdown toolbar__dropdown--right" id="documentMenu">
+                    <div class="toolbar__dropdown-item" data-action="rename">
                         <i data-lucide="edit-3"></i>
                         <span>Rename</span>
                     </div>
-                    <div class="context-menu__item" data-action="download">
-                        <i data-lucide="download"></i>
-                        <span>Download</span>
-                    </div>
-                    <div class="context-menu__divider"></div>
-                    <div class="context-menu__item context-menu__item--danger" data-action="delete">
+                    <div class="toolbar__dropdown-divider"></div>
+                    <div class="toolbar__dropdown-item toolbar__dropdown-item--danger" data-action="delete">
                         <i data-lucide="trash-2"></i>
                         <span>Delete</span>
                     </div>
                 </div>
-
-                <!-- User Menu -->
-                <div class="user-menu u-relative" id="userMenuTrigger">
-                    <span class="user-menu__name" id="userDisplayName">User</span>
-                    <div class="user-menu__avatar" id="userAvatar">U</div>
-                </div>
-                <div class="context-menu" id="userMenuDropdown">
-                    <div class="context-menu__item" style="pointer-events: none; opacity: 0.7;">
-                        <i data-lucide="mail"></i>
-                        <span id="userEmail">user@example.com</span>
-                    </div>
-                    <div class="context-menu__divider"></div>
-                    <div class="context-menu__item" id="signOutBtn" data-action="signout">
-                        <i data-lucide="log-out"></i>
-                        <span>Sign out</span>
-                    </div>
-                </div>
             </div>
-        </div>
-    </header>
+        </header>
 
-    <!-- Hidden file input for upload -->
-    <input type="file" id="documentFileInput" class="is-hidden" accept=".yaml,.yml,text/yaml">
+        <!-- Hidden file input for upload -->
+        <input type="file" id="documentFileInput" class="is-hidden" accept=".yaml,.yml,text/yaml">
 
-    <!-- Main Content -->
-    <main class="main-content">
-        <!-- Status message -->
-        <p class="document-status" id="documentStatusMessage"></p>
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Status message -->
+            <p class="document-status" id="documentStatusMessage"></p>
 
-        <!-- Agent Groups Container -->
-        <div id="agentGroupsContainer"></div>
-    </main>
+            <!-- Empty State -->
+            <div class="empty-state" id="emptyState">
+                <div class="empty-state__icon">
+                    <i data-lucide="layout-grid"></i>
+                </div>
+                <h2 class="empty-state__title">No canvas selected</h2>
+                <p class="empty-state__description">Create a new canvas or select one from the sidebar to get started.</p>
+                <button type="button" class="empty-state__btn" id="emptyStateNewBtn">
+                    <i data-lucide="plus"></i>
+                    Create Canvas
+                </button>
+            </div>
+
+            <!-- Agent Groups Container -->
+            <div id="agentGroupsContainer"></div>
+        </main>
+    </div>
 
     <!-- Edit Agent Modal -->
     <div id="agentModal" class="modal-overlay">
@@ -188,12 +217,6 @@
             </div>
             <div class="modal__body">
                 <form id="agentForm">
-                    <!-- View Toggle -->
-                    <div class="modal__tabs">
-                        <button type="button" class="modal__tab is-active" id="agentFormToggle">Form</button>
-                        <button type="button" class="modal__tab" id="agentYamlToggle">Code</button>
-                    </div>
-
                     <!-- Form View -->
                     <div id="agentFormContent">
                         <div class="form-group">
@@ -270,17 +293,6 @@
                         </div>
                     </div>
 
-                    <!-- YAML View -->
-                    <div id="agentYamlContent" class="is-hidden">
-                        <div class="u-flex u-justify-between u-align-center u-gap-2" style="margin-bottom: var(--space-3);">
-                            <button type="button" class="btn btn--sm" id="agentCopyYamlBtn">
-                                <i data-lucide="copy"></i> Copy
-                            </button>
-                            <span class="badge" id="agentYamlStatus"></span>
-                        </div>
-                        <textarea id="agentYamlInput" class="yaml-editor" rows="20" spellcheck="false"></textarea>
-                        <p class="badge badge--error" id="agentYamlError" style="margin-top: var(--space-2);"></p>
-                    </div>
                 </form>
             </div>
             <div class="modal__footer">
@@ -290,65 +302,6 @@
                 <div class="u-flex-1"></div>
                 <button type="button" class="btn" id="agentCancelBtn">Cancel</button>
                 <button type="button" class="btn btn--primary" id="agentSaveBtn">
-                    <i data-lucide="check"></i> Save
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Edit Group Modal -->
-    <div id="groupModal" class="modal-overlay">
-        <div class="modal">
-            <div class="modal__header">
-                <h2 class="modal__title" id="modalGroupTitle">Edit Section</h2>
-                <button type="button" class="modal__close" id="groupModalClose">
-                    <i data-lucide="x"></i>
-                </button>
-            </div>
-            <div class="modal__body">
-                <form id="groupForm">
-                    <!-- View Toggle -->
-                    <div class="modal__tabs">
-                        <button type="button" class="modal__tab is-active" id="groupFormToggle">Form</button>
-                        <button type="button" class="modal__tab" id="groupYamlToggle">Code</button>
-                    </div>
-
-                    <!-- Form View -->
-                    <div id="groupFormContent">
-                        <div class="form-group">
-                            <label class="form-label form-label--required" for="groupName">Section Name</label>
-                            <input type="text" id="groupName" class="form-input" required>
-                            <div id="groupIdPreview" class="badge" style="margin-top: var(--space-2);">
-                                ID will be generated
-                            </div>
-                        </div>
-
-                        <div class="form-group">
-                            <label class="form-label" for="groupPhaseTag">Phase Tag (optional)</label>
-                            <input type="text" id="groupPhaseTag" class="form-input" placeholder="e.g., Phase 1">
-                        </div>
-                    </div>
-
-                    <!-- YAML View -->
-                    <div id="groupYamlContent" class="is-hidden">
-                        <div class="u-flex u-justify-between u-align-center u-gap-2" style="margin-bottom: var(--space-3);">
-                            <button type="button" class="btn btn--sm" id="groupCopyYamlBtn">
-                                <i data-lucide="copy"></i> Copy
-                            </button>
-                            <span class="badge" id="groupYamlStatus"></span>
-                        </div>
-                        <textarea id="groupYamlInput" class="yaml-editor" rows="15" spellcheck="false"></textarea>
-                        <p class="badge badge--error" id="groupYamlError" style="margin-top: var(--space-2);"></p>
-                    </div>
-                </form>
-            </div>
-            <div class="modal__footer">
-                <button type="button" class="btn btn--danger" id="deleteGroupBtn">
-                    <i data-lucide="trash-2"></i> Delete
-                </button>
-                <div class="u-flex-1"></div>
-                <button type="button" class="btn" id="groupCancelBtn">Cancel</button>
-                <button type="button" class="btn btn--primary" id="groupSaveBtn">
                     <i data-lucide="check"></i> Save
                 </button>
             </div>
@@ -375,31 +328,6 @@
             <div class="modal__footer">
                 <button type="button" class="btn" id="titleModalCancel">Cancel</button>
                 <button type="button" class="btn btn--primary" id="titleModalSave">
-                    <i data-lucide="check"></i> Save
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Edit Full YAML Modal -->
-    <div id="fullYamlModal" class="modal-overlay">
-        <div class="modal modal--large">
-            <div class="modal__header">
-                <h2 class="modal__title">Edit Raw Data</h2>
-                <button type="button" class="modal__close" id="fullYamlModalClose">
-                    <i data-lucide="x"></i>
-                </button>
-            </div>
-            <div class="modal__body">
-                <p style="color: var(--text-muted); font-size: var(--text-sm); margin-bottom: var(--space-4);">
-                    Edit the complete dashboard configuration. Required: <code>agentGroups</code> array with <code>groupName</code> and <code>agents</code>.
-                </p>
-                <textarea id="fullYamlInput" class="yaml-editor" style="min-height: 400px;"></textarea>
-                <p class="badge badge--error" id="fullYamlError" style="margin-top: var(--space-2);"></p>
-            </div>
-            <div class="modal__footer">
-                <button type="button" class="btn" id="fullYamlCancel">Cancel</button>
-                <button type="button" class="btn btn--primary" id="fullYamlSave">
                     <i data-lucide="check"></i> Save
                 </button>
             </div>

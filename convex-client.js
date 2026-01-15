@@ -231,6 +231,8 @@ export async function createAgent(data) {
     demoLink: data.demoLink,
     videoLink: data.videoLink,
     metrics: data.metrics,
+    tags: data.tags,
+    payload: data.payload,
   });
 }
 
@@ -276,6 +278,10 @@ export async function getCanvasBySlug(workosOrgId, slug) {
   return requireClient().query("canvases:getBySlug", { workosOrgId, slug });
 }
 
+export async function getCanvas(canvasId) {
+  return requireClient().query("canvases:get", { canvasId });
+}
+
 export async function getAgentHistory(agentId) {
   return requireClient().query("agentHistory:list", { agentId });
 }
@@ -303,7 +309,7 @@ export async function getDocument(workosOrgId, slug) {
 /**
  * Create or update a document (canvas)
  */
-export async function saveDocument(workosOrgId, slug, title, sourceYaml) {
+export async function saveDocument(workosOrgId, slug, title) {
   // Try to get existing canvas
   const existing = await requireClient().query("canvases:getBySlug", { workosOrgId, slug });
   
@@ -312,7 +318,6 @@ export async function saveDocument(workosOrgId, slug, title, sourceYaml) {
     await requireClient().mutation("canvases:update", {
       canvasId: existing._id,
       title,
-      sourceYaml,
     });
     return existing._id;
   } else {
@@ -321,7 +326,6 @@ export async function saveDocument(workosOrgId, slug, title, sourceYaml) {
       workosOrgId,
       title: title || slug,
       slug,
-      sourceYaml,
     });
   }
 }

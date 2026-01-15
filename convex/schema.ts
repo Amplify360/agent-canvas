@@ -18,7 +18,6 @@ export default defineSchema({
     workosOrgId: v.string(),
     title: v.string(),
     slug: v.string(), // Document name/identifier
-    sourceYaml: v.optional(v.string()), // Optional original YAML for import/export
     deletedAt: v.optional(v.number()), // Soft delete timestamp
     createdBy: v.string(), // WorkOS user ID
     updatedBy: v.string(),

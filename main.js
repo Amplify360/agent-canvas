@@ -10,20 +10,11 @@ import {
     setActiveDocumentName,
     setDocumentStatusMessage
 } from './documents.js';
-import {
-    copyTextToClipboard,
-    setElementText
-} from './modal-utils.js';
 import { bindToggleMenu } from './menu-utils.js';
 import {
     deepClone,
-    DEFAULT_DOCUMENT_NAME,
-    ensureGroupHasId,
-    generateGroupIdFromName,
+    slugifyIdentifier,
     getAgentMetrics,
-    getCollapsedPillClass,
-    getGroupClass,
-    getGroupFormatting,
     loadCollapsedState,
     refreshIcons,
     saveCollapsedState,
@@ -40,9 +31,8 @@ import {
     getGroupingTagType
 } from './state.js';
 import { initAuth, signOut, getCurrentUser, getUserName, getUserEmail, isAuthenticated, getIdToken } from './auth-client-workos.js';
-import { initConvexClient, initConvexClientAsync, getConvexClient, updateConvexAuth, getDocument, syncOrgMemberships, unsubscribeAll } from './convex-client.js';
-import { convexToYaml, yamlToConvexAgents } from './yaml-converter.js';
-import { groupAgentsByTag, flattenAgentsFromConfig, filterAgents, searchAgents } from './grouping.js';
+import { createAgent as createAgentMutation, deleteAgent as deleteAgentMutation, getConvexClient, getDocument, initConvexClient, initConvexClientAsync, syncOrgMemberships, unsubscribeAll, updateAgent as updateAgentMutation, updateConvexAuth } from './convex-client.js';
+import { groupAgentsByTag, filterAgents, searchAgents } from './grouping.js';
 import { TAG_TYPES, getAgentTagDisplay, getToolDisplay } from './types/tags.js';
 
 // Tag type to DOM container ID mapping
@@ -125,8 +115,12 @@ export function canManageCanvasesInCurrentGroup() {
 async function initializeGroups() {
     const orgs = getUserOrgsFromState();
 
-    // Render group switcher (simplified)
+    // Render group switcher (simplified - legacy)
     renderGroupSwitcher();
+
+    // Update sidebar org switcher
+    updateOrgSwitcherUI();
+    populateOrgDropdown();
 
     return orgs;
 }
@@ -162,7 +156,7 @@ function updateRoleBasedUI() {
     // Update board menu - hide admin-only actions for viewers
     const boardMenu = document.getElementById('board-menu');
     if (boardMenu) {
-        const adminActions = ['edit-title', 'edit-full-yaml', 'add-section'];
+        const adminActions = ['edit-title', 'add-section'];
         const displayValue = canManage ? '' : 'none';
 
         adminActions.forEach(action => {
@@ -207,10 +201,11 @@ function toggleSectionCollapse(groupId) {
 }
 
 function collapseAll() {
-    if (!state.configData?.agentGroups) return;
-    state.configData.agentGroups.forEach(group => {
-        state.collapsedSections[group.groupId] = true;
-        const section = document.querySelector(`[data-group-id="${group.groupId}"]`);
+    if (!Array.isArray(state.computedGroups) || state.computedGroups.length === 0) return;
+    state.computedGroups.forEach(group => {
+        const groupId = group.id || group.groupId;
+        state.collapsedSections[groupId] = true;
+        const section = document.querySelector(`[data-group-id="${groupId}"]`);
         section?.classList.add('collapsed');
     });
     saveCollapsedState();
@@ -218,10 +213,11 @@ function collapseAll() {
 }
 
 function expandAll() {
-    if (!state.configData?.agentGroups) return;
-    state.configData.agentGroups.forEach(group => {
-        state.collapsedSections[group.groupId] = false;
-        const section = document.querySelector(`[data-group-id="${group.groupId}"]`);
+    if (!Array.isArray(state.computedGroups) || state.computedGroups.length === 0) return;
+    state.computedGroups.forEach(group => {
+        const groupId = group.id || group.groupId;
+        state.collapsedSections[groupId] = false;
+        const section = document.querySelector(`[data-group-id="${groupId}"]`);
         section?.classList.remove('collapsed');
     });
     saveCollapsedState();
@@ -229,8 +225,11 @@ function expandAll() {
 }
 
 function toggleCollapseAll() {
-    if (!state.configData?.agentGroups) return;
-    const allCollapsed = state.configData.agentGroups.every(group => state.collapsedSections[group.groupId] === true);
+    if (!Array.isArray(state.computedGroups) || state.computedGroups.length === 0) return;
+    const allCollapsed = state.computedGroups.every(group => {
+        const groupId = group.id || group.groupId;
+        return state.collapsedSections[groupId] === true;
+    });
     if (allCollapsed) {
         expandAll();
     } else {
@@ -239,7 +238,7 @@ function toggleCollapseAll() {
 }
 
 function updateCollapseAllButton() {
-    if (!state.configData?.agentGroups || state.configData.agentGroups.length === 0) return;
+    if (!Array.isArray(state.computedGroups) || state.computedGroups.length === 0) return;
 
     const btn = document.getElementById('collapseAllBtn');
     const text = document.getElementById('collapseAllText');
@@ -247,20 +246,16 @@ function updateCollapseAllButton() {
 
     if (!btn || !text || !icon) return;
 
-    const allCollapsed = state.configData.agentGroups.every(group => state.collapsedSections[group.groupId] === true);
+    const allCollapsed = state.computedGroups.every(group => {
+        const groupId = group.id || group.groupId;
+        return state.collapsedSections[groupId] === true;
+    });
     text.textContent = allCollapsed ? 'Expand All' : 'Collapse All';
     icon.setAttribute('data-lucide', allCollapsed ? 'chevrons-up' : 'chevrons-down');
     refreshIcons();
 }
 
-// ----- Modal YAML view helpers -----
-function updateAgentModalViewUI() {
-    updateDualViewModalUI(modalViewConfigs.agent);
-}
-
-function updateGroupModalViewUI() {
-    updateDualViewModalUI(modalViewConfigs.group);
-}
+// ----- Agent modal helpers -----
 
 function populateAgentFormFields(agent = {}) {
     document.getElementById('agentName').value = agent.name || '';
@@ -303,70 +298,13 @@ function populateAgentFormFields(agent = {}) {
     refreshIcons();
 }
 
-function populateGroupFormFields(group = {}, options = {}) {
-    const derivedIndex = typeof options.groupIndex === 'number'
-        ? options.groupIndex
-        : parseInt(document.getElementById('groupForm')?.dataset.groupIndex ?? '-1', 10);
-    const groupIndex = Number.isNaN(derivedIndex) ? -1 : derivedIndex;
-
-    document.getElementById('groupName').value = group.groupName || '';
-    document.getElementById('groupPhaseTag').value = group.phaseTag || '';
-
-    updateGroupIdPreview({ groupIndex, group });
-}
-
-function updateGroupIdPreview(options = {}) {
-    const previewEl = document.getElementById('groupIdPreview');
-    if (!previewEl) {
-        return;
-    }
-
-    const form = document.getElementById('groupForm');
-    const datasetIndex = form ? parseInt(form.dataset.groupIndex ?? '-1', 10) : -1;
-    const groupIndex = typeof options.groupIndex === 'number'
-        ? options.groupIndex
-        : (Number.isNaN(datasetIndex) ? -1 : datasetIndex);
-
-    const isExistingGroup = groupIndex > -1;
-    const groupSource = options.group || state.groupModalOriginal || {};
-    const configGroup = isExistingGroup && Array.isArray(state.configData?.agentGroups)
-        ? state.configData.agentGroups[groupIndex]
-        : null;
-
-    const resolvedExistingId = (groupSource.groupId || configGroup?.groupId || '').trim();
-
-    if (isExistingGroup && resolvedExistingId) {
-        previewEl.textContent = `Section ID: ${resolvedExistingId}`;
-        return;
-    }
-
-    const rawName = options.nameOverride !== undefined
-        ? options.nameOverride
-        : document.getElementById('groupName')?.value || groupSource.groupName || '';
-    const trimmedName = rawName.trim();
-
-    if (!trimmedName) {
-        previewEl.textContent = 'Section ID will be generated when you enter a name.';
-        return;
-    }
-
-    const previewId = generateGroupIdFromName(trimmedName, groupIndex);
-    previewEl.textContent = `Section ID (auto): ${previewId}`;
-}
-
 function buildAgentDraftFromForm() {
     const form = document.getElementById('agentForm');
     if (!form) return null;
 
-    const groupIndex = parseInt(form.dataset.groupIndex);
-    const agentIndex = parseInt(form.dataset.agentIndex);
-    const isNew = agentIndex === -1;
     const baseAgent = deepClone(state.agentModalOriginal || {});
-    const group = state.configData?.agentGroups?.[groupIndex];
 
     const draft = { ...baseAgent };
-    const existingAgentNumber = !isNew ? (baseAgent.agentNumber || group?.agents?.[agentIndex]?.agentNumber) : null;
-    draft.agentNumber = existingAgentNumber || ((group?.agents?.length || 0) + 1);
     draft.name = document.getElementById('agentName').value;
     draft.objective = document.getElementById('agentObjective').value;
     draft.description = document.getElementById('agentDescription').value;
@@ -379,10 +317,13 @@ function buildAgentDraftFromForm() {
         .map(line => line.trim())
         .filter(line => line.length > 0);
 
-    const metrics = { ...(baseAgent.metrics || {}), ...getAgentMetrics(baseAgent) };
-    metrics.usageThisWeek = document.getElementById('metricsUsage').value;
-    metrics.timeSaved = document.getElementById('metricsTimeSaved').value;
-    draft.metrics = metrics;
+    // UI metrics are strings; Convex metrics are numeric { adoption, satisfaction }
+    const usageThisWeek = document.getElementById('metricsUsage').value;
+    const timeSaved = document.getElementById('metricsTimeSaved').value;
+    draft.metrics = {
+        adoption: parseFloat(usageThisWeek) || 0,
+        satisfaction: parseFloat(timeSaved) || 0
+    };
 
     // Collect tag values from custom tag selectors
     const tags = { ...(baseAgent.tags || {}) };
@@ -399,303 +340,73 @@ function buildAgentDraftFromForm() {
 
     // Phase (for grouping)
     const phaseInput = document.getElementById('agentPhase');
-    if (phaseInput?.value) draft.phase = phaseInput.value;
+    const defaultPhase = form.dataset.defaultPhase || '';
+    const nextPhase = (phaseInput?.value || defaultPhase || baseAgent.phase || '').trim();
+    if (nextPhase) draft.phase = nextPhase;
+
+    // Keep a portable payload for UI/legacy compatibility (not used as source of truth)
+    const legacyMetrics = {
+        usageThisWeek,
+        timeSaved,
+        roiContribution: (baseAgent?.payload?.metrics?.roiContribution || baseAgent?.metrics?.roiContribution || 'Medium')
+    };
+    draft.payload = {
+        name: draft.name,
+        objective: draft.objective,
+        description: draft.description,
+        tools: draft.tools,
+        journeySteps: draft.journeySteps,
+        metrics: legacyMetrics,
+        tags: draft.tags,
+        phase: draft.phase
+    };
 
     return draft;
 }
-
-function buildGroupDraftFromForm() {
-    const form = document.getElementById('groupForm');
-    if (!form) return null;
-
-    const groupIndex = parseInt(form.dataset.groupIndex);
-    const isNew = groupIndex === -1;
-    const baseGroup = deepClone(state.groupModalOriginal || {});
-
-    const draft = { ...baseGroup };
-    draft.groupNumber = isNew
-        ? state.configData?.agentGroups?.length || 0
-        : (baseGroup.groupNumber ?? state.configData.agentGroups[groupIndex].groupNumber);
-    draft.groupName = document.getElementById('groupName').value;
-    // groupClass is derived from groupId, not set from form - only preserve if explicitly in original
-    if (!baseGroup.groupClass) {
-        delete draft.groupClass;
-    }
-    draft.phaseTag = document.getElementById('groupPhaseTag').value;
-
-    ensureGroupHasId(draft, groupIndex);
-
-    if (isNew) {
-        draft.agents = draft.agents || [];
-    } else {
-        draft.agents = state.configData.agentGroups[groupIndex].agents;
-    }
-
-    return draft;
-}
-
-function syncAgentStateFromForm() {
-    const draft = buildAgentDraftFromForm();
-    if (!draft) return false;
-    state.agentModalOriginal = draft;
-    return true;
-}
-
-function syncGroupStateFromForm() {
-    const draft = buildGroupDraftFromForm();
-    if (!draft) return false;
-    state.groupModalOriginal = draft;
-    return true;
-}
-
-function updateYamlEditor(type) {
-    const inputId = type === 'agent' ? 'agentYamlInput' : 'groupYamlInput';
-    const errorId = type === 'agent' ? 'agentYamlError' : 'groupYamlError';
-    const statusId = type === 'agent' ? 'agentYamlStatus' : 'groupYamlStatus';
-    const stateKey = type === 'agent' ? 'agentModalOriginal' : 'groupModalOriginal';
-
-    const textarea = document.getElementById(inputId);
-    if (!textarea) return;
-    textarea.value = window.jsyaml.dump(state[stateKey] || {});
-    setElementText(errorId, '');
-    setElementText(statusId, '');
-}
-function updateAgentYamlEditor() { updateYamlEditor('agent'); }
-function updateGroupYamlEditor() { updateYamlEditor('group'); }
-
-function applyYamlToForm(type) {
-    const inputId = type === 'agent' ? 'agentYamlInput' : 'groupYamlInput';
-    const errorId = type === 'agent' ? 'agentYamlError' : 'groupYamlError';
-    const stateKey = type === 'agent' ? 'agentModalOriginal' : 'groupModalOriginal';
-    const label = type === 'agent' ? 'Agent' : 'Section';
-
-    const textarea = document.getElementById(inputId);
-    if (!textarea) return false;
-    try {
-        const parsed = window.jsyaml.load(textarea.value) || {};
-        if (typeof parsed !== 'object' || Array.isArray(parsed)) {
-            throw new Error(`${label} YAML must describe an object.`);
-        }
-
-        if (type === 'agent') {
-            state[stateKey] = parsed;
-            populateAgentFormFields(parsed);
-        } else {
-            const form = document.getElementById('groupForm');
-            const datasetIndex = form ? parseInt(form.dataset.groupIndex ?? '-1', 10) : -1;
-            const groupIndex = Number.isNaN(datasetIndex) ? -1 : datasetIndex;
-            state[stateKey] = ensureGroupHasId(parsed, groupIndex);
-            populateGroupFormFields(state[stateKey], { groupIndex });
-        }
-
-        setElementText(errorId, '');
-        return true;
-    } catch (error) {
-        setElementText(errorId, error.message);
-        return false;
-    }
-}
-function applyAgentYamlToForm() { return applyYamlToForm('agent'); }
-function applyGroupYamlToForm() { return applyYamlToForm('group'); }
-
-const modalViewConfigs = {
-    agent: {
-        formId: 'agentForm', modalId: 'agentModal', titleId: 'modalAgentTitle',
-        stateKey: 'agentModalOriginal', indexKey: 'agentIndex', secondIndexKey: 'groupIndex',
-        numberKey: 'agentNumber', nameKey: 'name',
-        getMode: () => state.agentModalViewMode,
-        setMode: mode => { state.agentModalViewMode = mode; },
-        selectors: {
-            formContentId: 'agentFormContent',
-            yamlContentId: 'agentYamlContent',
-            formToggleId: 'agentFormToggle',
-            yamlToggleId: 'agentYamlToggle'
-        },
-        syncFromForm: syncAgentStateFromForm,
-        applyFromYaml: applyAgentYamlToForm,
-        updateYamlEditor: updateAgentYamlEditor,
-        formReadError: 'Unable to read agent form data.',
-        yamlValidationError: 'Please fix YAML errors before returning to form view.',
-        getCollection: (gi) => state.configData.agentGroups[gi].agents
-    },
-    group: {
-        formId: 'groupForm', modalId: 'groupModal', titleId: 'modalGroupTitle',
-        stateKey: 'groupModalOriginal', indexKey: 'groupIndex',
-        numberKey: 'groupNumber', nameKey: 'groupName',
-        getMode: () => state.groupModalViewMode,
-        setMode: mode => { state.groupModalViewMode = mode; },
-        selectors: {
-            formContentId: 'groupFormContent',
-            yamlContentId: 'groupYamlContent',
-            formToggleId: 'groupFormToggle',
-            yamlToggleId: 'groupYamlToggle'
-        },
-        syncFromForm: syncGroupStateFromForm,
-        applyFromYaml: applyGroupYamlToForm,
-        updateYamlEditor: updateGroupYamlEditor,
-        formReadError: 'Unable to read section form data.',
-        yamlValidationError: 'Please fix YAML errors before returning to form view.',
-        getCollection: () => state.configData.agentGroups
-    }
-};
-
-function updateDualViewModalUI(config) {
-    const mode = config.getMode();
-    const {
-        formContentId,
-        yamlContentId,
-        formToggleId,
-        yamlToggleId
-    } = config.selectors;
-
-    const formContent = document.getElementById(formContentId);
-    const yamlContent = document.getElementById(yamlContentId);
-    const formToggle = document.getElementById(formToggleId);
-    const yamlToggle = document.getElementById(yamlToggleId);
-
-    if (formContent) {
-        formContent.style.display = mode === 'form' ? 'block' : 'none';
-    }
-    if (yamlContent) {
-        yamlContent.style.display = mode === 'yaml' ? 'block' : 'none';
-    }
-    if (formToggle) {
-        formToggle.classList.toggle('active', mode === 'form');
-    }
-    if (yamlToggle) {
-        yamlToggle.classList.toggle('active', mode === 'yaml');
-    }
-}
-
-function setModalView(mode, config) {
-    if (mode === config.getMode()) {
-        return;
-    }
-
-    if (mode === 'yaml') {
-        if (!config.syncFromForm()) {
-            alert(config.formReadError);
-            return;
-        }
-        config.updateYamlEditor();
-    } else {
-        if (!config.applyFromYaml()) {
-            alert(config.yamlValidationError);
-            return;
-        }
-    }
-
-    config.setMode(mode);
-    updateDualViewModalUI(config);
-}
-
-function ensureModalStateFromCurrentView(config) {
-    if (config.getMode() === 'yaml') {
-        return config.applyFromYaml();
-    }
-    return config.syncFromForm();
-}
-
-function ensureAgentStateFromCurrentView() { return ensureModalStateFromCurrentView(modalViewConfigs.agent); }
-function ensureGroupStateFromCurrentView() { return ensureModalStateFromCurrentView(modalViewConfigs.group); }
-
-async function copyYaml(type) {
-    const inputId = type === 'agent' ? 'agentYamlInput' : 'groupYamlInput';
-    const statusId = type === 'agent' ? 'agentYamlStatus' : 'groupYamlStatus';
-    const textarea = document.getElementById(inputId);
-    if (!textarea) return;
-    const success = await copyTextToClipboard(textarea.value);
-    setElementText(statusId, success ? 'Copied to clipboard' : 'Clipboard unavailable');
-    if (success) setTimeout(() => setElementText(statusId, ''), 2000);
-}
-async function copyAgentYaml() { return copyYaml('agent'); }
-async function copyGroupYaml() { return copyYaml('group'); }
 
 // ----- Config load/save -----
-async function loadConfig(docName = state.currentDocumentName || DEFAULT_DOCUMENT_NAME) {
+async function loadConfig(canvasRef = state.currentCanvasId || state.currentDocumentName) {
     try {
         const currentOrg = getCurrentOrg();
         if (!currentOrg) {
             throw new Error('No organization selected');
         }
+        if (!canvasRef) {
+            throw new Error('No canvas selected');
+        }
 
-        // Get canvas from Convex
-        const canvas = await getDocument(currentOrg.id, docName);
+        // Get canvas from Convex (canvasId preferred; fall back to slug for legacy)
+        const refIsCanvasId = state.availableDocuments?.some(d => d.id === canvasRef);
+        const canvas = refIsCanvasId
+            ? await getConvexClient().query("canvases:get", { canvasId: canvasRef })
+            : await getDocument(currentOrg.id, canvasRef);
         if (!canvas) {
-            throw new Error(`Document "${docName}" not found`);
+            throw new Error(`Canvas not found`);
         }
 
         // Get agents for this canvas
         const agents = await getConvexClient().query("agents:list", { canvasId: canvas._id });
         
         // Get org settings for toolsConfig and sectionDefaults
-        const orgSettings = await getConvexClient().query("orgSettings:get", { workosOrgId: currentOrg.id }).catch(() => null);
+        const orgSettings = await getConvexClient()
+            .query("orgSettings:get", { workosOrgId: canvas.workosOrgId })
+            .catch(() => null);
+        state.orgSettings = orgSettings;
+        
+        // Store canvas + agents as the canonical frontend state
+        state.currentCanvas = canvas;
+        state.agents = agents;
 
-        // Convert Convex data to YAML format
-        state.configData = convexToYaml(canvas, agents, orgSettings);
-        
-        // Store canvas ID for future operations
+        // Store canvas ID for future operations / persistence
         state.currentCanvasId = canvas._id;
+        state.currentDocumentName = canvas._id;
         
-        return state.configData;
+        return { canvas, agents, orgSettings };
     } catch (error) {
         console.error('Error loading config:', error);
         document.getElementById('agentGroupsContainer').innerHTML =
-            '<p class="empty-state-message">Error loading configuration file</p>';
+            '<p class="empty-state-message">Error loading canvas</p>';
         throw error;
-    }
-}
-
-async function saveConfig() {
-    try {
-        setDocumentStatusMessage('Saving configuration...');
-        const docName = state.currentDocumentName || DEFAULT_DOCUMENT_NAME;
-        const currentOrg = getCurrentOrg();
-        if (!currentOrg) {
-            throw new Error('No organization selected');
-        }
-
-        // Convert YAML to Convex agents format
-        const agents = yamlToConvexAgents(state.configData);
-        
-        // Get or create canvas
-        let canvas = await getDocument(currentOrg.id, docName);
-        const title = state.configData.documentTitle || docName;
-        const yamlText = window.jsyaml.dump(state.configData);
-
-        if (!canvas) {
-            // Create new canvas
-            const canvasId = await getConvexClient().mutation("canvases:create", {
-                workosOrgId: currentOrg.id,
-                title,
-                slug: docName,
-                sourceYaml: yamlText,
-            });
-            canvas = await getConvexClient().query("canvases:get", { canvasId });
-        } else {
-            // Update existing canvas
-            await getConvexClient().mutation("canvases:update", {
-                canvasId: canvas._id,
-                title,
-                sourceYaml: yamlText,
-            });
-        }
-
-        // Atomically replace all agents for this canvas
-        await getConvexClient().mutation("agents:bulkReplace", {
-            canvasId: canvas._id,
-            agents,
-        });
-
-        state.currentCanvasId = canvas._id;
-        setDocumentStatusMessage('Saved.', 'success');
-        await refreshDocumentList(docName);
-        return true;
-    } catch (error) {
-        console.error('Error saving config:', error);
-        alert('Failed to save configuration: ' + error.message);
-        setDocumentStatusMessage('Save failed.', 'error');
-        return false;
     }
 }
 
@@ -770,11 +481,11 @@ function createAgentCard(agent, groupIndex, agentIndex) {
     const staggerClass = `stagger-${((agentIndex % 8) + 1)}`;
 
     return `
-        <article class="agent-card ${staggerClass}" data-group-index="${groupIndex}" data-agent-index="${agentIndex}">
+        <article class="agent-card ${staggerClass}" data-agent-id="${agent._id}" data-group-index="${groupIndex}" data-agent-index="${agentIndex}">
             <div class="agent-card__status-strip" style="--status-color: ${statusColor};"></div>
 
             <header class="agent-card__header">
-                <span class="agent-card__number">${String(agent.agentNumber || agentIndex + 1).padStart(2, '0')}</span>
+                <span class="agent-card__number">${String((agent.agentOrder ?? agentIndex) + 1).padStart(2, '0')}</span>
                 <div class="agent-card__title">
                     <h3 class="agent-card__name">${agent.name || 'Untitled Agent'}</h3>
                 </div>
@@ -782,12 +493,12 @@ function createAgentCard(agent, groupIndex, agentIndex) {
                     <i data-lucide="more-horizontal"></i>
                 </button>
                 <div class="context-menu" id="${agentMenuId}">
-                    <div class="context-menu__item" data-action-type="agent-edit" data-group-index="${groupIndex}" data-agent-index="${agentIndex}">
+                    <div class="context-menu__item" data-action-type="agent-edit" data-agent-id="${agent._id}">
                         <i data-lucide="edit-3"></i>
                         <span>Edit Agent</span>
                     </div>
                     <div class="context-menu__divider"></div>
-                    <div class="context-menu__item context-menu__item--danger" data-action-type="agent-delete" data-group-index="${groupIndex}" data-agent-index="${agentIndex}">
+                    <div class="context-menu__item context-menu__item--danger" data-action-type="agent-delete" data-agent-id="${agent._id}">
                         <i data-lucide="trash-2"></i>
                         <span>Delete</span>
                     </div>
@@ -894,17 +605,29 @@ function createAgentGroup(group, groupIndex) {
     const collapsedPillsHTML = `<div class="collapsed-pills">${agentPills}${morePill}</div>`;
 
     // Section menu for admin actions
+    const groupingTag = getGroupingTagType();
+    const sectionMenuActions = [
+        {
+            icon: 'plus',
+            label: 'Add Agent',
+            dataAttrs: `data-action-type="agent-add" data-group-index="${groupIndex}"`
+        }
+    ];
+    if (groupingTag === 'phase') {
+        sectionMenuActions.push(
+            { type: 'divider' },
+            {
+                icon: 'edit-3',
+                label: 'Rename Section',
+                dataAttrs: `data-action-type="phase-rename" data-group-index="${groupIndex}"`
+            }
+        );
+    }
     const sectionMenuTrigger = canManageCanvases() ? renderContextMenuTrigger({
         menuId: `section-menu-${groupIndex}`,
         title: 'Group options',
         stopPropagation: true,
-        actions: [
-            {
-                icon: 'plus',
-                label: 'Add Agent',
-                dataAttrs: `data-action-type="agent-add" data-group-index="${groupIndex}"`
-            }
-        ]
+        actions: sectionMenuActions
     }) : '';
 
     return `
@@ -930,13 +653,8 @@ function createAgentGroup(group, groupIndex) {
 // ----- Primary render pipeline -----
 // Render agent groups (can be called to re-render after edits)
 function renderAgentGroups() {
-    // Get agents from state (Convex agents or legacy configData)
-    let agents = state.agents || [];
-
-    // Fallback to legacy configData if no agents in state
-    if (agents.length === 0 && state.configData?.agentGroups) {
-        agents = flattenAgentsFromConfig(state.configData);
-    }
+    // Get agents from canonical Convex-native state
+    const agents = state.agents || [];
 
     // Load collapsed state and grouping preference
     loadCollapsedState();
@@ -962,7 +680,7 @@ function renderAgentGroups() {
     });
 
     // Update document/canvas title
-    const title = state.currentCanvas?.name || state.configData?.documentTitle || 'AgentCanvas';
+    const title = state.currentCanvas?.title || 'AgentCanvas';
     const titleEl = document.getElementById('documentTitle');
     if (titleEl) titleEl.textContent = title;
 
@@ -1088,140 +806,44 @@ function setupTooltips() {
     });
 }
 
-// ----- Generic Modal Save/Delete -----
-function genericSaveModal(type) {
-    const def = modalViewConfigs[type];
-    const form = document.getElementById(def.formId);
-    const idx = parseInt(form.dataset[def.indexKey]);
-    const isNew = idx === -1;
-
-    if (!ensureModalStateFromCurrentView(def)) {
-        alert('Please resolve form or YAML errors before saving.');
+// ----- Agent modal handlers -----
+function openEditAgentModal(agentId) {
+    const agent = (state.agents || []).find(a => a._id === agentId);
+    if (!agent) {
+        alert('Agent not found.');
         return;
     }
-
-    // Disable save button and show loading state
-    const saveBtn = document.getElementById(type === 'agent' ? 'agentSaveBtn' : 'groupSaveBtn');
-    if (saveBtn) {
-        saveBtn.disabled = true;
-        saveBtn.innerHTML = '<i data-lucide="loader-2"></i> Saving...';
-        saveBtn.classList.add('btn-loading');
-        refreshIcons();
-    }
-
-    // Show loading overlay
-    showLoadingOverlay('Saving...');
-
-    const item = deepClone(state[def.stateKey] || {});
-
-    // Handle numbering
-    if (type === 'agent') {
-        const gi = parseInt(form.dataset.groupIndex);
-        const coll = def.getCollection(gi);
-        if (!item[def.numberKey]) {
-            item[def.numberKey] = isNew ? coll.length + 1 : (coll[idx]?.[def.numberKey] || idx + 1);
-        }
-        if (isNew) coll.push(item); else coll[idx] = item;
-    } else {
-        const coll = def.getCollection();
-        if (!item[def.numberKey]) {
-            item[def.numberKey] = isNew ? coll.length : coll[idx][def.numberKey];
-        }
-        if (isNew) {
-            item.agents = Array.isArray(item.agents) ? item.agents : [];
-            coll.push(item);
-        } else {
-            item.agents = coll[idx].agents;
-            coll[idx] = item;
-        }
-    }
-
-    saveConfig().then(success => {
-        // Hide loading overlay
-        hideLoadingOverlay();
-
-        // Re-enable button
-        if (saveBtn) {
-            saveBtn.disabled = false;
-            saveBtn.innerHTML = '<i data-lucide="save"></i> Save';
-            saveBtn.classList.remove('btn-loading');
-            refreshIcons();
-        }
-
-        if (success) {
-            def.setMode('form');
-            state[def.stateKey] = null;
-            document.getElementById(def.modalId).classList.remove('show');
-            renderAgentGroups();
-        }
-    });
-}
-
-function genericDeleteModal(type, idx1 = null, idx2 = null) {
-    const def = modalViewConfigs[type];
-    if (idx1 === null) {
-        const form = document.getElementById(def.formId);
-        idx1 = parseInt(form.dataset[def.indexKey]);
-        if (type === 'agent') idx2 = parseInt(form.dataset[def.secondIndexKey]);
-    }
-
-    const coll = type === 'agent' ? def.getCollection(idx2) : def.getCollection();
-    const item = coll[idx1];
-    const confirmMsg = type === 'agent'
-        ? `Are you sure you want to delete "${item[def.nameKey]}"?`
-        : `Are you sure you want to delete "${item[def.nameKey]}" and all its agents?`;
-
-    if (!confirm(confirmMsg)) return;
-
-    coll.splice(idx1, 1);
-    saveConfig().then(success => {
-        if (success) {
-            def.setMode('form');
-            state[def.stateKey] = null;
-            document.getElementById(def.modalId).classList.remove('show');
-            renderAgentGroups();
-        }
-    });
-}
-
-// ----- Agent modal handlers -----
-function openEditAgentModal(groupIndex, agentIndex) {
-    const group = state.configData.agentGroups[groupIndex];
-    const agent = group.agents[agentIndex];
-
-    showAgentModal(agent, groupIndex, agentIndex);
+    showAgentModal(agent, { agentId });
 }
 
 function openAddAgentModal(groupIndex) {
+    const groupingTag = getGroupingTagType();
+    const group = Number.isFinite(groupIndex) ? state.computedGroups?.[groupIndex] : null;
+    const defaultPhase = groupingTag === 'phase' && group?.id ? String(group.id) : '';
+
     const newAgent = {
-        agentNumber: state.configData.agentGroups[groupIndex].agents.length + 1,
         name: '',
         objective: '',
         description: '',
         tools: [],
         journeySteps: [],
-        metrics: getAgentMetrics({})
+        tags: undefined,
+        phase: defaultPhase,
+        metrics: undefined,
+        payload: { metrics: getAgentMetrics({}) }
     };
 
-    showAgentModal(newAgent, groupIndex, -1);
+    showAgentModal(newAgent, { agentId: null, defaultPhase });
 }
 
-function showAgentModal(agent, groupIndex, agentIndex) {
-    const isNew = agentIndex === -1;
+function showAgentModal(agent, { agentId = null, defaultPhase = '' } = {}) {
+    const isNew = !agentId;
     const modal = document.getElementById('agentModal');
     const form = document.getElementById('agentForm');
 
     document.getElementById('modalAgentTitle').textContent = isNew ? 'Add Agent' : 'Edit Agent';
     state.agentModalOriginal = deepClone(agent);
-    state.agentModalViewMode = 'form';
     populateAgentFormFields(state.agentModalOriginal);
-    setElementText('agentYamlError', '');
-    setElementText('agentYamlStatus', '');
-    const agentYamlInput = document.getElementById('agentYamlInput');
-    if (agentYamlInput) {
-        agentYamlInput.value = '';
-    }
-    updateAgentModalViewUI();
 
     // Show/hide delete button
     const deleteBtn = document.getElementById('deleteAgentBtn');
@@ -1230,70 +852,201 @@ function showAgentModal(agent, groupIndex, agentIndex) {
     }
 
     // Store context for save
-    form.dataset.groupIndex = groupIndex;
-    form.dataset.agentIndex = agentIndex;
+    form.dataset.agentId = agentId || '';
+    form.dataset.originalPhase = (agent?.phase || '').trim();
+    form.dataset.defaultPhase = (defaultPhase || '').trim();
 
     modal.classList.add('show');
 }
 
-function closeModal(type) {
-    const def = modalViewConfigs[type];
-    def.setMode('form');
-    state[def.stateKey] = null;
-    document.getElementById(def.modalId).classList.remove('show');
-}
-function closeAgentModal() { closeModal('agent'); }
-function closeGroupModal() { closeModal('group'); }
-
-function saveAgent() { genericSaveModal('agent'); }
-function deleteAgent(groupIndex = null, agentIndex = null) { genericDeleteModal('agent', agentIndex, groupIndex); }
-
-// ----- Group modal handlers -----
-function openEditGroupModal(groupIndex) {
-    const group = state.configData.agentGroups[groupIndex];
-    showGroupModal(group, groupIndex);
-}
-
-function openAddSectionModal() {
-    const newGroup = {
-        groupNumber: state.configData.agentGroups.length,
-        groupName: '',
-        groupId: '',
-        agents: []
-    };
-    showGroupModal(newGroup, -1);
-}
-
-function showGroupModal(group, groupIndex) {
-    const isNew = groupIndex === -1;
-    const modal = document.getElementById('groupModal');
-    const form = document.getElementById('groupForm');
-
-    document.getElementById('modalGroupTitle').textContent = isNew ? 'Add Section' : 'Edit Section';
-    state.groupModalOriginal = deepClone(group);
-    state.groupModalViewMode = 'form';
+function closeAgentModal() {
+    state.agentModalOriginal = null;
+    const form = document.getElementById('agentForm');
     if (form) {
-        form.dataset.groupIndex = groupIndex;
+        delete form.dataset.agentId;
+        delete form.dataset.originalPhase;
+        delete form.dataset.defaultPhase;
     }
-    populateGroupFormFields(state.groupModalOriginal, { groupIndex });
-    setElementText('groupYamlError', '');
-    setElementText('groupYamlStatus', '');
-    const groupYamlInput = document.getElementById('groupYamlInput');
-    if (groupYamlInput) {
-        groupYamlInput.value = '';
-    }
-    updateGroupModalViewUI();
-
-    const deleteBtn = document.getElementById('deleteGroupBtn');
-    if (deleteBtn) {
-        deleteBtn.style.display = isNew ? 'none' : 'inline-flex';
-    }
-
-    modal.classList.add('show');
+    document.getElementById('agentModal')?.classList.remove('show');
 }
 
-function saveGroup() { genericSaveModal('group'); }
-function deleteGroup(groupIndex = null) { genericDeleteModal('group', groupIndex); }
+function getNextAgentOrderForPhase(phase) {
+    const orders = (state.agents || [])
+        .filter(a => !a.deletedAt && (a.phase || 'Uncategorized') === phase)
+        .map(a => a.agentOrder ?? 0);
+    const maxOrder = orders.length ? Math.max(...orders) : -1;
+    return maxOrder + 1;
+}
+
+function getPhaseOrderForPhase(phase) {
+    const samePhase = (state.agents || []).find(a => !a.deletedAt && (a.phase || 'Uncategorized') === phase);
+    if (samePhase && Number.isFinite(samePhase.phaseOrder)) return samePhase.phaseOrder;
+    const phaseOrders = (state.agents || [])
+        .filter(a => !a.deletedAt)
+        .map(a => a.phaseOrder ?? 0);
+    const max = phaseOrders.length ? Math.max(...phaseOrders) : -1;
+    return max + 1;
+}
+
+async function saveAgent() {
+    const form = document.getElementById('agentForm');
+    if (!form) return;
+
+    const agentId = (form.dataset.agentId || '').trim();
+    const isNew = !agentId;
+
+    const originalPhase = (form.dataset.originalPhase || '').trim();
+    const draft = buildAgentDraftFromForm();
+    if (!draft) return;
+
+    const phase = (draft.phase || originalPhase || 'Uncategorized').trim() || 'Uncategorized';
+
+    // Disable save button and show loading state
+    const saveBtn = document.getElementById('agentSaveBtn');
+    if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<i data-lucide="loader-2"></i> Saving...';
+        saveBtn.classList.add('btn-loading');
+        refreshIcons();
+    }
+    showLoadingOverlay('Saving...');
+
+    try {
+        if (isNew) {
+            const phaseOrder = getPhaseOrderForPhase(phase);
+            const agentOrder = getNextAgentOrderForPhase(phase);
+            await createAgentMutation({
+                canvasId: state.currentCanvasId,
+                phase,
+                phaseOrder,
+                agentOrder,
+                name: draft.name,
+                objective: draft.objective || undefined,
+                description: draft.description || undefined,
+                tools: draft.tools || [],
+                journeySteps: draft.journeySteps || [],
+                metrics: draft.metrics,
+                tags: draft.tags,
+                payload: draft.payload,
+            });
+        } else {
+            const phaseChanged = phase !== (originalPhase || '');
+            const updates = {
+                phase,
+                name: draft.name,
+                objective: draft.objective || undefined,
+                description: draft.description || undefined,
+                tools: draft.tools || [],
+                journeySteps: draft.journeySteps || [],
+                metrics: draft.metrics,
+                tags: draft.tags,
+                payload: draft.payload,
+            };
+
+            if (phaseChanged) {
+                updates.phaseOrder = getPhaseOrderForPhase(phase);
+                updates.agentOrder = getNextAgentOrderForPhase(phase);
+            }
+
+            await updateAgentMutation(agentId, updates);
+        }
+
+        await loadConfig(state.currentCanvasId);
+        renderAgentGroups();
+        closeAgentModal();
+    } catch (error) {
+        console.error('Agent save failed:', error);
+        alert('Failed to save agent: ' + (error.message || 'Unknown error'));
+    } finally {
+        hideLoadingOverlay();
+        if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = '<i data-lucide="save"></i> Save';
+            saveBtn.classList.remove('btn-loading');
+            refreshIcons();
+        }
+    }
+}
+
+async function deleteAgent(agentId = null) {
+    const id = (agentId || '').trim();
+    if (!id) return;
+    const agent = (state.agents || []).find(a => a._id === id);
+    const label = agent?.name ? `"${agent.name}"` : 'this agent';
+    if (!confirm(`Are you sure you want to delete ${label}?`)) return;
+
+    try {
+        showLoadingOverlay('Deleting...');
+        await deleteAgentMutation(id);
+        await loadConfig(state.currentCanvasId);
+        renderAgentGroups();
+        closeAgentModal();
+    } catch (error) {
+        console.error('Agent delete failed:', error);
+        alert('Failed to delete agent: ' + (error.message || 'Unknown error'));
+    } finally {
+        hideLoadingOverlay();
+    }
+}
+
+// ----- Phase/section handlers -----
+function openAddSectionModal() {
+    const userInput = prompt('Section name:', '');
+    if (userInput === null) return;
+
+    const phaseName = userInput.trim();
+    if (!phaseName) {
+        alert('Section name is required.');
+        return;
+    }
+
+    const newAgent = {
+        name: '',
+        objective: '',
+        description: '',
+        tools: [],
+        journeySteps: [],
+        tags: undefined,
+        phase: phaseName,
+        metrics: undefined,
+        payload: { metrics: getAgentMetrics({}) }
+    };
+
+    showAgentModal(newAgent, { agentId: null, defaultPhase: phaseName });
+}
+
+async function renamePhaseFromGroup(groupIndex) {
+    const group = state.computedGroups?.[groupIndex];
+    const fromPhase = (group?.id || '').toString().trim();
+    if (!fromPhase) return;
+
+    const userInput = prompt('Rename section:', fromPhase);
+    if (userInput === null) return;
+
+    const toPhase = userInput.trim();
+    if (!toPhase) {
+        alert('Section name is required.');
+        return;
+    }
+
+    if (toPhase === fromPhase) return;
+
+    try {
+        showLoadingOverlay('Renaming section...');
+        await getConvexClient().mutation("agents:renamePhase", {
+            canvasId: state.currentCanvasId,
+            fromPhase,
+            toPhase
+        });
+        await loadConfig(state.currentCanvasId);
+        renderAgentGroups();
+    } catch (error) {
+        console.error('Phase rename failed:', error);
+        alert('Failed to rename section: ' + (error.message || 'Unknown error'));
+    } finally {
+        hideLoadingOverlay();
+    }
+}
 
 // ----- Title modal handlers -----
 function openEditTitleModal() {
@@ -1301,7 +1054,7 @@ function openEditTitleModal() {
     const input = document.getElementById('documentTitleInput');
 
     // Set current title or default
-    const currentTitle = state.configData.documentTitle || 'AgentCanvas';
+    const currentTitle = state.currentCanvas?.title || 'AgentCanvas';
     input.value = currentTitle;
 
     modal.classList.add('show');
@@ -1334,222 +1087,29 @@ function saveTitleEdit() {
     // Show loading overlay
     showLoadingOverlay('Saving title...');
 
-    // Update config
-    state.configData.documentTitle = newTitle;
-
-    // Update display
-    document.getElementById('documentTitle').textContent = newTitle;
-
-    // Save config
-    saveConfig().then(success => {
-        // Hide loading overlay
-        hideLoadingOverlay();
-
-        // Re-enable button
-        if (saveBtn) {
-            saveBtn.disabled = false;
-            saveBtn.innerHTML = '<i data-lucide="save"></i> Save';
-            saveBtn.classList.remove('btn-loading');
-            refreshIcons();
-        }
-
-        if (success) {
+    getConvexClient()
+        .mutation("canvases:update", { canvasId: state.currentCanvasId, title: newTitle })
+        .then(() => {
+            if (state.currentCanvas) state.currentCanvas.title = newTitle;
+            document.getElementById('documentTitle').textContent = newTitle;
             closeTitleModal();
-        }
-    });
-}
-
-// ----- Full YAML modal -----
-function showFullYamlModal() {
-    const modal = document.getElementById('fullYamlModal');
-    const textarea = document.getElementById('fullYamlInput');
-
-    // Dump entire configData to YAML
-    textarea.value = window.jsyaml.dump(state.configData);
-
-    // Clear any previous errors
-    setElementText('fullYamlError', '');
-
-    modal.classList.add('show');
-    refreshIcons();
-}
-
-function closeFullYamlModal() {
-    document.getElementById('fullYamlModal').classList.remove('show');
-    setElementText('fullYamlError', '');
-}
-
-function validateAndNormalizeConfig(parsed) {
-    // Validate root structure
-    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
-        throw new Error('Configuration must be a YAML object');
-    }
-
-    // Validate agentGroups exists and is array
-    if (!parsed.agentGroups) {
-        throw new Error('Missing required field: agentGroups');
-    }
-    if (!Array.isArray(parsed.agentGroups)) {
-        throw new Error('agentGroups must be an array');
-    }
-
-    // Ensure sectionDefaults exists with proper defaults
-    if (!parsed.sectionDefaults || typeof parsed.sectionDefaults !== 'object') {
-        parsed.sectionDefaults = {
-            iconType: 'target',
-            showInFlow: true,
-            isSupport: false
-        };
-    } else {
-        // Fill in missing defaults
-        if (parsed.sectionDefaults.iconType === undefined) {
-            parsed.sectionDefaults.iconType = 'target';
-        }
-        if (parsed.sectionDefaults.showInFlow === undefined) {
-            parsed.sectionDefaults.showInFlow = true;
-        }
-        if (parsed.sectionDefaults.isSupport === undefined) {
-            parsed.sectionDefaults.isSupport = false;
-        }
-    }
-
-    // Validate and normalize each group
-    parsed.agentGroups.forEach((group, groupIdx) => {
-        const groupLabel = `Group ${groupIdx + 1}`;
-
-        // Validate group is an object
-        if (!group || typeof group !== 'object' || Array.isArray(group)) {
-            throw new Error(`${groupLabel} must be an object`);
-        }
-
-        // Validate required: groupName
-        if (!group.groupName || typeof group.groupName !== 'string' || !group.groupName.trim()) {
-            throw new Error(`${groupLabel} missing required field: groupName (non-empty string)`);
-        }
-        group.groupName = group.groupName.trim();
-
-        // Auto-generate groupNumber if missing
-        if (group.groupNumber === undefined || group.groupNumber === null) {
-            group.groupNumber = groupIdx;
-        } else if (typeof group.groupNumber !== 'number') {
-            throw new Error(`${groupLabel} "${group.groupName}": groupNumber must be a number`);
-        }
-
-        // Auto-generate groupId if missing
-        ensureGroupHasId(group, groupIdx, parsed);
-
-        // Validate required: agents array
-        if (!group.agents) {
-            throw new Error(`${groupLabel} "${group.groupName}" missing required field: agents`);
-        }
-        if (!Array.isArray(group.agents)) {
-            throw new Error(`${groupLabel} "${group.groupName}": agents must be an array`);
-        }
-
-        // Validate and normalize each agent
-        group.agents.forEach((agent, agentIdx) => {
-            const agentLabel = `${groupLabel} "${group.groupName}", Agent ${agentIdx + 1}`;
-
-            // Validate agent is an object
-            if (!agent || typeof agent !== 'object' || Array.isArray(agent)) {
-                throw new Error(`${agentLabel} must be an object`);
-            }
-
-            // Validate required: name
-            if (!agent.name || typeof agent.name !== 'string' || !agent.name.trim()) {
-                throw new Error(`${agentLabel} missing required field: name (non-empty string)`);
-            }
-            agent.name = agent.name.trim();
-
-            // Auto-generate agentNumber if missing
-            if (agent.agentNumber === undefined || agent.agentNumber === null) {
-                agent.agentNumber = agentIdx + 1;
-            } else if (typeof agent.agentNumber !== 'number') {
-                throw new Error(`${agentLabel} "${agent.name}": agentNumber must be a number`);
-            }
-
-            // Ensure optional fields have correct types if present
-            if (agent.objective !== undefined && typeof agent.objective !== 'string') {
-                throw new Error(`${agentLabel} "${agent.name}": objective must be a string`);
-            }
-            if (agent.description !== undefined && typeof agent.description !== 'string') {
-                throw new Error(`${agentLabel} "${agent.name}": description must be a string`);
-            }
-            if (agent.tools !== undefined && !Array.isArray(agent.tools)) {
-                throw new Error(`${agentLabel} "${agent.name}": tools must be an array`);
-            }
-            if (agent.journeySteps !== undefined && !Array.isArray(agent.journeySteps)) {
-                throw new Error(`${agentLabel} "${agent.name}": journeySteps must be an array`);
-            }
-            if (agent.metrics !== undefined && (typeof agent.metrics !== 'object' || Array.isArray(agent.metrics))) {
-                throw new Error(`${agentLabel} "${agent.name}": metrics must be an object`);
-            }
-
-            // Set defaults for optional fields
-            agent.tools = agent.tools || [];
-            agent.journeySteps = agent.journeySteps || [];
-            agent.objective = agent.objective || '';
-            agent.description = agent.description || '';
-        });
-    });
-
-    return parsed;
-}
-
-function saveFullYaml() {
-    const textarea = document.getElementById('fullYamlInput');
-    const errorEl = document.getElementById('fullYamlError');
-    const saveBtn = document.getElementById('fullYamlSave');
-
-    try {
-        // Parse YAML
-        let parsed;
-        try {
-            parsed = window.jsyaml.load(textarea.value);
-        } catch (yamlError) {
-            throw new Error(`YAML syntax error: ${yamlError.message}`);
-        }
-
-        // Validate and normalize configuration
-        const normalized = validateAndNormalizeConfig(parsed);
-
-        // Show loading state
-        if (saveBtn) {
-            saveBtn.disabled = true;
-            saveBtn.innerHTML = '<i data-lucide="loader-2"></i> Saving...';
-            saveBtn.classList.add('btn-loading');
-            refreshIcons();
-        }
-
-        // Show loading overlay
-        showLoadingOverlay('Saving full configuration...');
-
-        // Apply to state
-        state.configData = normalized;
-
-        // Save to backend
-        saveConfig().then(success => {
-            // Hide loading overlay
+        })
+        .catch((error) => {
+            console.error('Title update failed:', error);
+            alert('Failed to update title: ' + (error.message || 'Unknown error'));
+        })
+        .finally(() => {
             hideLoadingOverlay();
-
-            // Re-enable button
             if (saveBtn) {
                 saveBtn.disabled = false;
-                saveBtn.innerHTML = '<i data-lucide="save"></i> Save Full Config';
+                saveBtn.innerHTML = '<i data-lucide="save"></i> Save';
                 saveBtn.classList.remove('btn-loading');
                 refreshIcons();
             }
-
-            if (success) {
-                closeFullYamlModal();
-                renderAgentGroups(); // Re-render entire dashboard
-            }
         });
-
-    } catch (error) {
-        setElementText('fullYamlError', `Error: ${error.message}`);
-    }
 }
+
+// Full YAML editor removed (Convex-native storage is canonical)
 
 // ----- Context menu handlers -----
 // Context menus are dynamically created, so we keep custom handlers but use shared pattern
@@ -1633,11 +1193,17 @@ async function bootstrapApp() {
             // Update user menu UI
             const userDisplayName = document.getElementById('userDisplayName');
             const userEmail = document.getElementById('userEmail');
-            if (userDisplayName) userDisplayName.textContent = getUserName() || 'User';
+            const userAvatar = document.getElementById('userAvatar');
+            const userName = getUserName() || 'User';
+            if (userDisplayName) userDisplayName.textContent = userName;
             if (userEmail) userEmail.textContent = getUserEmail() || '';
+            if (userAvatar) userAvatar.textContent = userName.charAt(0).toUpperCase();
 
             // Bind user menu events
             bindUserMenuEvents();
+
+            // Bind sidebar events
+            bindSidebarEvents();
 
             // Initialize groups/orgs
             await initializeGroups();
@@ -1647,6 +1213,9 @@ async function bootstrapApp() {
 
             // Listen for org changes to update UI
             window.addEventListener('orgChanged', updateRoleBasedUI);
+
+            // Listen for document list changes to update sidebar
+            window.addEventListener('documentsChanged', renderCanvasList);
         } else {
             // Not authenticated, redirect to login
             // Prevent redirect loops using sessionStorage
@@ -1679,6 +1248,7 @@ function bindUserMenuEvents() {
         bindToggleMenu({
             buttonEl: userMenuBtn,
             menuEl: userMenuDropdown,
+            actionSelector: '[data-action]',
             onAction: (action) => {
                 if (action === 'signout') {
                     handleSignOut();
@@ -1692,6 +1262,240 @@ async function handleSignOut() {
     // Clear Convex auth before signing out
     updateConvexAuth(null);
     await signOut();
+}
+
+// ----- Sidebar events -----
+function bindSidebarEvents() {
+    // Import createBlankDocument and triggerDocumentUpload from documents.js
+    import('./documents.js').then(({ createBlankDocument, triggerDocumentUpload }) => {
+        // New Canvas button in sidebar
+        const newCanvasBtn = document.getElementById('newCanvasBtn');
+        newCanvasBtn?.addEventListener('click', createBlankDocument);
+
+        // Import Canvas button in sidebar
+        const importCanvasBtn = document.getElementById('importCanvasBtn');
+        importCanvasBtn?.addEventListener('click', triggerDocumentUpload);
+
+        // Empty state create button
+        const emptyStateNewBtn = document.getElementById('emptyStateNewBtn');
+        emptyStateNewBtn?.addEventListener('click', createBlankDocument);
+    });
+
+    // Org switcher in sidebar
+    const orgTrigger = document.getElementById('orgSwitcherTrigger');
+    const orgDropdown = document.getElementById('orgDropdown');
+    if (orgTrigger && orgDropdown) {
+        bindToggleMenu({
+            buttonEl: orgTrigger,
+            menuEl: orgDropdown,
+            actionSelector: '[data-org-id]',
+            onAction: async (action) => {
+                // action is the org ID
+                setCurrentOrgId(action);
+                await refreshDocumentList();
+                await loadAgents();
+                renderCanvasList();
+                updateOrgSwitcherUI();
+            }
+        });
+    }
+
+    // Mobile sidebar toggle
+    const sidebarToggle = document.getElementById('sidebarToggle');
+    const sidebar = document.getElementById('sidebar');
+    sidebarToggle?.addEventListener('click', () => {
+        sidebar?.classList.toggle('is-collapsed');
+    });
+
+    // Board menu (canvas title dropdown)
+    const boardTrigger = document.getElementById('boardMenuTrigger');
+    const boardMenu = document.getElementById('board-menu');
+    if (boardTrigger && boardMenu) {
+        bindToggleMenu({
+            buttonEl: boardTrigger,
+            menuEl: boardMenu,
+            actionSelector: '[data-board-action]',
+            onAction: (action) => {
+                if (action === 'edit-title') {
+                    openEditTitleModal();
+                } else if (action === 'add-section') {
+                    openAddSectionModal();
+                }
+            }
+        });
+    }
+
+    // Document menu (more options)
+    const docMenuBtn = document.getElementById('documentMenuBtn');
+    const docMenu = document.getElementById('documentMenu');
+    if (docMenuBtn && docMenu) {
+        import('./documents.js').then(({ renameCurrentDocument, deleteCurrentDocument }) => {
+            bindToggleMenu({
+                buttonEl: docMenuBtn,
+                menuEl: docMenu,
+                actionSelector: '[data-action]',
+                onAction: (action) => {
+                    if (action === 'rename') renameCurrentDocument();
+                    else if (action === 'delete') deleteCurrentDocument();
+                }
+            });
+        });
+    }
+
+    // Grouping control dropdown
+    const groupingControl = document.getElementById('groupingControl');
+    const groupingBtn = document.getElementById('groupingValue');
+    const groupingDropdown = document.getElementById('groupingDropdown');
+    if (groupingBtn && groupingDropdown) {
+        bindToggleMenu({
+            buttonEl: groupingBtn,
+            menuEl: groupingDropdown,
+            actionSelector: '[data-tag-type]',
+            onAction: (tagType) => {
+                // Update active state
+                groupingDropdown.querySelectorAll('[data-tag-type]').forEach(i => i.classList.remove('is-active'));
+                const item = groupingDropdown.querySelector(`[data-tag-type="${tagType}"]`);
+                item?.classList.add('is-active');
+
+                // Update displayed value
+                const label = item?.querySelector('span')?.textContent || tagType;
+                const valueSpan = groupingBtn?.querySelector('span');
+                if (valueSpan) valueSpan.textContent = label;
+
+                // Update grouping and re-render
+                setGroupingTagType(tagType);
+                renderAgentGroups();
+            }
+        });
+    }
+}
+
+// Update toolbar UI based on canvas selection state
+function updateToolbarUI() {
+    const titleGroup = document.querySelector('.toolbar__title-group');
+    const titleEl = document.getElementById('documentTitle');
+    const agentCountBadge = document.getElementById('agent-count');
+    const groupingControl = document.getElementById('groupingControl');
+    const collapseBtn = document.getElementById('collapseAllBtn');
+    const docMenuBtn = document.getElementById('documentMenuBtn');
+
+    const docs = state.availableDocuments || [];
+    const currentDocName = state.currentDocumentName;
+    const hasCanvas = currentDocName && docs.length > 0;
+
+    // Find current canvas to get its title
+    const currentCanvas = docs.find(d => (d.id || d.slug || d.name) === currentDocName);
+    const canvasTitle = currentCanvas?.title || currentCanvas?.name || currentDocName;
+
+    if (hasCanvas && canvasTitle) {
+        // Show toolbar elements when canvas is selected
+        if (titleGroup) titleGroup.style.display = '';
+        if (titleEl) titleEl.textContent = canvasTitle;
+        if (agentCountBadge) agentCountBadge.style.display = '';
+        if (groupingControl) groupingControl.style.display = '';
+        if (collapseBtn) collapseBtn.style.display = '';
+        if (docMenuBtn) docMenuBtn.style.display = '';
+    } else {
+        // Hide toolbar elements when no canvas selected
+        if (titleGroup) titleGroup.style.display = 'none';
+        if (agentCountBadge) agentCountBadge.style.display = 'none';
+        if (groupingControl) groupingControl.style.display = 'none';
+        if (collapseBtn) collapseBtn.style.display = 'none';
+        if (docMenuBtn) docMenuBtn.style.display = 'none';
+    }
+}
+
+// Render the canvas list in the sidebar
+export function renderCanvasList() {
+    const container = document.getElementById('canvasList');
+    const emptyState = document.getElementById('emptyState');
+    const agentGroupsContainer = document.getElementById('agentGroupsContainer');
+
+    if (!container) return;
+
+    const docs = state.availableDocuments || [];
+    const currentDocName = state.currentDocumentName;
+
+    // Update toolbar based on selection state
+    updateToolbarUI();
+
+    if (docs.length === 0) {
+        container.innerHTML = `
+            <div class="sidebar__empty-message" style="padding: var(--space-3); color: var(--text-muted); font-size: var(--text-sm);">
+                No canvases yet
+            </div>
+        `;
+        // Show empty state, hide agent groups
+        if (emptyState) emptyState.style.display = '';
+        if (agentGroupsContainer) agentGroupsContainer.style.display = 'none';
+        return;
+    }
+
+    // Hide empty state when we have canvases and one is selected
+    const hasSelection = currentDocName && docs.some(d => (d.id || d.slug || d.name) === currentDocName);
+    if (emptyState) emptyState.style.display = hasSelection ? 'none' : '';
+    if (agentGroupsContainer) agentGroupsContainer.style.display = hasSelection ? '' : 'none';
+
+    container.innerHTML = docs.map(doc => {
+        const docId = doc.id || doc.slug || doc.name;
+        const docTitle = doc.title || doc.name || doc.slug || doc.id;
+        const isActive = docId === currentDocName;
+        return `
+            <button type="button" class="sidebar__canvas-item ${isActive ? 'is-active' : ''}" data-canvas-id="${docId}">
+                <i data-lucide="layout-grid"></i>
+                <span>${docTitle}</span>
+            </button>
+        `;
+    }).join('');
+
+    // Bind click handlers
+    container.querySelectorAll('.sidebar__canvas-item').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const canvasId = btn.dataset.canvasId;
+            if (canvasId && canvasId !== state.currentDocumentName) {
+                showLoadingOverlay(`Loading "${canvasId}"...`);
+                try {
+                    const { setActiveDocumentName } = await import('./documents.js');
+                    setActiveDocumentName(canvasId);
+                    await loadAgents(canvasId);
+                    renderCanvasList(); // Update active state
+                } catch (err) {
+                    console.error('Failed to load canvas:', err);
+                } finally {
+                    hideLoadingOverlay();
+                }
+            }
+        });
+    });
+
+    refreshIcons();
+}
+
+// Update the org switcher UI
+function updateOrgSwitcherUI() {
+    const orgNameEl = document.getElementById('currentOrgName');
+    const currentOrg = getCurrentOrg();
+    if (orgNameEl && currentOrg) {
+        orgNameEl.textContent = currentOrg.name || currentOrg.id || 'Organization';
+    }
+}
+
+// Populate org dropdown
+function populateOrgDropdown() {
+    const dropdown = document.getElementById('orgDropdown');
+    const orgs = getUserOrgsFromState();
+    const currentOrgId = getCurrentOrgId();
+
+    if (!dropdown || orgs.length === 0) return;
+
+    dropdown.innerHTML = orgs.map(org => `
+        <div class="sidebar__dropdown-item ${org.id === currentOrgId ? 'is-active' : ''}" data-org-id="${org.id}">
+            <i data-lucide="building-2"></i>
+            <span>${org.name || org.id}</span>
+        </div>
+    `).join('');
+
+    refreshIcons();
 }
 
 const groupNameInput = document.getElementById('groupName');
@@ -1788,28 +1592,19 @@ function bindStaticEventHandlers() {
         const type = actionBtn.dataset.boardAction;
         if (type === 'edit-title') {
             openEditTitleModal();
-        } else if (type === 'edit-full-yaml') {
-            showFullYamlModal();
         } else if (type === 'add-section') {
             openAddSectionModal();
         }
     });
 
     document.getElementById('agentModalClose')?.addEventListener('click', closeAgentModal);
-    document.getElementById('agentFormToggle')?.addEventListener('click', () => setModalView('form', modalViewConfigs.agent));
-    document.getElementById('agentYamlToggle')?.addEventListener('click', () => setModalView('yaml', modalViewConfigs.agent));
-    document.getElementById('agentCopyYamlBtn')?.addEventListener('click', copyAgentYaml);
     document.getElementById('agentCancelBtn')?.addEventListener('click', closeAgentModal);
     document.getElementById('agentSaveBtn')?.addEventListener('click', saveAgent);
-    document.getElementById('deleteAgentBtn')?.addEventListener('click', () => deleteAgent());
-
-    document.getElementById('groupModalClose')?.addEventListener('click', closeGroupModal);
-    document.getElementById('groupFormToggle')?.addEventListener('click', () => setModalView('form', modalViewConfigs.group));
-    document.getElementById('groupYamlToggle')?.addEventListener('click', () => setModalView('yaml', modalViewConfigs.group));
-    document.getElementById('groupCopyYamlBtn')?.addEventListener('click', copyGroupYaml);
-    document.getElementById('groupCancelBtn')?.addEventListener('click', closeGroupModal);
-    document.getElementById('groupSaveBtn')?.addEventListener('click', saveGroup);
-    document.getElementById('deleteGroupBtn')?.addEventListener('click', () => deleteGroup());
+    document.getElementById('deleteAgentBtn')?.addEventListener('click', () => {
+        const form = document.getElementById('agentForm');
+        const agentId = (form?.dataset.agentId || '').trim();
+        if (agentId) deleteAgent(agentId);
+    });
 
     document.getElementById('titleModalClose')?.addEventListener('click', closeTitleModal);
     document.getElementById('titleModalCancel')?.addEventListener('click', closeTitleModal);
@@ -1819,37 +1614,28 @@ function bindStaticEventHandlers() {
         saveTitleEdit();
     });
 
-    document.getElementById('fullYamlModalClose')?.addEventListener('click', closeFullYamlModal);
-    document.getElementById('fullYamlCancel')?.addEventListener('click', closeFullYamlModal);
-    document.getElementById('fullYamlSave')?.addEventListener('click', saveFullYaml);
-
     agentGroupsContainer?.addEventListener('click', event => {
         const actionBtn = event.target.closest('[data-action-type]');
         if (actionBtn) {
             event.preventDefault();
             closeAllContextMenus();
             const type = actionBtn.dataset.actionType;
+            const agentId = actionBtn.dataset.agentId || null;
             const g = actionBtn.dataset.groupIndex !== undefined
                 ? parseInt(actionBtn.dataset.groupIndex, 10)
                 : null;
-            const a = actionBtn.dataset.agentIndex !== undefined
-                ? parseInt(actionBtn.dataset.agentIndex, 10)
-                : null;
             switch (type) {
                 case 'agent-edit':
-                    if (g !== null && a !== null) openEditAgentModal(g, a);
+                    if (agentId) openEditAgentModal(agentId);
                     break;
                 case 'agent-delete':
-                    if (g !== null && a !== null) deleteAgent(g, a);
+                    if (agentId) deleteAgent(agentId);
                     break;
                 case 'agent-add':
                     if (g !== null) openAddAgentModal(g);
                     break;
-                case 'group-edit':
-                    if (g !== null) openEditGroupModal(g);
-                    break;
-                case 'group-delete':
-                    if (g !== null) deleteGroup(g);
+                case 'phase-rename':
+                    if (g !== null) renamePhaseFromGroup(g);
                     break;
                 default:
                     break;
