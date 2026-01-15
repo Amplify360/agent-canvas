@@ -11,7 +11,6 @@ export const state = {
     // Canvas state (Convex)
     currentCanvasId: null,
     currentCanvas: null,
-    canvases: [],
 
     // Agent state (Convex) - replaces configData.agentGroups
     agents: [],
@@ -20,15 +19,11 @@ export const state = {
     orgSettings: null,
 
     // Legacy - kept for backward compatibility during migration
-    dynamicStyleElement: null,
     availableDocuments: [],
     canvasListLoaded: false,
 
     // Modal state
-    agentModalViewMode: 'form',
-    groupModalViewMode: 'form',
     agentModalOriginal: null,
-    groupModalOriginal: null,
     documentMenuBound: false,
     collapsedSections: {},
 
@@ -246,24 +241,3 @@ export function getGroupingTagType() {
     return state.grouping.activeTagType || 'phase';
 }
 
-export function setGroupingFilter(tagType, values) {
-    if (!values || values.length === 0) {
-        delete state.grouping.filters[tagType];
-    } else {
-        state.grouping.filters[tagType] = values;
-    }
-    saveGroupingPreference();
-    window.dispatchEvent(new CustomEvent('filterChanged', { detail: { tagType, values } }));
-}
-
-export function clearGroupingFilters() {
-    state.grouping.filters = {};
-    state.grouping.searchQuery = '';
-    saveGroupingPreference();
-    window.dispatchEvent(new CustomEvent('filterChanged', { detail: {} }));
-}
-
-export function setSearchQuery(query) {
-    state.grouping.searchQuery = query;
-    window.dispatchEvent(new CustomEvent('searchChanged', { detail: { query } }));
-}
