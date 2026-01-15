@@ -11,7 +11,6 @@
 import type * as agentHistory from "../agentHistory.js";
 import type * as agents from "../agents.js";
 import type * as canvases from "../canvases.js";
-import type * as debug from "../debug.js";
 import type * as lib_auth from "../lib/auth.js";
 import type * as orgSettings from "../orgSettings.js";
 import type * as users from "../users.js";
@@ -26,7 +25,6 @@ declare const fullApi: ApiFromModules<{
   agentHistory: typeof agentHistory;
   agents: typeof agents;
   canvases: typeof canvases;
-  debug: typeof debug;
   "lib/auth": typeof lib_auth;
   orgSettings: typeof orgSettings;
   users: typeof users;
