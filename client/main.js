@@ -1,23 +1,19 @@
 import { getIdToken, getUserEmail, getUserName, initAuth, signOut } from './auth-client-workos.js';
 import {
+    handleCanvasSelection,
+    initializeCanvasControls,
+    refreshCanvasList,
+    registerLoadAgents,
+    setActiveCanvasId,
+    setCanvasStatusMessage
+} from './canvases.js';
+import {
     TAG_TYPES, getAgentTagDisplay,
     getAvailableTools,
     getSectionColor,
     getToolDisplay
 } from './config.js';
 import { createAgent as createAgentMutation, deleteAgent as deleteAgentMutation, getConvexClient, initConvexClientAsync, syncOrgMemberships, unsubscribeAll, updateAgent as updateAgentMutation, updateConvexAuth } from './convex-client.js';
-import {
-    handleCanvasSelection,
-    initializeCanvasControls,
-    refreshCanvasList,
-    registerLoadAgents,
-    setCanvasStatusMessage,
-    handleDocumentSelection,
-    initializeDocumentControls,
-    refreshDocumentList,
-    registerLoadAgents,
-    setDocumentStatusMessage
-} from './canvases.js';
 import { filterAgents, groupAgentsByTag, searchAgents } from './grouping.js';
 import { bindToggleMenu } from './menu-utils.js';
 import {
@@ -1138,14 +1134,14 @@ async function bootstrapApp() {
                         console.error('Failed to sync org memberships:', err);
                     }
                 } else {
-                    setDocumentStatusMessage(
+                    setCanvasStatusMessage(
                         'Warning: Backend not configured. Some features may be unavailable.',
                         'error'
                     );
                 }
             } catch (err) {
                 console.error('Failed to initialize Convex client:', err);
-                setDocumentStatusMessage(
+                setCanvasStatusMessage(
                     'Warning: Could not connect to backend. Some features may be unavailable.',
                     'error'
                 );
@@ -1196,7 +1192,7 @@ async function bootstrapApp() {
             return;
         }
 
-        await initializeDocumentControls();
+        await initializeCanvasControls();
         await loadAgents();
     } catch (error) {
         console.error('Initialization failed:', error);
@@ -1231,18 +1227,18 @@ async function handleSignOut() {
 // ----- Sidebar events -----
 function bindSidebarEvents() {
     // Import createBlankCanvas and triggerCanvasUpload from canvases.js
-    import('./canvases.js').then(({ createBlankDocument, triggerDocumentUpload }) => {
+    import('./canvases.js').then(({ createBlankCanvas, triggerCanvasUpload }) => {
         // New Canvas button in sidebar
         const newCanvasBtn = document.getElementById('newCanvasBtn');
-        newCanvasBtn?.addEventListener('click', createBlankDocument);
+        newCanvasBtn?.addEventListener('click', createBlankCanvas);
 
         // Import Canvas button in sidebar
         const importCanvasBtn = document.getElementById('importCanvasBtn');
-        importCanvasBtn?.addEventListener('click', triggerDocumentUpload);
+        importCanvasBtn?.addEventListener('click', triggerCanvasUpload);
 
         // Empty state create button
         const emptyStateNewBtn = document.getElementById('emptyStateNewBtn');
-        emptyStateNewBtn?.addEventListener('click', createBlankDocument);
+        emptyStateNewBtn?.addEventListener('click', createBlankCanvas);
     });
 
     // Org switcher in sidebar
@@ -1256,7 +1252,7 @@ function bindSidebarEvents() {
             onAction: async (action) => {
                 // action is the org ID
                 setCurrentOrgId(action);
-                await refreshDocumentList();
+                await refreshCanvasList();
                 await loadAgents();
                 renderCanvasList();
                 updateOrgSwitcherUI();
@@ -1293,14 +1289,14 @@ function bindSidebarEvents() {
     const docMenuBtn = document.getElementById('documentMenuBtn');
     const docMenu = document.getElementById('documentMenu');
     if (docMenuBtn && docMenu) {
-        import('./canvases.js').then(({ renameCurrentDocument, deleteCurrentDocument }) => {
+        import('./canvases.js').then(({ renameCurrentCanvas, deleteCurrentCanvas }) => {
             bindToggleMenu({
                 buttonEl: docMenuBtn,
                 menuEl: docMenu,
                 actionSelector: '[data-action]',
                 onAction: (action) => {
-                    if (action === 'rename') renameCurrentDocument();
-                    else if (action === 'delete') deleteCurrentDocument();
+                    if (action === 'rename') renameCurrentCanvas();
+                    else if (action === 'delete') deleteCurrentCanvas();
                 }
             });
         });
@@ -1419,8 +1415,7 @@ export function renderCanvasList() {
             if (canvasId && canvasId !== state.currentDocumentName) {
                 showLoadingOverlay(`Loading "${canvasId}"...`);
                 try {
-                    const { setActiveDocumentName } = await import('./canvases.js');
-                    setActiveDocumentName(canvasId);
+                    setActiveCanvasId(canvasId);
                     await loadAgents(canvasId);
                     renderCanvasList(); // Update active state
                 } catch (err) {
@@ -1477,7 +1472,7 @@ function bindStaticEventHandlers() {
     collapseBtn?.addEventListener('click', toggleCollapseAll);
 
     const docSelect = document.getElementById('documentSelect');
-    docSelect?.addEventListener('change', handleDocumentSelection);
+    docSelect?.addEventListener('change', handleCanvasSelection);
 
     // Grouping control - custom dropdown for selecting grouping tag type
     const groupingControl = document.getElementById('groupingControl');

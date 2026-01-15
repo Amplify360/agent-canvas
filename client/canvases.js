@@ -21,10 +21,6 @@ export function setActiveCanvasId(canvasId, options = {}) {
     updateCanvasControlsUI();
 }
 
-// Backward-compatible export (call sites still use "document" naming)
-export function setActiveDocumentName(name, options = {}) {
-    return setActiveCanvasId(name, options);
-}
 
 function getCanvasSelectElement() {
     return document.getElementById('documentSelect');
@@ -50,8 +46,6 @@ export function closeCanvasMenu() {
     }
 }
 
-// Backward-compatible alias
-export const closeDocumentMenu = closeCanvasMenu;
 
 function handleCanvasMenuAction(action) {
     const actions = {
@@ -429,16 +423,6 @@ export async function initializeCanvasControls() {
     await refreshCanvasList();
 }
 
-// Backward-compatible exports
-export const initializeDocumentControls = initializeCanvasControls;
-export const handleDocumentSelection = handleCanvasSelection;
-export const refreshDocumentList = refreshCanvasList;
-export const createBlankDocument = createBlankCanvas;
-export const renameCurrentDocument = renameCurrentCanvas;
-export const deleteCurrentDocument = deleteCurrentCanvas;
-export const triggerDocumentUpload = triggerCanvasUpload;
-export const uploadDocumentFromContents = uploadCanvasFromContents;
-export const setDocumentStatusMessage = setCanvasStatusMessage;
 
 export async function handleCanvasSelection(event) {
     const selectedDoc = event.target.value;
