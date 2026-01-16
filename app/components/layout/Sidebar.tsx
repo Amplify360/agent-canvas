@@ -4,14 +4,16 @@
 
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCanvas } from '@/contexts/CanvasContext';
 import { useLucideIcons } from '@/hooks/useLucideIcons';
+import { ImportYamlModal } from '../forms/ImportYamlModal';
 
 export function Sidebar() {
   const { user, userOrgs, currentOrgId, setCurrentOrgId, signOut } = useAuth();
   const { canvases, currentCanvasId, setCurrentCanvasId } = useCanvas();
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
 
   // Initialize Lucide icons
   useLucideIcons();
@@ -44,7 +46,16 @@ export function Sidebar() {
       )}
 
       <div className="sidebar__section sidebar__section--grow">
-        <h3>Canvases</h3>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+          <h3 style={{ margin: 0 }}>Canvases</h3>
+          <button
+            className="btn-icon"
+            onClick={() => setIsImportModalOpen(true)}
+            title="Import from YAML"
+          >
+            <i data-lucide="upload"></i>
+          </button>
+        </div>
         <div className="sidebar__canvas-list">
           {canvases.map((canvas) => (
             <button
@@ -72,6 +83,11 @@ export function Sidebar() {
           </button>
         </div>
       </div>
+
+      <ImportYamlModal
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+      />
     </aside>
   );
 }

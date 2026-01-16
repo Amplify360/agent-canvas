@@ -50,7 +50,10 @@ export interface AgentFormData {
   journeySteps: string[];
   demoLink?: string;
   videoLink?: string;
-  metrics?: AgentMetrics;
+  metrics?: {
+    adoption: number;
+    satisfaction: number;
+  };
   roiContribution?: RoiContribution;
   department?: string;
   status?: string;

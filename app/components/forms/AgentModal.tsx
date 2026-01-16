@@ -55,7 +55,10 @@ export function AgentModal({ isOpen, onClose, agent, defaultPhase }: AgentModalP
         journeySteps: agent.journeySteps || [],
         demoLink: agent.demoLink || '',
         videoLink: agent.videoLink || '',
-        metrics: agent.metrics || { adoption: 0, satisfaction: 0 },
+        metrics: agent.metrics ? {
+          adoption: agent.metrics.adoption ?? 0,
+          satisfaction: agent.metrics.satisfaction ?? 0,
+        } : { adoption: 0, satisfaction: 0 },
         roiContribution: agent.roiContribution || 'Medium',
         department: agent.department || '',
         status: agent.status || 'draft',

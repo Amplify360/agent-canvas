@@ -9,6 +9,7 @@ import { Canvas } from '@/types/canvas';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useQuery, useMutation } from '@/hooks/useConvex';
 import { useAuth } from './AuthContext';
+import { api } from '../../convex/_generated/api';
 
 const CURRENT_CANVAS_KEY = 'agentcanvas-current-canvas';
 
@@ -30,10 +31,10 @@ export function CanvasProvider({ children }: { children: React.ReactNode }) {
   const [currentCanvasId, setCurrentCanvasIdState] = useLocalStorage<string | null>(CURRENT_CANVAS_KEY, null);
 
   // Subscribe to canvases using official Convex hook
-  const canvases = useQuery('canvases:list', currentOrgId ? { workosOrgId: currentOrgId } : 'skip') || [];
-  const createCanvasMutation = useMutation('canvases:create');
-  const updateCanvasMutation = useMutation('canvases:update');
-  const deleteCanvasMutation = useMutation('canvases:remove');
+  const canvases = useQuery(api.canvases.list, currentOrgId ? { workosOrgId: currentOrgId } : 'skip') || [];
+  const createCanvasMutation = useMutation(api.canvases.create);
+  const updateCanvasMutation = useMutation(api.canvases.update);
+  const deleteCanvasMutation = useMutation(api.canvases.remove);
 
   // Find current canvas
   const currentCanvas = currentCanvasId
@@ -62,11 +63,11 @@ export function CanvasProvider({ children }: { children: React.ReactNode }) {
   }, [currentOrgId, createCanvasMutation]);
 
   const updateCanvas = useCallback(async (canvasId: string, data: Partial<Canvas>) => {
-    await updateCanvasMutation({ canvasId, ...data });
+    await updateCanvasMutation({ canvasId: canvasId as any, ...data });
   }, [updateCanvasMutation]);
 
   const deleteCanvas = useCallback(async (canvasId: string) => {
-    await deleteCanvasMutation({ canvasId, confirmDelete: true });
+    await deleteCanvasMutation({ canvasId: canvasId as any, confirmDelete: true });
   }, [deleteCanvasMutation]);
 
   const value: CanvasContextValue = {
