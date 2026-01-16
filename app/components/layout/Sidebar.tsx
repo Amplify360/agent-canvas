@@ -49,7 +49,7 @@ export function Sidebar() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
           <h3 style={{ margin: 0 }}>Canvases</h3>
           <button
-            className="btn-icon"
+            className="icon-btn"
             onClick={() => setIsImportModalOpen(true)}
             title="Import from YAML"
           >
@@ -78,7 +78,7 @@ export function Sidebar() {
             </span>
             <span className="sidebar__user-email">{user?.email}</span>
           </div>
-          <button className="btn-icon" onClick={signOut} title="Sign out">
+          <button className="icon-btn" onClick={signOut} title="Sign out">
             <i data-lucide="log-out"></i>
           </button>
         </div>
