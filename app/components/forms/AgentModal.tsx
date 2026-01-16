@@ -10,7 +10,8 @@ import { Modal } from '../ui/Modal';
 import { useAgents } from '@/contexts/AgentContext';
 import { useAppState } from '@/contexts/AppStateContext';
 import { validateAgentForm } from '@/utils/validation';
-import { getAvailableTools } from '@/utils/config';
+import { getAvailableTools, getToolDisplay } from '@/utils/config';
+import { useLucideIcons } from '@/hooks/useLucideIcons';
 
 interface AgentModalProps {
   isOpen: boolean;
@@ -22,6 +23,9 @@ interface AgentModalProps {
 export function AgentModal({ isOpen, onClose, agent, defaultPhase }: AgentModalProps) {
   const { createAgent, updateAgent } = useAgents();
   const { showLoading, hideLoading, showToast } = useAppState();
+
+  // Initialize Lucide icons
+  useLucideIcons();
 
   const [formData, setFormData] = useState<AgentFormData>({
     name: '',
@@ -124,12 +128,13 @@ export function AgentModal({ isOpen, onClose, agent, defaultPhase }: AgentModalP
     <Modal isOpen={isOpen} onClose={onClose} title={agent ? 'Edit Agent' : 'New Agent'} size="large">
       <form onSubmit={handleSubmit} className="agent-form">
         <div className="form-group">
-          <label htmlFor="agent-name">
+          <label htmlFor="agent-name" className="form-label">
             Agent Name <span className="required">*</span>
           </label>
           <input
             id="agent-name"
             type="text"
+            className="form-input"
             value={formData.name}
             onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
             required
@@ -137,12 +142,13 @@ export function AgentModal({ isOpen, onClose, agent, defaultPhase }: AgentModalP
         </div>
 
         <div className="form-group">
-          <label htmlFor="agent-phase">
+          <label htmlFor="agent-phase" className="form-label">
             Phase <span className="required">*</span>
           </label>
           <input
             id="agent-phase"
             type="text"
+            className="form-input"
             value={formData.phase}
             onChange={(e) => setFormData((prev) => ({ ...prev, phase: e.target.value }))}
             required
@@ -150,9 +156,12 @@ export function AgentModal({ isOpen, onClose, agent, defaultPhase }: AgentModalP
         </div>
 
         <div className="form-group">
-          <label htmlFor="agent-objective">Objective</label>
+          <label htmlFor="agent-objective" className="form-label">
+            Objective
+          </label>
           <textarea
             id="agent-objective"
+            className="form-textarea"
             value={formData.objective}
             onChange={(e) => setFormData((prev) => ({ ...prev, objective: e.target.value }))}
             rows={2}
@@ -160,9 +169,12 @@ export function AgentModal({ isOpen, onClose, agent, defaultPhase }: AgentModalP
         </div>
 
         <div className="form-group">
-          <label htmlFor="agent-description">Description</label>
+          <label htmlFor="agent-description" className="form-label">
+            Description
+          </label>
           <textarea
             id="agent-description"
+            className="form-textarea"
             value={formData.description}
             onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
             rows={3}
@@ -170,25 +182,38 @@ export function AgentModal({ isOpen, onClose, agent, defaultPhase }: AgentModalP
         </div>
 
         <div className="form-group">
-          <label>Tools</label>
-          <div className="tool-selector">
-            {availableTools.map((tool) => (
-              <label key={tool} className="checkbox-label">
-                <input
-                  type="checkbox"
-                  checked={formData.tools.includes(tool)}
-                  onChange={() => handleToolToggle(tool)}
-                />
-                {tool}
-              </label>
-            ))}
+          <label className="form-label">Tools</label>
+          <div className="checkbox-grid">
+            {availableTools.map((tool) => {
+              const toolDisplay = getToolDisplay(tool);
+              return (
+                <label
+                  key={tool}
+                  className={`checkbox-item ${formData.tools.includes(tool) ? 'is-checked' : ''}`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={formData.tools.includes(tool)}
+                    onChange={() => handleToolToggle(tool)}
+                  />
+                  <div className="checkbox-item__check">
+                    <i data-lucide="check"></i>
+                  </div>
+                  <i data-lucide={toolDisplay.icon} style={{ color: toolDisplay.color }}></i>
+                  <span>{toolDisplay.label}</span>
+                </label>
+              );
+            })}
           </div>
         </div>
 
         <div className="form-group">
-          <label htmlFor="agent-department">Department</label>
+          <label htmlFor="agent-department" className="form-label">
+            Department
+          </label>
           <select
             id="agent-department"
+            className="form-select"
             value={formData.department}
             onChange={(e) => setFormData((prev) => ({ ...prev, department: e.target.value }))}
           >
@@ -202,9 +227,12 @@ export function AgentModal({ isOpen, onClose, agent, defaultPhase }: AgentModalP
         </div>
 
         <div className="form-group">
-          <label htmlFor="agent-status">Status</label>
+          <label htmlFor="agent-status" className="form-label">
+            Status
+          </label>
           <select
             id="agent-status"
+            className="form-select"
             value={formData.status}
             onChange={(e) => setFormData((prev) => ({ ...prev, status: e.target.value }))}
           >
@@ -216,10 +244,10 @@ export function AgentModal({ isOpen, onClose, agent, defaultPhase }: AgentModalP
         </div>
 
         <div className="form-actions">
-          <button type="button" className="btn-secondary" onClick={onClose}>
+          <button type="button" className="btn btn--secondary" onClick={onClose}>
             Cancel
           </button>
-          <button type="submit" className="btn-primary">
+          <button type="submit" className="btn btn--primary">
             {agent ? 'Update' : 'Create'} Agent
           </button>
         </div>
