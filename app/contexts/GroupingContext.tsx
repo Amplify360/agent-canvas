@@ -14,10 +14,13 @@ import { useAgents } from './AgentContext';
 const GROUPING_PREFERENCE_KEY = 'agentcanvas-grouping-pref';
 const COLLAPSED_SECTIONS_KEY = 'agentcanvas-collapsed-sections';
 
+export type ViewMode = 'grid' | 'detail';
+
 interface GroupingPreferences {
   activeTagType: string;
   sortOrder: 'asc' | 'desc';
   filters: Record<string, string[]>;
+  viewMode: ViewMode;
 }
 
 interface GroupingContextValue {
@@ -25,10 +28,12 @@ interface GroupingContextValue {
   filters: Record<string, string[]>;
   collapsedSections: Record<string, boolean>;
   computedGroups: AgentGroup[];
+  viewMode: ViewMode;
   setActiveTagType: (tagType: string) => void;
   setFilters: (filters: Record<string, string[]>) => void;
   toggleSectionCollapse: (groupId: string) => void;
   collapseAll: (collapsed: boolean) => void;
+  setViewMode: (mode: ViewMode) => void;
 }
 
 const GroupingContext = createContext<GroupingContextValue | undefined>(undefined);
@@ -42,6 +47,7 @@ export function GroupingProvider({ children }: { children: React.ReactNode }) {
       activeTagType: DEFAULT_GROUPING_TAG,
       sortOrder: 'asc',
       filters: {},
+      viewMode: 'grid',
     }
   );
 
@@ -87,15 +93,21 @@ export function GroupingProvider({ children }: { children: React.ReactNode }) {
     setCollapsedSections(newCollapsedState);
   }, [computedGroups, setCollapsedSections]);
 
+  const setViewMode = useCallback((mode: ViewMode) => {
+    setPreferences((prev) => ({ ...prev, viewMode: mode }));
+  }, [setPreferences]);
+
   const value: GroupingContextValue = {
     activeTagType: preferences.activeTagType,
     filters: preferences.filters,
     collapsedSections,
     computedGroups,
+    viewMode: preferences.viewMode,
     setActiveTagType,
     setFilters,
     toggleSectionCollapse,
     collapseAll,
+    setViewMode,
   };
 
   return <GroupingContext.Provider value={value}>{children}</GroupingContext.Provider>;

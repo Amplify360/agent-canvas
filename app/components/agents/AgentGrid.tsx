@@ -1,10 +1,10 @@
 /**
- * AgentGrid - main container for agent groups
+ * AgentGrid - main container for agent groups with premium empty state
  */
 
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import { Agent } from '@/types/agent';
 import { AgentGroupSection } from './AgentGroupSection';
 import { useGrouping } from '@/contexts/GroupingContext';
@@ -40,19 +40,31 @@ export function AgentGrid({ onEditAgent, onAddAgent }: AgentGridProps) {
   if (computedGroups.length === 0) {
     return (
       <div className="empty-state">
-        <Icon name="inbox" />
-        <h3>No agents found</h3>
-        <p>Create your first agent to get started</p>
+        <div className="empty-state__icon">
+          <Icon name="bot" />
+        </div>
+        <h3 className="empty-state__title">No agents found</h3>
+        <p className="empty-state__description">
+          Create your first agent to get started building your AI workflow
+        </p>
+        <button
+          className="empty-state__btn"
+          onClick={() => onAddAgent('default')}
+        >
+          <Icon name="plus" />
+          Add Agent
+        </button>
       </div>
     );
   }
 
   return (
     <div className="agent-groups-container">
-      {computedGroups.map((group) => (
+      {computedGroups.map((group, idx) => (
         <AgentGroupSection
           key={group.id}
           group={group}
+          groupIndex={idx}
           onEditAgent={onEditAgent}
           onDeleteAgent={handleDeleteAgent}
           onAddAgent={onAddAgent}

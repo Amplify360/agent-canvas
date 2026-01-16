@@ -18,11 +18,10 @@ interface MainToolbarProps {
 export function MainToolbar({ onAddAgent }: MainToolbarProps) {
   const { currentCanvas } = useCanvas();
   const { agents } = useAgents();
-  const { activeTagType, setActiveTagType, collapsedSections, collapseAll } = useGrouping();
+  const { activeTagType, setActiveTagType, viewMode, setViewMode } = useGrouping();
   const [isGroupingOpen, setIsGroupingOpen] = useState(false);
 
   const activeTag = TAG_TYPES[activeTagType as keyof typeof TAG_TYPES];
-  const allCollapsed = Object.values(collapsedSections).every(Boolean);
 
   return (
     <header className="toolbar">
@@ -63,16 +62,29 @@ export function MainToolbar({ onAddAgent }: MainToolbarProps) {
           </div>
         </div>
 
-        {/* Collapse/Expand All Button */}
-        <button
-          type="button"
-          className="toolbar__btn"
-          onClick={() => collapseAll(!allCollapsed)}
-          title={allCollapsed ? 'Expand all' : 'Collapse all'}
-        >
-          <Icon name={allCollapsed ? 'chevrons-up' : 'chevrons-down'} />
-          <span>{allCollapsed ? 'Expand' : 'Collapse'}</span>
-        </button>
+        {/* View Mode Toggle */}
+        <div className="view-mode-toggle">
+          <button
+            type="button"
+            className={`view-mode-toggle__btn ${viewMode === 'grid' ? 'is-active' : ''}`}
+            onClick={() => setViewMode('grid')}
+            title="Grid view"
+            aria-pressed={viewMode === 'grid'}
+          >
+            <Icon name="layout-grid" />
+            <span>Grid</span>
+          </button>
+          <button
+            type="button"
+            className={`view-mode-toggle__btn ${viewMode === 'detail' ? 'is-active' : ''}`}
+            onClick={() => setViewMode('detail')}
+            title="Detail view"
+            aria-pressed={viewMode === 'detail'}
+          >
+            <Icon name="layout-list" />
+            <span>Detail</span>
+          </button>
+        </div>
 
         {/* Add Agent Button */}
         <button type="button" className="btn btn--primary" onClick={onAddAgent}>
