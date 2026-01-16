@@ -2,6 +2,8 @@
  * Form validation utilities
  */
 
+import { VALIDATION_CONSTANTS } from '@/types/validationConstants';
+
 export interface ValidationError {
   field: string;
   message: string;
@@ -21,11 +23,15 @@ export function validateAgentForm(data: {
   // Name is required
   if (!data.name || data.name.trim().length === 0) {
     errors.push({ field: 'name', message: 'Agent name is required' });
+  } else if (data.name.length > VALIDATION_CONSTANTS.AGENT_NAME_MAX_LENGTH) {
+    errors.push({ field: 'name', message: `Agent name must be ${VALIDATION_CONSTANTS.AGENT_NAME_MAX_LENGTH} characters or less` });
   }
 
   // Phase is required
   if (!data.phase || data.phase.trim().length === 0) {
     errors.push({ field: 'phase', message: 'Phase is required' });
+  } else if (data.phase.length > VALIDATION_CONSTANTS.PHASE_MAX_LENGTH) {
+    errors.push({ field: 'phase', message: `Phase must be ${VALIDATION_CONSTANTS.PHASE_MAX_LENGTH} characters or less` });
   }
 
   // Validate URLs if provided
@@ -62,8 +68,8 @@ export function validateCanvasTitle(title: string): ValidationError[] {
     errors.push({ field: 'title', message: 'Canvas title is required' });
   }
 
-  if (title.length > 100) {
-    errors.push({ field: 'title', message: 'Canvas title must be less than 100 characters' });
+  if (title.length > VALIDATION_CONSTANTS.CANVAS_TITLE_MAX_LENGTH) {
+    errors.push({ field: 'title', message: `Canvas title must be ${VALIDATION_CONSTANTS.CANVAS_TITLE_MAX_LENGTH} characters or less` });
   }
 
   return errors;

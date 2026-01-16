@@ -5,6 +5,7 @@
 
 import * as yaml from 'js-yaml';
 import { AgentFormData } from '@/types/agent';
+import { VALIDATION_CONSTANTS } from '@/types/validationConstants';
 
 /**
  * YAML document structure (legacy format)
@@ -89,8 +90,8 @@ function validateTitle(title: string): void {
   if (!trimmed) {
     throw new Error('Canvas title is required');
   }
-  if (trimmed.length > 100) {
-    throw new Error('Canvas title must be 100 characters or less');
+  if (trimmed.length > VALIDATION_CONSTANTS.CANVAS_TITLE_MAX_LENGTH) {
+    throw new Error(`Canvas title must be ${VALIDATION_CONSTANTS.CANVAS_TITLE_MAX_LENGTH} characters or less`);
   }
 }
 

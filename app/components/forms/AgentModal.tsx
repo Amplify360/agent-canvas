@@ -9,6 +9,7 @@ import { Agent, AgentFormData } from '@/types/agent';
 import { Modal } from '../ui/Modal';
 import { useAgents } from '@/contexts/AgentContext';
 import { useAppState } from '@/contexts/AppStateContext';
+import { useAsyncOperation } from '@/hooks/useAsyncOperation';
 import { validateAgentForm } from '@/utils/validation';
 import { getAvailableTools, getToolDisplay } from '@/utils/config';
 import { Icon } from '@/components/ui/Icon';
@@ -22,7 +23,8 @@ interface AgentModalProps {
 
 export function AgentModal({ isOpen, onClose, agent, defaultPhase }: AgentModalProps) {
   const { createAgent, updateAgent } = useAgents();
-  const { showLoading, hideLoading, showToast } = useAppState();
+  const { showToast } = useAppState();
+  const executeOperation = useAsyncOperation();
 
   const [formData, setFormData] = useState<AgentFormData>({
     name: '',
@@ -93,24 +95,21 @@ export function AgentModal({ isOpen, onClose, agent, defaultPhase }: AgentModalP
       return;
     }
 
-    try {
-      showLoading(agent ? 'Updating agent...' : 'Creating agent...');
-
-      if (agent) {
-        await updateAgent(agent._id, formData);
-        showToast('Agent updated successfully', 'success');
-      } else {
-        await createAgent(formData);
-        showToast('Agent created successfully', 'success');
+    await executeOperation(
+      async () => {
+        if (agent) {
+          await updateAgent(agent._id, formData);
+        } else {
+          await createAgent(formData);
+        }
+      },
+      {
+        loadingMessage: agent ? 'Updating agent...' : 'Creating agent...',
+        successMessage: agent ? 'Agent updated successfully' : 'Agent created successfully',
+        errorMessage: 'Failed to save agent',
+        onSuccess: onClose,
       }
-
-      onClose();
-    } catch (error) {
-      console.error('Save agent error:', error);
-      showToast('Failed to save agent', 'error');
-    } finally {
-      hideLoading();
-    }
+    );
   };
 
   const handleToolToggle = (tool: string) => {

@@ -6,6 +6,30 @@ import { Agent, AgentGroup } from '@/types/agent';
 import { TAG_TYPES, DEFAULT_GROUPING_TAG, SECTION_COLOR_PALETTE, getTagValue } from './config';
 
 /**
+ * Get tag value from agent for the specified tag type
+ * Returns undefined if tag type is unknown or agent doesn't have the value
+ */
+export function getAgentTagValue(agent: Agent, tagType: string): string | undefined {
+  const tagValueMap: Record<string, string | undefined> = {
+    phase: agent.phase,
+    department: agent.department,
+    status: agent.status,
+  };
+  return tagValueMap[tagType];
+}
+
+/**
+ * Get tag value from agent with a default fallback
+ */
+export function getAgentTagValueWithDefault(
+  agent: Agent,
+  tagType: string,
+  defaultValue = 'unassigned'
+): string {
+  return getAgentTagValue(agent, tagType) || defaultValue;
+}
+
+/**
  * Group agents by the specified tag type
  */
 export function groupAgentsByTag(agents: Agent[], tagType: string = DEFAULT_GROUPING_TAG): AgentGroup[] {
@@ -18,17 +42,8 @@ export function groupAgentsByTag(agents: Agent[], tagType: string = DEFAULT_GROU
     if (agent.deletedAt) continue;
 
     // Get tag value from agent
-    let tagValue: string;
-    if (tagType === 'phase') {
-      tagValue = agent.phase || 'Uncategorized';
-    } else if (tagType === 'department') {
-      tagValue = agent.department || 'unassigned';
-    } else if (tagType === 'status') {
-      tagValue = agent.status || 'unassigned';
-    } else {
-      // Unknown tag type - skip or use unassigned
-      tagValue = 'unassigned';
-    }
+    const defaultValue = tagType === 'phase' ? 'Uncategorized' : 'unassigned';
+    const tagValue = getAgentTagValueWithDefault(agent, tagType, defaultValue);
 
     // Initialize group if needed
     if (!groups.has(tagValue)) {
@@ -95,15 +110,10 @@ export function filterAgents(agents: Agent[], filters: Record<string, string[]>)
     for (const [tagType, allowedValues] of Object.entries(filters)) {
       if (!allowedValues || allowedValues.length === 0) continue;
 
-      let agentValue: string | undefined;
-      if (tagType === 'phase') {
-        agentValue = agent.phase;
-      } else if (tagType === 'department') {
-        agentValue = agent.department;
-      } else if (tagType === 'status') {
-        agentValue = agent.status;
-      } else {
-        // Unknown tag type - skip filter
+      const agentValue = getAgentTagValue(agent, tagType);
+
+      // If unknown tag type, skip this filter
+      if (agentValue === undefined && !['phase', 'department', 'status'].includes(tagType)) {
         continue;
       }
 

@@ -9,7 +9,7 @@ import { Agent } from '@/types/agent';
 import { AgentGroupSection } from './AgentGroupSection';
 import { useGrouping } from '@/contexts/GroupingContext';
 import { useAgents } from '@/contexts/AgentContext';
-import { useAppState } from '@/contexts/AppStateContext';
+import { useAsyncOperation } from '@/hooks/useAsyncOperation';
 import { Icon } from '@/components/ui/Icon';
 
 interface AgentGridProps {
@@ -20,23 +20,21 @@ interface AgentGridProps {
 export function AgentGrid({ onEditAgent, onAddAgent }: AgentGridProps) {
   const { computedGroups } = useGrouping();
   const { deleteAgent } = useAgents();
-  const { showLoading, hideLoading, showToast } = useAppState();
+  const executeOperation = useAsyncOperation();
 
   const handleDeleteAgent = async (agent: Agent) => {
     if (!window.confirm(`Are you sure you want to delete "${agent.name}"?`)) {
       return;
     }
 
-    try {
-      showLoading('Deleting agent...');
-      await deleteAgent(agent._id);
-      showToast('Agent deleted successfully', 'success');
-    } catch (error) {
-      console.error('Delete agent error:', error);
-      showToast('Failed to delete agent', 'error');
-    } finally {
-      hideLoading();
-    }
+    await executeOperation(
+      () => deleteAgent(agent._id),
+      {
+        loadingMessage: 'Deleting agent...',
+        successMessage: 'Agent deleted successfully',
+        errorMessage: 'Failed to delete agent',
+      }
+    );
   };
 
   if (computedGroups.length === 0) {

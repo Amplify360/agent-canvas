@@ -9,6 +9,7 @@ import { Modal } from '../ui/Modal';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCanvas } from '@/contexts/CanvasContext';
 import { useMutation } from '@/hooks/useConvex';
+import { useAsyncOperation } from '@/hooks/useAsyncOperation';
 import { Icon } from '@/components/ui/Icon';
 import { prepareYamlImport, extractTitleFromYaml } from '@/utils/yamlImport';
 import { api } from '../../../convex/_generated/api';
@@ -22,6 +23,7 @@ interface ImportYamlModalProps {
 export function ImportYamlModal({ isOpen, onClose, onSuccess }: ImportYamlModalProps) {
   const { currentOrgId } = useAuth();
   const { canvases, setCurrentCanvasId } = useCanvas();
+  const executeOperation = useAsyncOperation();
 
   const createCanvasMutation = useMutation(api.canvases.create);
   const bulkCreateAgentsMutation = useMutation(api.agents.bulkCreate);
@@ -76,47 +78,49 @@ export function ImportYamlModal({ isOpen, onClose, onSuccess }: ImportYamlModalP
       return;
     }
 
-    setIsLoading(true);
     setError(null);
 
-    try {
-      // Get existing slugs to avoid conflicts
-      const existingSlugs = new Set(canvases.map(c => c.slug));
+    await executeOperation(
+      async () => {
+        // Get existing slugs to avoid conflicts
+        const existingSlugs = new Set(canvases.map(c => c.slug));
 
-      // Prepare import data
-      const { title, slug, agents } = prepareYamlImport({
-        yamlText,
-        overrideTitle: customTitle,
-        existingSlugs,
-      });
-
-      // Create canvas
-      const canvasId = await createCanvasMutation({
-        workosOrgId: currentOrgId,
-        title,
-        slug,
-      });
-
-      // Bulk create agents if any exist
-      if (agents.length > 0) {
-        await bulkCreateAgentsMutation({
-          canvasId,
-          agents,
+        // Prepare import data
+        const { title, slug, agents } = prepareYamlImport({
+          yamlText,
+          overrideTitle: customTitle,
+          existingSlugs,
         });
-      }
 
-      // Success! Navigate to the new canvas
-      setCurrentCanvasId(canvasId);
-      if (onSuccess) {
-        onSuccess(canvasId);
-      }
+        // Create canvas
+        const canvasId = await createCanvasMutation({
+          workosOrgId: currentOrgId,
+          title,
+          slug,
+        });
 
-      // Close modal and reset
-      handleClose();
-    } catch (e: any) {
-      setError(e.message || 'Failed to import YAML');
-      setIsLoading(false);
-    }
+        // Bulk create agents if any exist
+        if (agents.length > 0) {
+          await bulkCreateAgentsMutation({
+            canvasId,
+            agents,
+          });
+        }
+
+        // Success! Navigate to the new canvas
+        setCurrentCanvasId(canvasId);
+        if (onSuccess) {
+          onSuccess(canvasId);
+        }
+      },
+      {
+        loadingMessage: 'Importing YAML...',
+        successMessage: 'Canvas imported successfully',
+        errorMessage: 'Failed to import YAML',
+        onSuccess: handleClose,
+        onError: (error) => setError(error.message),
+      }
+    );
   };
 
   const handleClose = () => {
