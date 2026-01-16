@@ -72,29 +72,6 @@ export async function initConvexClientAsync(getIdToken) {
   return client;
 }
 
-/**
- * Initialize the Convex client (sync version - uses existing window.CONVEX_URL)
- * @param {string} url - Convex deployment URL
- * @param {Function} getIdToken - Function that returns the current WorkOS id_token (JWT)
- * @returns {ConvexClient}
- */
-export function initConvexClient(url, getIdToken) {
-  if (client && getIdTokenFn === getIdToken) return client;
-
-  const convexUrl = url || window.CONVEX_URL;
-  if (!convexUrl) {
-    throw new Error(
-      "CONVEX_URL not configured. Please set VITE_CONVEX_URL environment variable " +
-      "in your Vercel project settings or inject window.CONVEX_URL at build time."
-    );
-  }
-
-  client = new ConvexClient(convexUrl);
-  getIdTokenFn = getIdToken;
-  client.setAuth(createAuthCallback(getIdToken));
-
-  return client;
-}
 
 /**
  * Update Convex authentication with a new id_token getter

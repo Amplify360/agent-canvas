@@ -8,7 +8,7 @@ import {
   encryptSession,
   createSessionCookie,
   json,
-  generateIdToken,
+  getIdTokenForConvex,
   type SessionData,
 } from '@/server/session-utils';
 import { refreshAccessToken } from '@/server/workos';
@@ -37,14 +37,8 @@ export async function POST(request: Request) {
 
     const { access_token, refresh_token, id_token } = tokenData;
 
-    // Use WorkOS id_token if provided, otherwise generate our own JWT
-    // WorkOS typically doesn't return id_token on refresh (standard OIDC behavior)
-    let idTokenForConvex = id_token;
-    if (!idTokenForConvex) {
-      console.log('WorkOS did not return id_token on refresh - generating custom JWT');
-      // Use the user data from the existing session to generate a new token
-      idTokenForConvex = await generateIdToken(session.user);
-    }
+    // Use WorkOS id_token if provided, otherwise generate custom JWT for Convex
+    const idTokenForConvex = await getIdTokenForConvex(id_token, session.user);
 
     // Calculate token expiry from expires_in if provided, otherwise default to 50 minutes
     const expiresIn = tokenData.expires_in ? parseInt(String(tokenData.expires_in)) * 1000 : 50 * 60 * 1000;

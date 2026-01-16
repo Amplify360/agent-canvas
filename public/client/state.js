@@ -79,11 +79,7 @@ export function deepClone(value) {
     if (value === null || value === undefined) {
         return value;
     }
-    try {
-        return structuredClone(value);
-    } catch {
-        return JSON.parse(JSON.stringify(value));
-    }
+    return structuredClone(value);
 }
 
 export function slugifyIdentifier(value) {
@@ -131,32 +127,23 @@ export function saveCollapsedState() {
     } catch { /* ignore */ }
 }
 
-// LocalStorage helpers with fallback
-function getStoredValue(key) {
+// Organization preference helpers
+export function loadOrgPreference() {
     try {
-        return localStorage.getItem(key) || null;
+        return localStorage.getItem(CURRENT_ORG_KEY) || null;
     } catch {
         return null;
     }
 }
 
-function setStoredValue(key, value) {
+export function saveOrgPreference(orgId) {
     try {
-        if (value) {
-            localStorage.setItem(key, value);
+        if (orgId) {
+            localStorage.setItem(CURRENT_ORG_KEY, orgId);
         } else {
-            localStorage.removeItem(key);
+            localStorage.removeItem(CURRENT_ORG_KEY);
         }
     } catch { /* ignore */ }
-}
-
-// Organization preference helpers
-export function loadOrgPreference() {
-    return getStoredValue(CURRENT_ORG_KEY);
-}
-
-export function saveOrgPreference(orgId) {
-    setStoredValue(CURRENT_ORG_KEY, orgId);
     state.currentOrgId = orgId;
 }
 
@@ -204,11 +191,21 @@ export function canManageCanvases() {
 
 // Canvas preference helpers
 export function loadCanvasPreference() {
-    return getStoredValue(CURRENT_CANVAS_KEY);
+    try {
+        return localStorage.getItem(CURRENT_CANVAS_KEY) || null;
+    } catch {
+        return null;
+    }
 }
 
 export function saveCanvasPreference(canvasId) {
-    setStoredValue(CURRENT_CANVAS_KEY, canvasId);
+    try {
+        if (canvasId) {
+            localStorage.setItem(CURRENT_CANVAS_KEY, canvasId);
+        } else {
+            localStorage.removeItem(CURRENT_CANVAS_KEY);
+        }
+    } catch { /* ignore */ }
     state.currentCanvasId = canvasId;
 }
 

@@ -108,6 +108,10 @@ async function initializeGroups() {
     updateOrgSwitcherUI();
     populateOrgDropdown();
 
+    // Load user preferences once during initialization
+    loadCollapsedState();
+    loadGroupingPreference();
+
     return orgs;
 }
 
@@ -611,10 +615,6 @@ function createAgentGroup(group, groupIndex) {
 function renderAgentGroups() {
     // Get agents from canonical Convex-native state
     const agents = state.agents || [];
-
-    // Load collapsed state and grouping preference
-    loadCollapsedState();
-    loadGroupingPreference();
 
     // Get current grouping tag type
     const groupingTag = getGroupingTagType();
@@ -1147,9 +1147,6 @@ async function bootstrapApp() {
                 );
             }
 
-            // Clear redirect loop tracking on successful auth
-            sessionStorage.removeItem('auth_redirect_time');
-
             // Update user menu UI
             const userDisplayName = document.getElementById('userDisplayName');
             const userEmail = document.getElementById('userEmail');
@@ -1178,16 +1175,6 @@ async function bootstrapApp() {
             window.addEventListener('canvasesChanged', renderCanvasList);
         } else {
             // Not authenticated, redirect to login
-            // Prevent redirect loops using sessionStorage
-            const lastRedirect = sessionStorage.getItem('auth_redirect_time');
-            const now = Date.now();
-            if (lastRedirect && (now - parseInt(lastRedirect)) < 5000) {
-                console.error('Redirect loop detected! Stopping redirect.');
-                document.body.innerHTML = '<div style="padding: 40px; text-align: center;"><h2>Authentication Error</h2><p>Unable to verify authentication. Please <a href="/login">try logging in again</a>.</p></div>';
-                return;
-            }
-            sessionStorage.setItem('auth_redirect_time', now.toString());
-            console.log('No user found, redirecting to login...');
             window.location.href = '/login';
             return;
         }

@@ -7,7 +7,7 @@ import {
   clearOAuthStateCookie,
   createSessionCookie,
   encryptSession,
-  generateIdToken,
+  getIdTokenForConvex,
   type SessionData,
 } from '@/server/session-utils';
 import { exchangeCodeForTokens, fetchUserOrgs } from '@/server/workos';
@@ -47,17 +47,8 @@ export async function GET(request: Request) {
 
     const { user, access_token, refresh_token, id_token } = tokenData;
 
-    // Debug: log what WorkOS returned
-    console.log('WorkOS token response keys:', Object.keys(tokenData));
-    console.log('WorkOS returned id_token:', !!id_token, 'length:', id_token?.length || 0);
-
-    // Use WorkOS id_token if provided, otherwise generate our own JWT for Convex
-    let idTokenForConvex = id_token;
-    if (!idTokenForConvex) {
-      console.log('WorkOS did not return id_token - generating custom JWT for Convex');
-      idTokenForConvex = await generateIdToken(user);
-      console.log('Generated custom id_token, length:', idTokenForConvex.length);
-    }
+    // Use WorkOS id_token if provided, otherwise generate custom JWT for Convex
+    const idTokenForConvex = await getIdTokenForConvex(id_token, user);
 
     const orgs = await fetchUserOrgs(user.id, workosApiKey);
 

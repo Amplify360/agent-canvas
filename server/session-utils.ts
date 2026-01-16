@@ -10,21 +10,20 @@ const SESSION_MAX_AGE = 604800; // 7 days in seconds
 
 // Cache the derived key to avoid re-deriving on every request
 let cachedKey: Uint8Array | null = null;
-let cachedPassword: string | null = null;
 
 /**
  * Get the encryption key from environment using HKDF
  * Properly derives a 256-bit key regardless of password encoding
  */
 async function getEncryptionKey(): Promise<Uint8Array> {
+  // Return cached key if already derived
+  if (cachedKey) {
+    return cachedKey;
+  }
+
   const password = process.env.WORKOS_COOKIE_PASSWORD;
   if (!password || password.length < 32) {
     throw new Error('WORKOS_COOKIE_PASSWORD must be at least 32 characters');
-  }
-
-  // Return cached key if password hasn't changed
-  if (cachedKey && cachedPassword === password) {
-    return cachedKey;
   }
 
   // Import password as raw key material for HKDF
@@ -50,10 +49,9 @@ async function getEncryptionKey(): Promise<Uint8Array> {
     ['encrypt', 'decrypt']
   );
 
-  // Export as raw bytes for jose
+  // Export as raw bytes for jose and cache
   const rawKey = await crypto.subtle.exportKey('raw', derivedKey);
   cachedKey = new Uint8Array(rawKey);
-  cachedPassword = password;
 
   return cachedKey;
 }
@@ -240,4 +238,18 @@ export async function generateIdToken(user: WorkOSUser): Promise<string> {
     .sign(privateKey);
 
   return jwt;
+}
+
+/**
+ * Get or generate id_token for Convex authentication
+ * Uses WorkOS id_token if provided, otherwise generates custom JWT
+ * @param workosIdToken - Optional id_token from WorkOS
+ * @param user - WorkOS user object for generating custom token
+ * @returns id_token for Convex
+ */
+export async function getIdTokenForConvex(
+  workosIdToken: string | undefined,
+  user: WorkOSUser
+): Promise<string> {
+  return workosIdToken || await generateIdToken(user);
 }
