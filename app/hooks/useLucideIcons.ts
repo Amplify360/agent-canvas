@@ -1,24 +1,31 @@
 /**
  * Hook to initialize Lucide icons after render
- * Waits for Lucide to load and calls createIcons()
+ * Now uses lucide-react components instead of CDN
  */
 
-import { useEffect } from 'react';
+import * as LucideIcons from 'lucide-react';
+import { createElement } from 'react';
 
 export function useLucideIcons() {
-  useEffect(() => {
-    const initIcons = () => {
-      if (typeof window !== 'undefined' && (window as any).lucide) {
-        (window as any).lucide.createIcons();
-      }
-    };
+  // No longer needed - using React components directly
+}
 
-    // Try immediately
-    initIcons();
+/**
+ * Get a lucide-react icon component by name
+ */
+export function getLucideIcon(name: string, props?: any) {
+  // Convert kebab-case to PascalCase (e.g., "edit-3" -> "Edit3")
+  const componentName = name
+    .split('-')
+    .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+    .join('');
 
-    // Also try after a short delay to catch late-loading icons
-    const timer = setTimeout(initIcons, 100);
+  const IconComponent = (LucideIcons as any)[componentName];
 
-    return () => clearTimeout(timer);
-  });
+  if (!IconComponent) {
+    console.warn(`Icon "${name}" not found in lucide-react`);
+    return null;
+  }
+
+  return createElement(IconComponent, { size: 16, ...props });
 }

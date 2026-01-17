@@ -4,11 +4,14 @@
 
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { User, Organization, SessionData } from '@/types/auth';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 
 const CURRENT_ORG_KEY = 'agentcanvas-current-org';
+
+// Module-level flag to prevent double-initialization in React Strict Mode
+let authInitialized = false;
 
 interface AuthContextValue {
   user: User | null;
@@ -30,6 +33,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [currentOrgId, setCurrentOrgIdState] = useLocalStorage<string | null>(CURRENT_ORG_KEY, null);
   const [idToken, setIdToken] = useState<string | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
+  const currentOrgIdRef = useRef(currentOrgId);
+
+  // Keep ref in sync with state
+  useEffect(() => {
+    currentOrgIdRef.current = currentOrgId;
+  }, [currentOrgId]);
 
   const refreshAuth = useCallback(async () => {
     try {
@@ -41,10 +50,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUserOrgs(data.orgs || []);
         setIdToken(data.idToken || null);
 
-        // Set current org from preference or first available
-        if (!currentOrgId && data.orgs && data.orgs.length > 0) {
+        // Set current org from preference or first available (use ref to avoid dependency issues)
+        const savedOrgId = currentOrgIdRef.current;
+        if (!savedOrgId && data.orgs && data.orgs.length > 0) {
           setCurrentOrgIdState(data.orgs[0].id);
-        } else if (currentOrgId && !data.orgs?.some(org => org.id === currentOrgId)) {
+        } else if (savedOrgId && !data.orgs?.some(org => org.id === savedOrgId)) {
           // Current org no longer accessible, switch to first available
           if (data.orgs && data.orgs.length > 0) {
             setCurrentOrgIdState(data.orgs[0].id);
@@ -89,11 +99,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setIsInitialized(true);
     }
-  }, [currentOrgId, setCurrentOrgIdState]);
+  }, [setCurrentOrgIdState]);
 
-  // Initialize auth on mount
+  // Initialize auth on mount (only once, even across React Strict Mode remounts)
   useEffect(() => {
+    if (authInitialized) return;
+    authInitialized = true;
     refreshAuth();
+
+    // Reset flag on unmount so navigation back to this page works
+    return () => {
+      // Only reset after a delay to handle Strict Mode's quick unmount/remount
+      setTimeout(() => {
+        if (!document.querySelector('[data-auth-provider]')) {
+          authInitialized = false;
+        }
+      }, 100);
+    };
   }, [refreshAuth]);
 
   const setCurrentOrgId = useCallback((orgId: string) => {
@@ -128,7 +150,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     refreshAuth,
   };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={value}>
+      <div data-auth-provider style={{ display: 'contents' }}>{children}</div>
+    </AuthContext.Provider>
+  );
 }
 
 export function useAuth() {

@@ -1,22 +1,8 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-
-// Mock Convex client helpers used by legacy importer
-vi.mock('../../client/convex-client.js', () => {
-  return {
-    createCanvas: vi.fn(async () => 'canvas_123'),
-    bulkCreateAgents: vi.fn(async () => []),
-  };
-});
-
-import { bulkCreateAgents, createCanvas } from '../../client/convex-client.js';
-import { importLegacyYamlToNative } from '../../client/legacy-yaml-import.js';
+import { describe, expect, it } from 'vitest';
+import { prepareYamlImport, parseYaml, slugifyTitle, generateUniqueSlug, extractTitleFromYaml } from '../../app/utils/yamlImport';
 
 describe('Legacy YAML importer (one-way)', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('creates a canvas and bulk-creates agents (no YAML stored)', async () => {
+  it('parses YAML and converts agents to Convex format', () => {
     const yamlText = `
 documentTitle: Example Canvas
 agentGroups:
@@ -35,51 +21,89 @@ agentGroups:
         journeySteps: []
     `.trim();
 
-    const result = await importLegacyYamlToNative({
-      workosOrgId: 'org_1',
+    const result = parseYaml(yamlText);
+
+    expect(result.title).toBe('Example Canvas');
+    expect(result.agents).toHaveLength(2);
+    expect(result.agents[0]).toMatchObject({
+      phase: 'Sales',
+      name: 'Lead Qualifier',
+      tools: ['CRM'],
+      metrics: { adoption: 10, satisfaction: 5 },
+    });
+  });
+
+  it('prepares import with unique slug generation', () => {
+    const yamlText = `
+documentTitle: Example Canvas
+agentGroups:
+  - groupName: Sales
+    agents:
+      - name: Lead Qualifier
+    `.trim();
+
+    const result = prepareYamlImport({
       yamlText,
       overrideTitle: 'Imported Title',
       existingSlugs: new Set(['imported-title']),
     });
 
-    expect(createCanvas).toHaveBeenCalledWith(
-      expect.objectContaining({
-        workosOrgId: 'org_1',
-        title: 'Imported Title',
-        slug: 'imported-title-2',
-      })
-    );
-
-    expect(bulkCreateAgents).toHaveBeenCalledWith(
-      'canvas_123',
-      expect.arrayContaining([
-        expect.objectContaining({
-          phase: 'Sales',
-          name: 'Lead Qualifier',
-          tools: ['CRM'],
-          metrics: { adoption: 10, satisfaction: 5 },
-        }),
-      ])
-    );
-
-    expect(result).toEqual({ canvasId: 'canvas_123', title: 'Imported Title', agentCount: 2 });
+    expect(result.title).toBe('Imported Title');
+    expect(result.slug).toBe('imported-title-2');
+    expect(result.agents).toHaveLength(1);
   });
 
-  it('does not call bulkCreateAgents when YAML has no agents', async () => {
+  it('handles YAML with no agents', () => {
     const yamlText = `
 documentTitle: Empty
 agentGroups: []
     `.trim();
 
-    await importLegacyYamlToNative({
-      workosOrgId: 'org_1',
+    const result = prepareYamlImport({
       yamlText,
-      overrideTitle: 'Empty Canvas',
       existingSlugs: new Set(),
     });
 
-    expect(createCanvas).toHaveBeenCalled();
-    expect(bulkCreateAgents).not.toHaveBeenCalled();
+    expect(result.title).toBe('Empty');
+    expect(result.agents).toHaveLength(0);
+  });
+
+  it('extracts title from YAML', () => {
+    const yamlText = `
+documentTitle: Test Canvas
+agentGroups: []
+    `.trim();
+
+    const title = extractTitleFromYaml(yamlText);
+    expect(title).toBe('Test Canvas');
+  });
+
+  it('generates slugs correctly', () => {
+    expect(slugifyTitle('My Canvas')).toBe('my-canvas');
+    expect(slugifyTitle('Multiple   Spaces')).toBe('multiple-spaces');
+    expect(slugifyTitle('Special!@#$%Characters')).toBe('special-characters');
+  });
+
+  it('generates unique slugs with suffix', () => {
+    const existingSlugs = new Set(['my-canvas', 'my-canvas-2']);
+    const slug = generateUniqueSlug('My Canvas', existingSlugs);
+    expect(slug).toBe('my-canvas-3');
+  });
+
+  it('throws error for invalid YAML', () => {
+    const yamlText = 'invalid: [ unclosed';
+    expect(() => parseYaml(yamlText)).toThrow(/YAML parse error/);
+  });
+
+  it('throws error for agents without names', () => {
+    const yamlText = `
+documentTitle: Test
+agentGroups:
+  - groupName: Phase
+    agents:
+      - objective: Has objective but no name
+    `.trim();
+
+    expect(() => parseYaml(yamlText)).toThrow(/missing a name/);
   });
 });
-

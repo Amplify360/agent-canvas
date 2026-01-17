@@ -3,12 +3,14 @@
  * Convex validators handle type checking; these handle business rules
  */
 
+import { VALIDATION_CONSTANTS } from "../../app/types/validationConstants";
+
 /**
  * Validate metric value is between 0 and 100
  */
 export function validateMetric(value: number, fieldName: string): void {
-  if (value < 0 || value > 100) {
-    throw new Error(`Validation: ${fieldName} must be between 0 and 100`);
+  if (value < VALIDATION_CONSTANTS.METRIC_MIN_VALUE || value > VALIDATION_CONSTANTS.METRIC_MAX_VALUE) {
+    throw new Error(`Validation: ${fieldName} must be between ${VALIDATION_CONSTANTS.METRIC_MIN_VALUE} and ${VALIDATION_CONSTANTS.METRIC_MAX_VALUE}`);
   }
 }
 
@@ -72,24 +74,24 @@ function validateStringLength(
 }
 
 /**
- * Validate canvas title (max 200 chars)
+ * Validate canvas title (max chars from shared constants)
  */
 export function validateTitle(title: string): void {
-  validateStringLength(title, "title", 200);
+  validateStringLength(title, "title", VALIDATION_CONSTANTS.CANVAS_TITLE_MAX_LENGTH);
 }
 
 /**
- * Validate agent name (max 100 chars)
+ * Validate agent name (max chars from shared constants)
  */
 export function validateAgentName(name: string): void {
-  validateStringLength(name, "name", 100);
+  validateStringLength(name, "name", VALIDATION_CONSTANTS.AGENT_NAME_MAX_LENGTH);
 }
 
 /**
- * Validate phase name (max 50 chars)
+ * Validate phase name (max chars from shared constants)
  */
 export function validatePhase(phase: string): void {
-  validateStringLength(phase, "phase", 50);
+  validateStringLength(phase, "phase", VALIDATION_CONSTANTS.PHASE_MAX_LENGTH);
 }
 
 /**
@@ -100,6 +102,8 @@ export function validateOptionalUrl(
   fieldName: string
 ): void {
   if (!url) return;
+  // Allow "#" as a placeholder for missing URLs
+  if (url === "#") return;
   try {
     new URL(url);
   } catch {
@@ -114,10 +118,9 @@ export function validateRoiContribution(
   roiContribution?: "Very High" | "High" | "Medium" | "Low"
 ): void {
   if (!roiContribution) return;
-  const validValues = ["Very High", "High", "Medium", "Low"];
-  if (!validValues.includes(roiContribution)) {
+  if (!VALIDATION_CONSTANTS.ROI_CONTRIBUTION_VALUES.includes(roiContribution as any)) {
     throw new Error(
-      `Validation: roiContribution must be one of: ${validValues.join(", ")}`
+      `Validation: roiContribution must be one of: ${VALIDATION_CONSTANTS.ROI_CONTRIBUTION_VALUES.join(", ")}`
     );
   }
 }

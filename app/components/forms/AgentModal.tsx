@@ -9,9 +9,10 @@ import { Agent, AgentFormData } from '@/types/agent';
 import { Modal } from '../ui/Modal';
 import { useAgents } from '@/contexts/AgentContext';
 import { useAppState } from '@/contexts/AppStateContext';
+import { useAsyncOperation } from '@/hooks/useAsyncOperation';
 import { validateAgentForm } from '@/utils/validation';
 import { getAvailableTools, getToolDisplay } from '@/utils/config';
-import { useLucideIcons } from '@/hooks/useLucideIcons';
+import { Icon } from '@/components/ui/Icon';
 
 interface AgentModalProps {
   isOpen: boolean;
@@ -22,10 +23,8 @@ interface AgentModalProps {
 
 export function AgentModal({ isOpen, onClose, agent, defaultPhase }: AgentModalProps) {
   const { createAgent, updateAgent } = useAgents();
-  const { showLoading, hideLoading, showToast } = useAppState();
-
-  // Initialize Lucide icons
-  useLucideIcons();
+  const { showToast } = useAppState();
+  const executeOperation = useAsyncOperation();
 
   const [formData, setFormData] = useState<AgentFormData>({
     name: '',
@@ -55,7 +54,10 @@ export function AgentModal({ isOpen, onClose, agent, defaultPhase }: AgentModalP
         journeySteps: agent.journeySteps || [],
         demoLink: agent.demoLink || '',
         videoLink: agent.videoLink || '',
-        metrics: agent.metrics || { adoption: 0, satisfaction: 0 },
+        metrics: agent.metrics ? {
+          adoption: agent.metrics.adoption ?? 0,
+          satisfaction: agent.metrics.satisfaction ?? 0,
+        } : { adoption: 0, satisfaction: 0 },
         roiContribution: agent.roiContribution || 'Medium',
         department: agent.department || '',
         status: agent.status || 'draft',
@@ -93,24 +95,21 @@ export function AgentModal({ isOpen, onClose, agent, defaultPhase }: AgentModalP
       return;
     }
 
-    try {
-      showLoading(agent ? 'Updating agent...' : 'Creating agent...');
-
-      if (agent) {
-        await updateAgent(agent._id, formData);
-        showToast('Agent updated successfully', 'success');
-      } else {
-        await createAgent(formData);
-        showToast('Agent created successfully', 'success');
+    await executeOperation(
+      async () => {
+        if (agent) {
+          await updateAgent(agent._id, formData);
+        } else {
+          await createAgent(formData);
+        }
+      },
+      {
+        loadingMessage: agent ? 'Updating agent...' : 'Creating agent...',
+        successMessage: agent ? 'Agent updated successfully' : 'Agent created successfully',
+        errorMessage: 'Failed to save agent',
+        onSuccess: onClose,
       }
-
-      onClose();
-    } catch (error) {
-      console.error('Save agent error:', error);
-      showToast('Failed to save agent', 'error');
-    } finally {
-      hideLoading();
-    }
+    );
   };
 
   const handleToolToggle = (tool: string) => {
@@ -197,9 +196,9 @@ export function AgentModal({ isOpen, onClose, agent, defaultPhase }: AgentModalP
                     onChange={() => handleToolToggle(tool)}
                   />
                   <div className="checkbox-item__check">
-                    <i data-lucide="check"></i>
+                    <Icon name="check" />
                   </div>
-                  <i data-lucide={toolDisplay.icon} style={{ color: toolDisplay.color }}></i>
+                  <Icon name={toolDisplay.icon} style={{ color: toolDisplay.color }} />
                   <span>{toolDisplay.label}</span>
                 </label>
               );

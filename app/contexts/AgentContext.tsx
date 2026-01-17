@@ -9,6 +9,7 @@ import { Agent, AgentFormData } from '@/types/agent';
 import { useQuery, useMutation } from '@/hooks/useConvex';
 import { useAuth } from './AuthContext';
 import { useCanvas } from './CanvasContext';
+import { api } from '../../convex/_generated/api';
 
 interface AgentContextValue {
   agents: Agent[];
@@ -21,30 +22,34 @@ interface AgentContextValue {
 const AgentContext = createContext<AgentContextValue | undefined>(undefined);
 
 export function AgentProvider({ children }: { children: React.ReactNode }) {
-  const { isInitialized } = useAuth();
+  const { isInitialized, isAuthenticated } = useAuth();
   const { currentCanvasId } = useCanvas();
 
   // Subscribe to agents using official Convex hook
-  const agents = useQuery('agents:list', currentCanvasId ? { canvasId: currentCanvasId } : 'skip') || [];
-  const createAgentMutation = useMutation('agents:create');
-  const updateAgentMutation = useMutation('agents:update');
-  const deleteAgentMutation = useMutation('agents:remove');
+  // Only query if authenticated AND has canvasId
+  const agents = useQuery(
+    api.agents.list,
+    isAuthenticated && currentCanvasId ? { canvasId: currentCanvasId as any } : 'skip'
+  ) || [];
+  const createAgentMutation = useMutation(api.agents.create);
+  const updateAgentMutation = useMutation(api.agents.update);
+  const deleteAgentMutation = useMutation(api.agents.remove);
 
   const createAgent = useCallback(async (data: AgentFormData) => {
     if (!currentCanvasId) throw new Error('No canvas selected');
     const agentId = await createAgentMutation({
-      canvasId: currentCanvasId,
+      canvasId: currentCanvasId as any,
       ...data,
     });
     return agentId as string;
   }, [currentCanvasId, createAgentMutation]);
 
   const updateAgent = useCallback(async (agentId: string, data: Partial<AgentFormData>) => {
-    await updateAgentMutation({ agentId, ...data });
+    await updateAgentMutation({ agentId: agentId as any, ...data });
   }, [updateAgentMutation]);
 
   const deleteAgent = useCallback(async (agentId: string) => {
-    await deleteAgentMutation({ agentId });
+    await deleteAgentMutation({ agentId: agentId as any });
   }, [deleteAgentMutation]);
 
   const value: AgentContextValue = {

@@ -6,15 +6,15 @@ This file provides guidance to Claude Code when working with this repository.
 
 **AgentCanvas** is a web-based configuration management system for visualizing and editing multi-phase agent workflows. It displays business process agents organized by phases with interactive editing capabilities.
 
-**Architecture**: Minimal Next.js App Router for routing and API endpoints, with vanilla JavaScript client code for the UI, Convex backend, and WorkOS authentication. Next.js serves as a thin wrapper - it handles auth checks and routing, then loads the existing vanilla JS application.
+**Architecture**: Next.js 15 App Router with React 19 for the frontend UI, Convex for the real-time backend, and WorkOS for authentication. The app is fully React/TypeScript with server-side auth checks and API routes.
 
 ## Technology Stack
 
-- **Frontend**: Next.js 15 (App Router) with React 19, vanilla JavaScript client code (ES6 modules), HTML5, CSS3
+- **Frontend**: Next.js 15 (App Router) with React 19, TypeScript, HTML5, CSS3
 - **Backend**: Convex (real-time backend-as-a-service)
 - **Auth**: WorkOS AuthKit (magic link, social login, SSO)
 - **Hosting**: Vercel (Next.js deployment)
-- **Libraries**: `next`, `react`, `react-dom`, `lucide` (CDN), `jose` (session encryption), `convex` (and `js-yaml` lazy-loaded for legacy YAML import only)
+- **Libraries**: `next`, `react`, `react-dom`, `lucide-react` (icons), `jose` (session encryption), `convex`, `js-yaml` (legacy YAML import)
 
 ## Development Commands
 
@@ -72,11 +72,46 @@ BASE_URL=http://localhost:3000
 
 ```
 /
-├── app/                     # Next.js App Router
-│   ├── page.tsx            # Main app page (auth check + loads app-shell.html + client/main.js)
-│   ├── login/page.tsx      # Login page (React component)
-│   ├── layout.tsx          # Root layout with importmap and scripts
+├── app/                     # Next.js App Router (React + TypeScript)
+│   ├── page.tsx            # Main app page (auth-protected)
+│   ├── login/page.tsx      # Login page
+│   ├── layout.tsx          # Root layout
 │   ├── globals.css         # Global styles (imports styles.css)
+│   ├── components/         # React components
+│   │   ├── agents/         # Agent display components
+│   │   │   ├── AgentCard.tsx
+│   │   │   ├── AgentGrid.tsx
+│   │   │   └── AgentGroupSection.tsx
+│   │   ├── forms/          # Form components
+│   │   │   └── AgentModal.tsx
+│   │   ├── layout/         # Layout components
+│   │   │   ├── AppLayout.tsx
+│   │   │   ├── MainToolbar.tsx
+│   │   │   └── Sidebar.tsx
+│   │   └── ui/             # Reusable UI components
+│   │       ├── LoadingOverlay.tsx
+│   │       ├── Modal.tsx
+│   │       └── Toast.tsx
+│   ├── contexts/           # React Context providers
+│   │   ├── AgentContext.tsx
+│   │   ├── AppStateContext.tsx
+│   │   ├── AuthContext.tsx
+│   │   ├── CanvasContext.tsx
+│   │   ├── ConvexClientProvider.tsx
+│   │   └── GroupingContext.tsx
+│   ├── hooks/              # Custom React hooks
+│   │   ├── useConvex.ts
+│   │   ├── useLocalStorage.ts
+│   │   └── useLucideIcons.ts
+│   ├── types/              # TypeScript type definitions
+│   │   ├── agent.ts
+│   │   ├── auth.ts
+│   │   ├── canvas.ts
+│   │   └── config.ts
+│   ├── utils/              # Utility functions
+│   │   ├── config.ts
+│   │   ├── grouping.ts
+│   │   └── validation.ts
 │   └── api/                # Next.js Route Handlers (Edge runtime)
 │       ├── config/route.ts         # App configuration endpoint
 │       └── auth/                   # Auth endpoints
@@ -90,17 +125,7 @@ BASE_URL=http://localhost:3000
 │   ├── session-utils.ts    # Session encryption/decryption, cookie management
 │   └── workos.ts           # WorkOS API helpers
 ├── public/                  # Static assets served by Next.js
-│   ├── app-shell.html      # HTML structure for vanilla JS app (injected by page.tsx)
-│   └── client/             # Browser-side JavaScript (ES modules)
-│       ├── main.js             # Main client-side logic
-│       ├── auth-client-workos.js   # WorkOS auth client
-│       ├── convex-client.js        # Convex client adapter
-│       ├── config.js, state.js     # Configuration and state
-│       ├── canvases.js             # Canvas management
-│       ├── grouping.js              # Agent grouping logic
-│       ├── legacy-yaml-import.js   # Legacy YAML import (one-way)
-│       ├── menu-utils.js           # Menu UI helpers
-│       └── modal-utils.js          # Modal UI helpers
+│   └── styles.css          # Main CSS stylesheet
 ├── convex/                  # Convex backend (TypeScript)
 │   ├── schema.ts           # Database schema (5 tables)
 │   ├── agents.ts           # Agent CRUD + history
@@ -110,9 +135,8 @@ BASE_URL=http://localhost:3000
 │   ├── users.ts            # User org membership sync
 │   ├── auth.config.ts      # Convex auth provider config
 │   └── lib/auth.ts         # Auth helpers (requireAuth, requireOrgAccess)
-├── styles.css              # Main styling (imported by app/globals.css)
 ├── next.config.js          # Next.js configuration
-├── tsconfig.json           # TypeScript configuration for Next.js
+├── tsconfig.json           # TypeScript configuration
 └── tests/                   # Vitest tests (unit/, integration/)
 ```
 
@@ -149,12 +173,14 @@ Session contains: `accessToken`, `refreshToken`, `idToken` (for Convex), `user`,
 ## Key Patterns
 
 ### State Management
-```javascript
-// auth-client-workos.js
-currentUser, currentOrgs, isInitialized
-
-// convex-client.js
-Manages Convex subscriptions with auto-cleanup
+```typescript
+// React Context providers manage global state
+<AuthProvider>          // User authentication state
+<ConvexClientProvider>  // Convex client instance
+<CanvasProvider>        // Canvas list and current canvas
+<AgentProvider>         // Agent list with real-time updates
+<GroupingProvider>      // UI grouping/filtering state
+<AppStateProvider>      // App-wide UI state (modals, loading, toasts)
 ```
 
 ### Authorization
@@ -165,9 +191,10 @@ await requireOrgAccess(ctx, auth, workosOrgId);  // Checks userOrgMemberships ta
 ```
 
 ### Real-time Updates
-```javascript
-// Subscribe to agents for a canvas
-subscribeToAgents(canvasId, (agents) => renderAgentGroups(agents));
+```typescript
+// React hooks subscribe to Convex queries
+const agents = useQuery(api.agents.list, { canvasId });
+// Agents automatically update when changed in Convex
 ```
 
 ## Styling System
@@ -182,12 +209,12 @@ subscribeToAgents(canvasId, (agents) => renderAgentGroups(agents));
 
 - **Functions/Variables**: camelCase
 - **CSS Classes**: kebab-case
-- **Next.js App Router**: Minimal usage - auth routing and API endpoints only
-- **TypeScript**: Used for Next.js pages, API routes, and server utilities
-- **Client Code**: Vanilla JavaScript in `public/client/` - NO React, NO build system for client code
+- **React Components**: PascalCase, functional components with hooks
+- **TypeScript**: Used throughout the app (pages, components, API routes, utilities)
+- **File Extensions**: `.tsx` for React components, `.ts` for utilities
 - **API Routes**: All use Edge runtime for WebCrypto support (session encryption)
-- **Path Aliases**: Use `@/` prefix for imports (e.g., `@/server/session-utils`)
-- **Architecture**: Next.js is a thin wrapper - `app/page.tsx` fetches `app-shell.html`, injects it into the DOM, then loads `client/main.js`. This preserves the existing vanilla JS architecture while adding modern auth and routing.
+- **Path Aliases**: Use `@/` prefix for imports (e.g., `@/components/agents/AgentCard`)
+- **Architecture**: Fully React-based with Next.js App Router. Client-side state managed via React Context and Convex real-time subscriptions.
 
 ## Debugging
 
@@ -196,9 +223,9 @@ Common issues:
 - **Convex errors**: Run `npx convex dev` to sync schema, check Convex dashboard logs
 - **Session issues**: WORKOS_COOKIE_PASSWORD must be 32+ chars
 - **Next.js build errors**: Check TypeScript errors with `pnpm build`, ensure all imports use correct paths
-- **Client code not loading**: Verify `public/client/` and `public/app-shell.html` exist
+- **React hydration errors**: Check browser console for mismatched server/client rendering
 - **Route handler errors**: Check Edge runtime compatibility (WebCrypto APIs work, Node.js APIs don't)
-- **Blank page**: Check browser console - ensure `app-shell.html` is loading correctly and `client/main.js` is executing
+- **Blank page**: Check browser console for React errors, ensure contexts are properly nested
 
 ## Related Files
 

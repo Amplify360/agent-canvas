@@ -3,7 +3,13 @@ import { mutation, query } from "./_generated/server";
 import { Doc, Id } from "./_generated/dataModel";
 import { MutationCtx, QueryCtx } from "./_generated/server";
 import { AuthContext, requireAuth, requireOrgAccess } from "./lib/auth";
-import { getAgentSnapshot } from "./lib/helpers";
+import {
+  getAgentSnapshot,
+  getCanvasWithAccess,
+  getAgentWithAccess,
+  withCanvasAccess,
+  withAgentAccess,
+} from "./lib/helpers";
 import {
   validateAgentName,
   validateMetrics,
@@ -11,87 +17,7 @@ import {
   validatePhase,
   validateRoiContribution,
 } from "./lib/validation";
-
-// Shared validator components for reuse
-const metricsValidator = v.optional(
-  v.object({
-    adoption: v.number(),
-    satisfaction: v.number(),
-  })
-);
-
-const roiValidator = v.optional(
-  v.union(
-    v.literal("Very High"),
-    v.literal("High"),
-    v.literal("Medium"),
-    v.literal("Low")
-  )
-);
-
-// Complete agent fields for bulk operations
-const agentInputValidator = v.object({
-  phase: v.string(),
-  phaseOrder: v.number(),
-  agentOrder: v.number(),
-  name: v.string(),
-  objective: v.optional(v.string()),
-  description: v.optional(v.string()),
-  tools: v.array(v.string()),
-  journeySteps: v.array(v.string()),
-  demoLink: v.optional(v.string()),
-  videoLink: v.optional(v.string()),
-  metrics: metricsValidator,
-  roiContribution: roiValidator,
-  department: v.optional(v.string()),
-  status: v.optional(v.string()),
-});
-
-// Partial agent fields for updates
-const agentUpdateFields = {
-  phase: v.optional(v.string()),
-  phaseOrder: v.optional(v.number()),
-  agentOrder: v.optional(v.number()),
-  name: v.optional(v.string()),
-  objective: v.optional(v.string()),
-  description: v.optional(v.string()),
-  tools: v.optional(v.array(v.string())),
-  journeySteps: v.optional(v.array(v.string())),
-  demoLink: v.optional(v.string()),
-  videoLink: v.optional(v.string()),
-  metrics: metricsValidator,
-  roiContribution: roiValidator,
-  department: v.optional(v.string()),
-  status: v.optional(v.string()),
-};
-
-// Helper to verify canvas access and return canvas
-async function getCanvasWithAccess(
-  ctx: QueryCtx | MutationCtx,
-  auth: AuthContext,
-  canvasId: Id<"canvases">
-): Promise<Doc<"canvases">> {
-  const canvas = await ctx.db.get(canvasId);
-  if (!canvas || canvas.deletedAt) {
-    throw new Error("NotFound: Canvas not found");
-  }
-  await requireOrgAccess(ctx, auth, canvas.workosOrgId);
-  return canvas;
-}
-
-// Helper to get agent with canvas access verification
-async function getAgentWithAccess(
-  ctx: QueryCtx | MutationCtx,
-  auth: AuthContext,
-  agentId: Id<"agents">
-): Promise<{ agent: Doc<"agents">; canvas: Doc<"canvases"> }> {
-  const agent = await ctx.db.get(agentId);
-  if (!agent || agent.deletedAt) {
-    throw new Error("NotFound: Agent not found");
-  }
-  const canvas = await getCanvasWithAccess(ctx, auth, agent.canvasId);
-  return { agent, canvas };
-}
+import { agentInputValidator, agentUpdateValidator } from "./lib/validators";
 
 // Shared validation for agent data
 function validateAgentData(data: {
@@ -211,7 +137,7 @@ export const create = mutation({
 export const update = mutation({
   args: {
     agentId: v.id("agents"),
-    ...agentUpdateFields,
+    ...agentUpdateValidator,
   },
   handler: async (ctx, { agentId, ...updates }) => {
     const auth = await requireAuth(ctx);

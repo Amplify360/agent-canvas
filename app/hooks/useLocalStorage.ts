@@ -2,9 +2,12 @@
  * Hook for syncing state with localStorage
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useCallback, Dispatch, SetStateAction } from 'react';
 
-export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T) => void] {
+export function useLocalStorage<T>(
+  key: string,
+  initialValue: T
+): [T, Dispatch<SetStateAction<T>>] {
   const [storedValue, setStoredValue] = useState<T>(() => {
     if (typeof window === 'undefined') {
       return initialValue;
@@ -19,16 +22,21 @@ export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T)
     }
   });
 
-  const setValue = (value: T) => {
-    try {
-      setStoredValue(value);
-      if (typeof window !== 'undefined') {
-        window.localStorage.setItem(key, JSON.stringify(value));
+  const setValue: Dispatch<SetStateAction<T>> = useCallback((value) => {
+    setStoredValue((currentValue) => {
+      try {
+        // Support functional updates like useState
+        const valueToStore = value instanceof Function ? value(currentValue) : value;
+        if (typeof window !== 'undefined') {
+          window.localStorage.setItem(key, JSON.stringify(valueToStore));
+        }
+        return valueToStore;
+      } catch (error) {
+        console.warn(`Error saving localStorage key "${key}":`, error);
+        return currentValue;
       }
-    } catch (error) {
-      console.warn(`Error saving localStorage key "${key}":`, error);
-    }
-  };
+    });
+  }, [key]);
 
   return [storedValue, setValue];
 }

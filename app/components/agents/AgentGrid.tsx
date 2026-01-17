@@ -1,16 +1,16 @@
 /**
- * AgentGrid - main container for agent groups
+ * AgentGrid - main container for agent groups with premium empty state
  */
 
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import { Agent } from '@/types/agent';
 import { AgentGroupSection } from './AgentGroupSection';
 import { useGrouping } from '@/contexts/GroupingContext';
 import { useAgents } from '@/contexts/AgentContext';
-import { useAppState } from '@/contexts/AppStateContext';
-import { useLucideIcons } from '@/hooks/useLucideIcons';
+import { useAsyncOperation } from '@/hooks/useAsyncOperation';
+import { Icon } from '@/components/ui/Icon';
 
 interface AgentGridProps {
   onEditAgent: (agent: Agent) => void;
@@ -20,44 +20,51 @@ interface AgentGridProps {
 export function AgentGrid({ onEditAgent, onAddAgent }: AgentGridProps) {
   const { computedGroups } = useGrouping();
   const { deleteAgent } = useAgents();
-  const { showLoading, hideLoading, showToast } = useAppState();
-
-  // Initialize Lucide icons
-  useLucideIcons();
+  const executeOperation = useAsyncOperation();
 
   const handleDeleteAgent = async (agent: Agent) => {
     if (!window.confirm(`Are you sure you want to delete "${agent.name}"?`)) {
       return;
     }
 
-    try {
-      showLoading('Deleting agent...');
-      await deleteAgent(agent._id);
-      showToast('Agent deleted successfully', 'success');
-    } catch (error) {
-      console.error('Delete agent error:', error);
-      showToast('Failed to delete agent', 'error');
-    } finally {
-      hideLoading();
-    }
+    await executeOperation(
+      () => deleteAgent(agent._id),
+      {
+        loadingMessage: 'Deleting agent...',
+        successMessage: 'Agent deleted successfully',
+        errorMessage: 'Failed to delete agent',
+      }
+    );
   };
 
   if (computedGroups.length === 0) {
     return (
       <div className="empty-state">
-        <i data-lucide="inbox"></i>
-        <h3>No agents found</h3>
-        <p>Create your first agent to get started</p>
+        <div className="empty-state__icon">
+          <Icon name="bot" />
+        </div>
+        <h3 className="empty-state__title">No agents found</h3>
+        <p className="empty-state__description">
+          Create your first agent to get started building your AI workflow
+        </p>
+        <button
+          className="empty-state__btn"
+          onClick={() => onAddAgent('default')}
+        >
+          <Icon name="plus" />
+          Add Agent
+        </button>
       </div>
     );
   }
 
   return (
     <div className="agent-groups-container">
-      {computedGroups.map((group) => (
+      {computedGroups.map((group, idx) => (
         <AgentGroupSection
           key={group.id}
           group={group}
+          groupIndex={idx}
           onEditAgent={onEditAgent}
           onDeleteAgent={handleDeleteAgent}
           onAddAgent={onAddAgent}
