@@ -19,7 +19,7 @@ interface AgentGridProps {
 
 export function AgentGrid({ onEditAgent, onAddAgent }: AgentGridProps) {
   const { computedGroups } = useGrouping();
-  const { deleteAgent } = useAgents();
+  const { deleteAgent, isLoading } = useAgents();
   const executeOperation = useAsyncOperation();
 
   const handleDeleteAgent = async (agent: Agent) => {
@@ -36,6 +36,18 @@ export function AgentGrid({ onEditAgent, onAddAgent }: AgentGridProps) {
       }
     );
   };
+
+  // Show loading state while data is being fetched
+  if (isLoading) {
+    return (
+      <div className="empty-state">
+        <div className="empty-state__icon">
+          <Icon name="loader-2" className="loading-icon" />
+        </div>
+        <h3 className="empty-state__title">Loading...</h3>
+      </div>
+    );
+  }
 
   if (computedGroups.length === 0) {
     return (

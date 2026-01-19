@@ -267,6 +267,10 @@
     to { transform: rotate(360deg); }
 }
 
+.loading-icon {
+    animation: spin 1s linear infinite;
+}
+
 @keyframes bounce-subtle {
     0%, 100% { transform: translateY(0); }
     50% { transform: translateY(-2px); }
