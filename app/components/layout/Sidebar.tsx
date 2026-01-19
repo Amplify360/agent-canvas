@@ -107,7 +107,7 @@ export function Sidebar() {
         <div className="sidebar__header">
           <div className="sidebar__logo">
             <Icon name="layout-grid" />
-            <span>AgentCanvas</span>
+            <span>Agent Canvas</span>
           </div>
           <button
             className="sidebar__collapse-btn"
