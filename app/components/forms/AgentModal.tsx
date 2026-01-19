@@ -5,7 +5,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Agent, AgentFormData } from '@/types/agent';
+import { Agent, AgentFormData, AgentMetrics } from '@/types/agent';
 import { Modal } from '../ui/Modal';
 import { useAgents } from '@/contexts/AgentContext';
 import { useAppState } from '@/contexts/AppStateContext';
@@ -21,6 +21,30 @@ interface AgentModalProps {
   defaultPhase?: string;
 }
 
+interface FormSectionProps {
+  title: string;
+  children: React.ReactNode;
+  defaultCollapsed?: boolean;
+}
+
+function FormSection({ title, children, defaultCollapsed = false }: FormSectionProps) {
+  const [isCollapsed, setIsCollapsed] = useState(defaultCollapsed);
+
+  return (
+    <div className={`form-section ${isCollapsed ? 'is-collapsed' : ''}`}>
+      <button
+        type="button"
+        className="form-section__header"
+        onClick={() => setIsCollapsed(!isCollapsed)}
+      >
+        <span>{title}</span>
+        <Icon name="chevron-down" />
+      </button>
+      <div className="form-section__content">{children}</div>
+    </div>
+  );
+}
+
 export function AgentModal({ isOpen, onClose, agent, defaultPhase }: AgentModalProps) {
   const { createAgent, updateAgent } = useAgents();
   const { showToast } = useAppState();
@@ -34,14 +58,16 @@ export function AgentModal({ isOpen, onClose, agent, defaultPhase }: AgentModalP
     journeySteps: [],
     demoLink: '',
     videoLink: '',
-    metrics: { adoption: 0, satisfaction: 0 },
-    roiContribution: 'Medium',
+    metrics: {},
     department: '',
     status: 'draft',
     phase: defaultPhase || 'Uncategorized',
     phaseOrder: 0,
     agentOrder: 0,
   });
+
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [newJourneyStep, setNewJourneyStep] = useState('');
 
   // Load agent data when editing
   useEffect(() => {
@@ -54,17 +80,14 @@ export function AgentModal({ isOpen, onClose, agent, defaultPhase }: AgentModalP
         journeySteps: agent.journeySteps || [],
         demoLink: agent.demoLink || '',
         videoLink: agent.videoLink || '',
-        metrics: agent.metrics ? {
-          adoption: agent.metrics.adoption ?? 0,
-          satisfaction: agent.metrics.satisfaction ?? 0,
-        } : { adoption: 0, satisfaction: 0 },
-        roiContribution: agent.roiContribution || 'Medium',
+        metrics: agent.metrics || {},
         department: agent.department || '',
         status: agent.status || 'draft',
         phase: agent.phase,
         phaseOrder: agent.phaseOrder,
         agentOrder: agent.agentOrder,
       });
+      setErrors({});
     } else {
       // Reset form for new agent
       setFormData({
@@ -75,23 +98,43 @@ export function AgentModal({ isOpen, onClose, agent, defaultPhase }: AgentModalP
         journeySteps: [],
         demoLink: '',
         videoLink: '',
-        metrics: { adoption: 0, satisfaction: 0 },
-        roiContribution: 'Medium',
+        metrics: {},
         department: '',
         status: 'draft',
         phase: defaultPhase || 'Uncategorized',
         phaseOrder: 0,
         agentOrder: 0,
       });
+      setErrors({});
     }
+    setNewJourneyStep('');
   }, [agent, defaultPhase]);
+
+  const validateField = (field: string, value: string) => {
+    const testData = { ...formData, [field]: value };
+    const validationErrors = validateAgentForm(testData);
+    const fieldError = validationErrors.find((e) => e.field === field);
+
+    setErrors((prev) => {
+      if (fieldError) {
+        return { ...prev, [field]: fieldError.message };
+      }
+      const { [field]: _, ...rest } = prev;
+      return rest;
+    });
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const errors = validateAgentForm(formData);
-    if (errors.length > 0) {
-      showToast(errors[0].message, 'error');
+    const validationErrors = validateAgentForm(formData);
+    if (validationErrors.length > 0) {
+      const errorMap: Record<string, string> = {};
+      validationErrors.forEach((err) => {
+        errorMap[err.field] = err.message;
+      });
+      setErrors(errorMap);
+      showToast('Please fix the errors before submitting', 'error');
       return;
     }
 
@@ -121,126 +164,332 @@ export function AgentModal({ isOpen, onClose, agent, defaultPhase }: AgentModalP
     }));
   };
 
+  const handleAddJourneyStep = () => {
+    if (newJourneyStep.trim()) {
+      setFormData((prev) => ({
+        ...prev,
+        journeySteps: [...prev.journeySteps, newJourneyStep.trim()],
+      }));
+      setNewJourneyStep('');
+    }
+  };
+
+  const handleRemoveJourneyStep = (index: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      journeySteps: prev.journeySteps.filter((_, i) => i !== index),
+    }));
+  };
+
+  const handleMetricChange = (key: keyof AgentMetrics, value: string) => {
+    const numValue = value === '' ? undefined : Number(value);
+    setFormData((prev) => ({
+      ...prev,
+      metrics: {
+        ...prev.metrics,
+        [key]: numValue,
+      },
+    }));
+  };
+
   const availableTools = getAvailableTools();
+
+  const getInputClassName = (field: string, baseClass: string = 'form-input') => {
+    return errors[field] ? `${baseClass} ${baseClass}--error` : baseClass;
+  };
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={agent ? 'Edit Agent' : 'New Agent'} size="large">
       <form onSubmit={handleSubmit} className="agent-form">
-        <div className="form-group">
-          <label htmlFor="agent-name" className="form-label">
-            Agent Name <span className="required">*</span>
-          </label>
-          <input
-            id="agent-name"
-            type="text"
-            className="form-input"
-            value={formData.name}
-            onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
-            required
-          />
-        </div>
-
-        <div className="form-group">
-          <label htmlFor="agent-phase" className="form-label">
-            Phase <span className="required">*</span>
-          </label>
-          <input
-            id="agent-phase"
-            type="text"
-            className="form-input"
-            value={formData.phase}
-            onChange={(e) => setFormData((prev) => ({ ...prev, phase: e.target.value }))}
-            required
-          />
-        </div>
-
-        <div className="form-group">
-          <label htmlFor="agent-objective" className="form-label">
-            Objective
-          </label>
-          <textarea
-            id="agent-objective"
-            className="form-textarea"
-            value={formData.objective}
-            onChange={(e) => setFormData((prev) => ({ ...prev, objective: e.target.value }))}
-            rows={2}
-          />
-        </div>
-
-        <div className="form-group">
-          <label htmlFor="agent-description" className="form-label">
-            Description
-          </label>
-          <textarea
-            id="agent-description"
-            className="form-textarea"
-            value={formData.description}
-            onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
-            rows={3}
-          />
-        </div>
-
-        <div className="form-group">
-          <label className="form-label">Tools</label>
-          <div className="checkbox-grid">
-            {availableTools.map((tool) => {
-              const toolDisplay = getToolDisplay(tool);
-              return (
-                <label
-                  key={tool}
-                  className={`checkbox-item ${formData.tools.includes(tool) ? 'is-checked' : ''}`}
-                >
-                  <input
-                    type="checkbox"
-                    checked={formData.tools.includes(tool)}
-                    onChange={() => handleToolToggle(tool)}
-                  />
-                  <div className="checkbox-item__check">
-                    <Icon name="check" />
-                  </div>
-                  <Icon name={toolDisplay.icon} style={{ color: toolDisplay.color }} />
-                  <span>{toolDisplay.label}</span>
-                </label>
-              );
-            })}
+        {/* Basic Info Section */}
+        <FormSection title="Basic Info">
+          <div className="form-group">
+            <label htmlFor="agent-name" className="form-label">
+              Agent Name <span className="required">*</span>
+            </label>
+            <input
+              id="agent-name"
+              type="text"
+              className={getInputClassName('name')}
+              value={formData.name}
+              onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
+              onBlur={(e) => validateField('name', e.target.value)}
+              required
+            />
+            {errors.name && <div className="form-error">{errors.name}</div>}
           </div>
-        </div>
 
-        <div className="form-group">
-          <label htmlFor="agent-department" className="form-label">
-            Department
-          </label>
-          <select
-            id="agent-department"
-            className="form-select"
-            value={formData.department}
-            onChange={(e) => setFormData((prev) => ({ ...prev, department: e.target.value }))}
-          >
-            <option value="">None</option>
-            <option value="sales">Sales</option>
-            <option value="engineering">Engineering</option>
-            <option value="marketing">Marketing</option>
-            <option value="operations">Operations</option>
-            <option value="support">Support</option>
-          </select>
-        </div>
+          <div className="form-row">
+            <div className="form-group">
+              <label htmlFor="agent-phase" className="form-label">
+                Phase <span className="required">*</span>
+              </label>
+              <input
+                id="agent-phase"
+                type="text"
+                className={getInputClassName('phase')}
+                value={formData.phase}
+                onChange={(e) => setFormData((prev) => ({ ...prev, phase: e.target.value }))}
+                onBlur={(e) => validateField('phase', e.target.value)}
+                required
+              />
+              {errors.phase && <div className="form-error">{errors.phase}</div>}
+            </div>
 
-        <div className="form-group">
-          <label htmlFor="agent-status" className="form-label">
-            Status
-          </label>
-          <select
-            id="agent-status"
-            className="form-select"
-            value={formData.status}
-            onChange={(e) => setFormData((prev) => ({ ...prev, status: e.target.value }))}
-          >
-            <option value="draft">Draft</option>
-            <option value="active">Active</option>
-            <option value="review">In Review</option>
-            <option value="deprecated">Deprecated</option>
-          </select>
-        </div>
+            <div className="form-group">
+              <label htmlFor="agent-department" className="form-label">
+                Department
+              </label>
+              <select
+                id="agent-department"
+                className="form-select"
+                value={formData.department}
+                onChange={(e) => setFormData((prev) => ({ ...prev, department: e.target.value }))}
+              >
+                <option value="">None</option>
+                <option value="sales">Sales</option>
+                <option value="engineering">Engineering</option>
+                <option value="marketing">Marketing</option>
+                <option value="operations">Operations</option>
+                <option value="support">Support</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="agent-status" className="form-label">
+              Status
+            </label>
+            <select
+              id="agent-status"
+              className="form-select"
+              value={formData.status}
+              onChange={(e) => setFormData((prev) => ({ ...prev, status: e.target.value }))}
+            >
+              <option value="draft">Draft</option>
+              <option value="active">Active</option>
+              <option value="review">In Review</option>
+              <option value="deprecated">Deprecated</option>
+            </select>
+          </div>
+        </FormSection>
+
+        {/* Details Section */}
+        <FormSection title="Details">
+          <div className="form-group">
+            <label htmlFor="agent-objective" className="form-label">
+              Objective
+            </label>
+            <textarea
+              id="agent-objective"
+              className="form-textarea"
+              value={formData.objective}
+              onChange={(e) => setFormData((prev) => ({ ...prev, objective: e.target.value }))}
+              rows={2}
+              placeholder="What does this agent aim to achieve?"
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="agent-description" className="form-label">
+              Description
+            </label>
+            <textarea
+              id="agent-description"
+              className="form-textarea"
+              value={formData.description}
+              onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
+              rows={3}
+              placeholder="Detailed description of the agent's functionality..."
+            />
+          </div>
+        </FormSection>
+
+        {/* Capabilities Section */}
+        <FormSection title="Capabilities">
+          <div className="form-group">
+            <label className="form-label">Tools</label>
+            <div className="checkbox-grid">
+              {availableTools.map((tool) => {
+                const toolDisplay = getToolDisplay(tool);
+                return (
+                  <label
+                    key={tool}
+                    className={`checkbox-item ${formData.tools.includes(tool) ? 'is-checked' : ''}`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={formData.tools.includes(tool)}
+                      onChange={() => handleToolToggle(tool)}
+                    />
+                    <div className="checkbox-item__check">
+                      <Icon name="check" />
+                    </div>
+                    <Icon name={toolDisplay.icon} style={{ color: toolDisplay.color }} />
+                    <span>{toolDisplay.label}</span>
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+        </FormSection>
+
+        {/* Journey Section */}
+        <FormSection title="Journey Steps">
+          <div className="journey-editor">
+            <div className="journey-editor__input">
+              <input
+                type="text"
+                className="form-input"
+                value={newJourneyStep}
+                onChange={(e) => setNewJourneyStep(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleAddJourneyStep();
+                  }
+                }}
+                placeholder="Add a journey step..."
+              />
+              <button
+                type="button"
+                className="btn btn--primary btn--sm"
+                onClick={handleAddJourneyStep}
+                disabled={!newJourneyStep.trim()}
+              >
+                <Icon name="plus" />
+                Add
+              </button>
+            </div>
+
+            {formData.journeySteps.length === 0 ? (
+              <div className="journey-editor__empty">
+                No journey steps defined. Add steps to describe the agent's workflow.
+              </div>
+            ) : (
+              <div className="journey-editor__list">
+                {formData.journeySteps.map((step, index) => (
+                  <div key={index} className="journey-editor__item">
+                    <div className="journey-editor__item-number">{index + 1}</div>
+                    <div className="journey-editor__item-text">{step}</div>
+                    <button
+                      type="button"
+                      className="journey-editor__item-remove"
+                      onClick={() => handleRemoveJourneyStep(index)}
+                      title="Remove step"
+                    >
+                      <Icon name="x" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </FormSection>
+
+        {/* Links Section */}
+        <FormSection title="Links">
+          <div className="form-row">
+            <div className="form-group">
+              <label htmlFor="agent-demoLink" className="form-label">
+                Demo Link
+              </label>
+              <input
+                id="agent-demoLink"
+                type="url"
+                className={getInputClassName('demoLink')}
+                value={formData.demoLink}
+                onChange={(e) => setFormData((prev) => ({ ...prev, demoLink: e.target.value }))}
+                onBlur={(e) => e.target.value && validateField('demoLink', e.target.value)}
+                placeholder="https://example.com/demo"
+              />
+              {errors.demoLink && <div className="form-error">{errors.demoLink}</div>}
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="agent-videoLink" className="form-label">
+                Video Link
+              </label>
+              <input
+                id="agent-videoLink"
+                type="url"
+                className={getInputClassName('videoLink')}
+                value={formData.videoLink}
+                onChange={(e) => setFormData((prev) => ({ ...prev, videoLink: e.target.value }))}
+                onBlur={(e) => e.target.value && validateField('videoLink', e.target.value)}
+                placeholder="https://youtube.com/watch?v=..."
+              />
+              {errors.videoLink && <div className="form-error">{errors.videoLink}</div>}
+            </div>
+          </div>
+        </FormSection>
+
+        {/* Metrics Section - Collapsed by default */}
+        <FormSection title="Metrics" defaultCollapsed={true}>
+          <div className="form-row">
+            <div className="form-group">
+              <label htmlFor="agent-numberOfUsers" className="form-label">
+                Number of Users
+              </label>
+              <input
+                id="agent-numberOfUsers"
+                type="number"
+                className="form-input"
+                value={formData.metrics?.numberOfUsers ?? ''}
+                onChange={(e) => handleMetricChange('numberOfUsers', e.target.value)}
+                min="0"
+                placeholder="0"
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="agent-timesUsed" className="form-label">
+                Times Used
+              </label>
+              <input
+                id="agent-timesUsed"
+                type="number"
+                className="form-input"
+                value={formData.metrics?.timesUsed ?? ''}
+                onChange={(e) => handleMetricChange('timesUsed', e.target.value)}
+                min="0"
+                placeholder="0"
+              />
+            </div>
+          </div>
+
+          <div className="form-row">
+            <div className="form-group">
+              <label htmlFor="agent-timeSaved" className="form-label">
+                Time Saved (hours)
+              </label>
+              <input
+                id="agent-timeSaved"
+                type="number"
+                className="form-input"
+                value={formData.metrics?.timeSaved ?? ''}
+                onChange={(e) => handleMetricChange('timeSaved', e.target.value)}
+                min="0"
+                step="0.5"
+                placeholder="0"
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="agent-roi" className="form-label">
+                ROI ($)
+              </label>
+              <input
+                id="agent-roi"
+                type="number"
+                className="form-input"
+                value={formData.metrics?.roi ?? ''}
+                onChange={(e) => handleMetricChange('roi', e.target.value)}
+                placeholder="0"
+              />
+            </div>
+          </div>
+        </FormSection>
 
         <div className="form-actions">
           <button type="button" className="btn btn--secondary" onClick={onClose}>
