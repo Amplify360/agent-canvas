@@ -900,14 +900,14 @@ a:hover {
 }
 
 .main-wrapper.sidebar-collapsed .toolbar {
-    padding-left: calc(var(--space-3) + 40px + var(--space-4));
+    padding-left: calc(var(--space-4) + 40px + var(--space-4));
 }
 
 /* Sidebar Expand Button (shown when collapsed) */
 .sidebar-expand-btn {
     position: fixed;
-    left: var(--space-3);
-    top: var(--space-3);
+    left: var(--space-4);
+    top: var(--space-4);
     z-index: 150;
     width: 40px;
     height: 40px;
