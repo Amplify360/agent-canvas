@@ -2,8 +2,8 @@
  * Convex authentication configuration for WorkOS and custom JWTs
  */
 
-// WorkOS Client ID (public, safe to hardcode)
-const clientId = "client_01KEZ54DKHJ14TRQF2NVH5B73X";
+// WorkOS Client ID (public, safe to hardcode) - Production
+const clientId = "client_01KEZ54DWP5SNBAFC1DE08FMF9";
 
 // Static JWKS embedded as data URI (public key for verifying custom JWTs)
 // This matches the JWT_PRIVATE_KEY used to sign tokens in the app
