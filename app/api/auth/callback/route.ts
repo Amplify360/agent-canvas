@@ -45,12 +45,17 @@ export async function GET(request: Request) {
 
   try {
     const tokenData = await exchangeCodeForTokens(code, workosApiKey, workosClientId);
-    if (!tokenData) return redirect(baseUrl, 'auth_failed');
+    if (!tokenData) {
+      console.error('[Auth Callback] Token exchange failed');
+      return redirect(baseUrl, 'auth_failed');
+    }
 
     const { user, access_token, refresh_token } = tokenData;
+    console.log(`[Auth Callback] User authenticated: ${user.id} (${user.email})`);
 
     // Fetch user's org memberships from WorkOS
     const orgs = await fetchUserOrgs(user.id, workosApiKey);
+    console.log(`[Auth Callback] Org memberships for ${user.email}: ${JSON.stringify(orgs.map(o => o.organization_id))}`);
 
     // Convert to OrgClaim format for JWT
     const orgClaims: OrgClaim[] = orgs.map((om) => ({
@@ -62,6 +67,7 @@ export async function GET(request: Request) {
     const idTokenForConvex = await getIdTokenForConvex(user, orgClaims);
 
     if (orgs.length === 0) {
+      console.error(`[Auth Callback] User ${user.email} has no org memberships - check WorkOS invitation status`);
       return redirect(baseUrl, 'no_organization');
     }
 

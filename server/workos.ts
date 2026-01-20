@@ -96,8 +96,13 @@ export async function fetchUserOrgs(userId: string, apiKey: string): Promise<Wor
     `https://api.workos.com/user_management/organization_memberships?user_id=${userId}`,
     { headers: { Authorization: `Bearer ${apiKey}` } }
   );
-  if (!response.ok) return [];
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error(`[Auth] fetchUserOrgs failed for user ${userId}: ${response.status} - ${errorText}`);
+    return [];
+  }
   const data = await response.json();
+  console.log(`[Auth] fetchUserOrgs for user ${userId}: found ${data.data?.length || 0} memberships`);
   return data.data || [];
 }
 
