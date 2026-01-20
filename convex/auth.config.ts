@@ -2,10 +2,8 @@
  * Convex authentication configuration for WorkOS and custom JWTs
  */
 
-const clientId = process.env.WORKOS_CLIENT_ID;
-if (!clientId) {
-  throw new Error("WORKOS_CLIENT_ID must be set in Convex environment variables");
-}
+// WorkOS Client ID (public, safe to hardcode)
+const clientId = "client_01KEZ54DKHJ14TRQF2NVH5B73X";
 
 // Static JWKS embedded as data URI (public key for verifying custom JWTs)
 // This matches the JWT_PRIVATE_KEY used to sign tokens in the app
@@ -36,10 +34,18 @@ export default {
       jwks: staticJwksDataUri,
       algorithm: "RS256" as const,
     },
-    // Custom JWT provider for production (update this URL for your deployment)
+    // Custom JWT provider for production - Vercel default
     {
       type: "customJwt" as const,
       issuer: "https://agent-canvas.vercel.app",
+      applicationID: "convex",
+      jwks: staticJwksDataUri,
+      algorithm: "RS256" as const,
+    },
+    // Custom JWT provider for production - custom domain
+    {
+      type: "customJwt" as const,
+      issuer: "https://canvas.amplify360.ai",
       applicationID: "convex",
       jwks: staticJwksDataUri,
       algorithm: "RS256" as const,
