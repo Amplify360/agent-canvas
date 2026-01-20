@@ -289,8 +289,10 @@ function agentsToYamlDoc(title: string, agents: Agent[]): YamlDocument {
 
 /**
  * Export canvas and agents to YAML string
+ * @throws Error if title is invalid
  */
 export function exportToYaml(title: string, agents: Agent[]): string {
+  validateTitle(title);
   const doc = agentsToYamlDoc(title, agents);
   return yaml.dump(doc, {
     indent: 2,

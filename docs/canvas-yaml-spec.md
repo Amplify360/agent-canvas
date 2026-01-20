@@ -28,13 +28,15 @@ agentGroups:
 
 ## Rules
 
-- `documentTitle`: Canvas name, max 100 chars
+- `documentTitle`: Canvas name, max 200 chars
 - `agentGroups`: Logical phases/stages containing agents
 - `groupName`: Phase label (e.g., "Discovery", "Implementation")
 - `name`: Agent name, required
 - All other fields optional, omit if empty
 - `tools`: List of tool/capability names
 - `journeySteps`: Ordered workflow steps
+- `metrics`: Values can be numbers or numeric strings (e.g., `42` or `"42"`)
+- `tags.department`: Maps to `category` field in database
 
 ## Example
 
