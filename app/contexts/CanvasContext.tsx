@@ -4,7 +4,7 @@
 
 'use client';
 
-import React, { createContext, useContext, useEffect, useCallback, useState, useRef } from 'react';
+import React, { createContext, useContext, useEffect, useCallback, useState } from 'react';
 import { Canvas } from '@/types/canvas';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useQuery, useMutation } from '@/hooks/useConvex';
@@ -37,7 +37,9 @@ export function CanvasProvider({ children, initialCanvasId }: CanvasProviderProp
   const { currentOrgId, isInitialized, isAuthenticated, userOrgs, setCurrentOrgId } = useAuth();
   const [currentCanvasId, setCurrentCanvasIdState] = useLocalStorage<string | null>(CURRENT_CANVAS_KEY, null);
   const [initialCanvasError, setInitialCanvasError] = useState<'not_found' | 'no_access' | null>(null);
-  const initialCanvasHandled = useRef(false);
+  // Use state instead of ref so that setting it to true triggers a re-render
+  // and causes the query to switch to 'skip' (fixes race condition)
+  const [initialCanvasHandled, setInitialCanvasHandled] = useState(false);
 
   // Subscribe to canvases using official Convex hook
   // Only query if authenticated AND has orgId
@@ -47,9 +49,10 @@ export function CanvasProvider({ children, initialCanvasId }: CanvasProviderProp
   ) || [];
 
   // Query the initial canvas by ID if provided (for shareable links)
+  // Using state for initialCanvasHandled ensures query skips after handling
   const initialCanvas = useQuery(
     api.canvases.get,
-    isAuthenticated && initialCanvasId && !initialCanvasHandled.current
+    isAuthenticated && initialCanvasId && !initialCanvasHandled
       ? { canvasId: initialCanvasId as Id<"canvases"> }
       : 'skip'
   );
@@ -66,13 +69,13 @@ export function CanvasProvider({ children, initialCanvasId }: CanvasProviderProp
   // Handle initial canvas from URL (shareable links)
   useEffect(() => {
     // Skip if no initialCanvasId, already handled, or query not yet completed
-    if (!initialCanvasId || initialCanvasHandled.current || initialCanvas === undefined) {
+    if (!initialCanvasId || initialCanvasHandled || initialCanvas === undefined) {
       return;
     }
 
     // Query returned null - canvas not found or no access
     if (initialCanvas === null) {
-      initialCanvasHandled.current = true;
+      setInitialCanvasHandled(true);
       setInitialCanvasError('not_found');
       return;
     }
@@ -83,13 +86,13 @@ export function CanvasProvider({ children, initialCanvasId }: CanvasProviderProp
 
     if (!hasOrgAccess) {
       // User doesn't have access to this org
-      initialCanvasHandled.current = true;
+      setInitialCanvasHandled(true);
       setInitialCanvasError('no_access');
       return;
     }
 
     // User has access - switch org if needed and select canvas
-    initialCanvasHandled.current = true;
+    setInitialCanvasHandled(true);
     if (currentOrgId !== canvasOrgId) {
       setCurrentOrgId(canvasOrgId);
     }
@@ -98,12 +101,12 @@ export function CanvasProvider({ children, initialCanvasId }: CanvasProviderProp
     if (typeof window !== 'undefined') {
       window.history.replaceState(null, '', `/c/${initialCanvas._id}`);
     }
-  }, [initialCanvasId, initialCanvas, userOrgs, currentOrgId, setCurrentOrgId, setCurrentCanvasIdState]);
+  }, [initialCanvasId, initialCanvas, initialCanvasHandled, userOrgs, currentOrgId, setCurrentOrgId, setCurrentCanvasIdState]);
 
   // Auto-select first canvas if none selected or current canvas was deleted
   // Skip this if we have an initialCanvasId that hasn't been handled yet
   useEffect(() => {
-    if (initialCanvasId && !initialCanvasHandled.current) {
+    if (initialCanvasId && !initialCanvasHandled) {
       return; // Wait for initial canvas handling
     }
 
@@ -117,7 +120,7 @@ export function CanvasProvider({ children, initialCanvasId }: CanvasProviderProp
       // No canvases available, clear selection
       setCurrentCanvasIdState(null);
     }
-  }, [canvases, currentCanvasId, setCurrentCanvasIdState, initialCanvasId]);
+  }, [canvases, currentCanvasId, setCurrentCanvasIdState, initialCanvasId, initialCanvasHandled]);
 
   const setCurrentCanvasId = useCallback((canvasId: string | null) => {
     setCurrentCanvasIdState(canvasId);

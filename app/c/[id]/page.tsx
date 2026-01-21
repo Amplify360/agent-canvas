@@ -5,25 +5,27 @@
 'use client';
 
 import { use } from 'react';
-import { AuthProvider } from '@/contexts/AuthContext';
-import { ConvexClientProvider } from '@/contexts/ConvexClientProvider';
-import { CanvasProvider, useCanvas } from '@/contexts/CanvasContext';
-import { AgentProvider } from '@/contexts/AgentContext';
-import { GroupingProvider } from '@/contexts/GroupingContext';
-import { AppStateProvider } from '@/contexts/AppStateContext';
+import { useRouter } from 'next/navigation';
+import { AppProviders } from '@/components/AppProviders';
 import { AppLayout } from '@/components/layout/AppLayout';
-import Link from 'next/link';
+import { useCanvas } from '@/contexts/CanvasContext';
+import { Icon } from '@/components/ui/Icon';
 
 interface CanvasPageProps {
   params: Promise<{ id: string }>;
 }
 
 function CanvasErrorView() {
+  const router = useRouter();
   const { initialCanvasError } = useCanvas();
 
   if (!initialCanvasError) {
     return null;
   }
+
+  const handleGoHome = () => {
+    router.push('/');
+  };
 
   return (
     <div className="canvas-error">
@@ -38,39 +40,32 @@ function CanvasErrorView() {
             ? 'This canvas may have been deleted or the link is invalid.'
             : 'You do not have access to this canvas.'}
         </p>
-        <Link href="/" className="btn btn--primary">
+        <button className="btn btn--primary" onClick={handleGoHome}>
           Go to Home
-        </Link>
+        </button>
       </div>
-      <style jsx>{`
-        .canvas-error {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          min-height: 100vh;
-          padding: 2rem;
-          background: var(--color-bg);
-        }
-        .canvas-error__content {
-          text-align: center;
-          max-width: 400px;
-        }
-        .canvas-error__content h1 {
-          margin: 0 0 1rem;
-          font-size: 1.5rem;
-          color: var(--color-text);
-        }
-        .canvas-error__content p {
-          margin: 0 0 1.5rem;
-          color: var(--color-text-secondary);
-        }
-      `}</style>
+    </div>
+  );
+}
+
+function CanvasLoadingView() {
+  return (
+    <div className="canvas-error">
+      <div className="canvas-error__loading">
+        <Icon name="loader-2" className="loading-icon" />
+        <p>Loading canvas...</p>
+      </div>
     </div>
   );
 }
 
 function CanvasContent() {
-  const { initialCanvasError } = useCanvas();
+  const { initialCanvasError, isLoading, currentCanvas } = useCanvas();
+
+  // Show loading while resolving initial canvas
+  if (isLoading && !initialCanvasError && !currentCanvas) {
+    return <CanvasLoadingView />;
+  }
 
   if (initialCanvasError) {
     return <CanvasErrorView />;
@@ -83,18 +78,8 @@ export default function CanvasPage({ params }: CanvasPageProps) {
   const { id } = use(params);
 
   return (
-    <AuthProvider>
-      <ConvexClientProvider>
-        <CanvasProvider initialCanvasId={id}>
-          <AgentProvider>
-            <GroupingProvider>
-              <AppStateProvider>
-                <CanvasContent />
-              </AppStateProvider>
-            </GroupingProvider>
-          </AgentProvider>
-        </CanvasProvider>
-      </ConvexClientProvider>
-    </AuthProvider>
+    <AppProviders initialCanvasId={id}>
+      <CanvasContent />
+    </AppProviders>
   );
 }
