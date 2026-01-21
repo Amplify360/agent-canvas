@@ -12,7 +12,7 @@ import {
   type SessionData,
   type OrgClaim,
 } from '@/server/session-utils';
-import { exchangeCodeForTokens, fetchUserOrgs } from '@/server/workos';
+import { exchangeCodeForTokens, fetchUserOrgs, fetchOrgDetails } from '@/server/workos';
 
 export const runtime = 'edge';
 
@@ -57,10 +57,25 @@ export async function GET(request: Request) {
     const orgs = await fetchUserOrgs(user.id, workosApiKey);
     console.log(`[Auth Callback] Org memberships for ${user.email}: ${JSON.stringify(orgs.map(o => o.organization_id))}`);
 
-    // Convert to OrgClaim format for JWT
-    const orgClaims: OrgClaim[] = orgs.map((om) => ({
-      id: om.organization_id,
-      role: om.role?.slug || 'member',
+    // Fetch org details to get names, then convert to OrgClaim format
+    console.log(`[Auth Callback] Fetching details for ${orgs.length} orgs`);
+    const orgDetails = await Promise.all(
+      orgs.map(async (om) => {
+        const details = await fetchOrgDetails(om.organization_id, workosApiKey);
+        console.log(`[Auth Callback] Org ${om.organization_id}: ${details?.name || 'NO NAME'}`);
+        return {
+          id: om.organization_id,
+          role: om.role?.slug || 'member',
+          name: details?.name,
+        };
+      })
+    );
+    console.log(`[Auth Callback] Final orgDetails: ${JSON.stringify(orgDetails)}`);
+
+    // OrgClaims for JWT (without name to keep token smaller)
+    const orgClaims: OrgClaim[] = orgDetails.map((org) => ({
+      id: org.id,
+      role: org.role,
     }));
 
     // Generate custom JWT with orgs and isSuperAdmin claims for Convex
@@ -88,7 +103,7 @@ export async function GET(request: Request) {
         lastName: user.last_name,
         profilePictureUrl: user.profile_picture_url,
       },
-      orgs: orgClaims, // Reuse the same org claims
+      orgs: orgDetails, // Include org names for display
       isSuperAdmin: checkSuperAdmin(user.email),
     };
 

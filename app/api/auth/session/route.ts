@@ -18,6 +18,8 @@ export async function GET(request: Request) {
     ? Date.now() > session.idTokenExpiresAt - (10 * 60 * 1000)
     : !session.idToken;
 
+  console.log(`[Session] User ${session.user?.email} has ${session.orgs?.length || 0} orgs: ${JSON.stringify(session.orgs?.map(o => o.name || o.id))}`);
+
   return json({
     authenticated: true,
     user: session.user,
