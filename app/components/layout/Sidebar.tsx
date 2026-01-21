@@ -12,6 +12,7 @@ import { useResizable } from '@/hooks/useResizable';
 import { Icon } from '@/components/ui/Icon';
 import { ImportYamlModal } from '../forms/ImportYamlModal';
 import { CanvasRenameModal } from '../forms/CanvasRenameModal';
+import { CopyCanvasModal } from '../forms/CopyCanvasModal';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { MembersModal } from '../org/MembersModal';
 
@@ -26,7 +27,7 @@ interface CanvasMenuState {
 
 // Context menu dimensions for viewport boundary calculations
 const MENU_WIDTH = 150;
-const MENU_HEIGHT = 116; // 3 items
+const MENU_HEIGHT = 152; // 4 items
 const VIEWPORT_PADDING = 8;
 
 export function Sidebar() {
@@ -46,6 +47,7 @@ export function Sidebar() {
   const [isMembersModalOpen, setIsMembersModalOpen] = useState(false);
   const [canvasMenu, setCanvasMenu] = useState<CanvasMenuState | null>(null);
   const [renameCanvas, setRenameCanvas] = useState<{ id: string; title: string } | null>(null);
+  const [copyCanvas, setCopyCanvas] = useState<{ id: string; title: string } | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; title: string } | null>(null);
   const [orgDropdownOpen, setOrgDropdownOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
@@ -128,13 +130,15 @@ export function Sidebar() {
     setCanvasMenu({ canvasId, x, y });
   };
 
-  const handleMenuAction = async (action: 'rename' | 'delete' | 'share') => {
+  const handleMenuAction = async (action: 'rename' | 'delete' | 'share' | 'copy') => {
     if (!canvasMenu) return;
     const canvas = canvases.find((c) => c._id === canvasMenu.canvasId);
     if (!canvas) return;
 
     if (action === 'rename') {
       setRenameCanvas({ id: canvas._id, title: canvas.title });
+    } else if (action === 'copy') {
+      setCopyCanvas({ id: canvas._id, title: canvas.title });
     } else if (action === 'delete') {
       setDeleteConfirm({ id: canvas._id, title: canvas.title });
     } else if (action === 'share') {
@@ -396,6 +400,15 @@ export function Sidebar() {
           </button>
           <button
             className="context-menu__item"
+            onClick={() => handleMenuAction('copy')}
+            disabled={userOrgs.length <= 1}
+            title={userOrgs.length <= 1 ? 'You need access to other organizations to copy' : undefined}
+          >
+            <Icon name="copy" />
+            <span>Copy to...</span>
+          </button>
+          <button
+            className="context-menu__item"
             onClick={() => handleMenuAction('rename')}
           >
             <Icon name="pencil" />
@@ -418,6 +431,16 @@ export function Sidebar() {
           canvasId={renameCanvas.id}
           currentTitle={renameCanvas.title}
           onClose={() => setRenameCanvas(null)}
+        />
+      )}
+
+      {/* Copy Canvas Modal */}
+      {copyCanvas && (
+        <CopyCanvasModal
+          isOpen={true}
+          canvasId={copyCanvas.id}
+          canvasTitle={copyCanvas.title}
+          onClose={() => setCopyCanvas(null)}
         />
       )}
 

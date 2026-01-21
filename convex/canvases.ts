@@ -1,8 +1,32 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
-import { requireAuth, requireOrgAccess } from "./lib/auth";
+import { Doc } from "./_generated/dataModel";
+import { requireAuth, requireOrgAccess, hasOrgAccess } from "./lib/auth";
 import { getAgentSnapshot } from "./lib/helpers";
 import { validateSlug, validateTitle } from "./lib/validation";
+
+/**
+ * Generate a unique slug in the target org by appending -copy, -copy-2, etc.
+ */
+function generateUniqueSlug(
+  baseSlug: string,
+  existingCanvases: Doc<"canvases">[]
+): string {
+  const existingSlugs = new Set(existingCanvases.map((c) => c.slug));
+
+  // Try the base slug with -copy suffix first
+  let candidate = `${baseSlug}-copy`;
+  if (!existingSlugs.has(candidate)) {
+    return candidate;
+  }
+
+  // Try -copy-2, -copy-3, etc.
+  let counter = 2;
+  while (existingSlugs.has(`${baseSlug}-copy-${counter}`)) {
+    counter++;
+  }
+  return `${baseSlug}-copy-${counter}`;
+}
 
 /**
  * List all canvases for an organization (excludes soft-deleted)
@@ -222,5 +246,112 @@ export const remove = mutation({
       updatedBy: auth.workosUserId,
       updatedAt: now,
     });
+  },
+});
+
+/**
+ * Copy a canvas (with all its agents) to one or more other organizations
+ */
+export const copyToOrgs = mutation({
+  args: {
+    sourceCanvasId: v.id("canvases"),
+    targetOrgIds: v.array(v.string()),
+    newTitle: v.string(),
+  },
+  handler: async (ctx, { sourceCanvasId, targetOrgIds, newTitle }) => {
+    const auth = await requireAuth(ctx);
+
+    // Validate newTitle
+    validateTitle(newTitle);
+
+    // Limit to max 10 orgs per operation
+    if (targetOrgIds.length > 10) {
+      throw new Error("Validation: Cannot copy to more than 10 organizations at once");
+    }
+
+    if (targetOrgIds.length === 0) {
+      throw new Error("Validation: Must select at least one organization");
+    }
+
+    // Get and validate source canvas
+    const sourceCanvas = await ctx.db.get(sourceCanvasId);
+    if (!sourceCanvas || sourceCanvas.deletedAt) {
+      throw new Error("NotFound: Source canvas not found");
+    }
+    requireOrgAccess(auth, sourceCanvas.workosOrgId);
+
+    // Validate access to all target orgs
+    for (const orgId of targetOrgIds) {
+      if (!hasOrgAccess(auth, orgId)) {
+        throw new Error(`Auth: No access to organization ${orgId}`);
+      }
+    }
+
+    // Get all non-deleted agents from source canvas
+    const sourceAgents = await ctx.db
+      .query("agents")
+      .withIndex("by_canvas", (q) => q.eq("canvasId", sourceCanvasId))
+      .filter((q) => q.eq(q.field("deletedAt"), undefined))
+      .collect();
+
+    const now = Date.now();
+    const baseSlug = sourceCanvas.slug;
+    const results: Array<{ orgId: string; canvasId: string; slug: string }> = [];
+
+    // Copy to each target org
+    for (const targetOrgId of targetOrgIds) {
+      // Get existing canvases in target org for slug uniqueness check
+      const existingCanvases = await ctx.db
+        .query("canvases")
+        .withIndex("by_org", (q) => q.eq("workosOrgId", targetOrgId))
+        .filter((q) => q.eq(q.field("deletedAt"), undefined))
+        .collect();
+
+      // Generate unique slug for target org
+      const uniqueSlug = generateUniqueSlug(baseSlug, existingCanvases);
+
+      // Create canvas copy
+      const newCanvasId = await ctx.db.insert("canvases", {
+        workosOrgId: targetOrgId,
+        title: newTitle,
+        slug: uniqueSlug,
+        createdBy: auth.workosUserId,
+        updatedBy: auth.workosUserId,
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      // Copy all agents to new canvas
+      for (const agent of sourceAgents) {
+        await ctx.db.insert("agents", {
+          canvasId: newCanvasId,
+          name: agent.name,
+          objective: agent.objective,
+          description: agent.description,
+          tools: agent.tools,
+          journeySteps: agent.journeySteps,
+          demoLink: agent.demoLink,
+          videoLink: agent.videoLink,
+          metrics: agent.metrics,
+          category: agent.category,
+          status: agent.status,
+          phase: agent.phase,
+          phaseOrder: agent.phaseOrder,
+          agentOrder: agent.agentOrder,
+          createdBy: auth.workosUserId,
+          updatedBy: auth.workosUserId,
+          createdAt: now,
+          updatedAt: now,
+        });
+      }
+
+      results.push({
+        orgId: targetOrgId,
+        canvasId: newCanvasId,
+        slug: uniqueSlug,
+      });
+    }
+
+    return { success: true, results };
   },
 });
