@@ -151,7 +151,9 @@ export function CopyCanvasModal({ isOpen, onClose, canvasId, canvasTitle }: Copy
           onClick={handleCopy}
           disabled={selectedCount === 0 || !newTitle.trim()}
         >
-          Copy to {selectedCount} organization{selectedCount !== 1 ? 's' : ''}
+          {selectedCount === 0
+            ? 'Select organizations'
+            : `Copy to ${selectedCount} organization${selectedCount !== 1 ? 's' : ''}`}
         </button>
       </div>
     </Modal>

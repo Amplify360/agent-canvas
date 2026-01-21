@@ -280,10 +280,10 @@ export const copyToOrgs = mutation({
     }
     requireOrgAccess(auth, sourceCanvas.workosOrgId);
 
-    // Validate access to all target orgs
+    // Validate access to all target orgs (use generic error to avoid leaking org info)
     for (const orgId of targetOrgIds) {
       if (!hasOrgAccess(auth, orgId)) {
-        throw new Error(`Auth: No access to organization ${orgId}`);
+        throw new Error("Auth: No access to one or more target organizations");
       }
     }
 
@@ -297,6 +297,23 @@ export const copyToOrgs = mutation({
     const now = Date.now();
     const baseSlug = sourceCanvas.slug;
     const results: Array<{ orgId: string; canvasId: string; slug: string }> = [];
+
+    // Extract agent data once (optimization: avoid repeated property access in loop)
+    const agentDataToCopy = sourceAgents.map((agent) => ({
+      name: agent.name,
+      objective: agent.objective,
+      description: agent.description,
+      tools: agent.tools,
+      journeySteps: agent.journeySteps,
+      demoLink: agent.demoLink,
+      videoLink: agent.videoLink,
+      metrics: agent.metrics,
+      category: agent.category,
+      status: agent.status,
+      phase: agent.phase,
+      phaseOrder: agent.phaseOrder,
+      agentOrder: agent.agentOrder,
+    }));
 
     // Copy to each target org
     for (const targetOrgId of targetOrgIds) {
@@ -321,27 +338,23 @@ export const copyToOrgs = mutation({
         updatedAt: now,
       });
 
-      // Copy all agents to new canvas
-      for (const agent of sourceAgents) {
-        await ctx.db.insert("agents", {
+      // Copy all agents to new canvas with history recording
+      for (const agentData of agentDataToCopy) {
+        const newAgentId = await ctx.db.insert("agents", {
           canvasId: newCanvasId,
-          name: agent.name,
-          objective: agent.objective,
-          description: agent.description,
-          tools: agent.tools,
-          journeySteps: agent.journeySteps,
-          demoLink: agent.demoLink,
-          videoLink: agent.videoLink,
-          metrics: agent.metrics,
-          category: agent.category,
-          status: agent.status,
-          phase: agent.phase,
-          phaseOrder: agent.phaseOrder,
-          agentOrder: agent.agentOrder,
+          ...agentData,
           createdBy: auth.workosUserId,
           updatedBy: auth.workosUserId,
           createdAt: now,
           updatedAt: now,
+        });
+
+        // Record history for audit trail
+        await ctx.db.insert("agentHistory", {
+          agentId: newAgentId,
+          changedBy: auth.workosUserId,
+          changedAt: now,
+          changeType: "create",
         });
       }
 
