@@ -32,6 +32,7 @@ agentGroups:                    # optional, defaults to []
 - `agentGroups`: Optional. Array of phases/stages. Omit or use `[]` if empty
 - `groupName`: Optional. Defaults to "Phase 1", "Phase 2", etc. Max 50 chars
 - `name`: Required per agent. Max 100 chars
+- `tools`: Valid names: `forms`, `code`, `rag`, `web-search`, `deep-research`, `context`, `email`, `calendar`, `slack`, `api`. Case-insensitive. Unknown names accepted with generic styling
 - `metrics`: All values must be numbers ≥ 0. Can also be numeric strings (e.g., `"42"`)
 - `tags.department`: Maps to `category` field in database
 - All other fields: Optional—omit if empty/unused
@@ -50,9 +51,9 @@ agentGroups:
           Analyzes lead data from multiple sources, applies scoring rules,
           and routes qualified leads to the appropriate sales team.
         tools:
-          - CRM
-          - Email
-          - Analytics
+          - context
+          - email
+          - deep-research
         journeySteps:
           - Receive lead notification
           - Pull company profile data
@@ -74,8 +75,8 @@ agentGroups:
       - name: Account Creator
         objective: Provision new customer accounts automatically
         tools:
-          - Admin Portal
-          - Billing System
+          - forms
+          - api
         journeySteps:
           - Create account record
           - Set initial permissions
