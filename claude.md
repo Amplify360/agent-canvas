@@ -52,6 +52,14 @@ pnpm test:ui     # browser UI
 - **Minor fixes** (typos, small doc updates): commit directly to `dev`
 - **Features/bug series**: feature branch → `dev` → test → `main` (prod)
 
+## Convex Deployments
+
+Two separate Convex deployments exist:
+- **Dev** (`expert-narwhal-281`): Used by `npx convex dev` locally
+- **Prod** (`quaint-bee-380`): Used by Vercel production
+
+After testing changes locally, promote to prod with `npx convex deploy`. Vercel deploys the frontend; Convex backend must be deployed separately.
+
 ## Environment Variables
 
 ```bash
