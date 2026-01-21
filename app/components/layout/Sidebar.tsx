@@ -4,7 +4,7 @@
 
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useAuth, useIsOrgAdmin, useCurrentOrg } from '@/contexts/AuthContext';
 import { useCanvas } from '@/contexts/CanvasContext';
 import { useAppState } from '@/contexts/AppStateContext';
@@ -54,12 +54,12 @@ export function Sidebar() {
   const userMenuRef = useRef<HTMLDivElement>(null);
 
   // Get user initials for avatar
-  const getUserInitials = (): string => {
+  const getUserInitials = useCallback((): string => {
     if (!user) return '??';
     const first = user.firstName?.charAt(0) || '';
     const last = user.lastName?.charAt(0) || '';
     return (first + last).toUpperCase() || user.email?.charAt(0).toUpperCase() || '??';
-  };
+  }, [user]);
 
   // Close menus on outside click
   useEffect(() => {
@@ -79,6 +79,22 @@ export function Sidebar() {
     if (canvasMenu || orgDropdownOpen || userMenuOpen) {
       document.addEventListener('mousedown', handleClickOutside);
       return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [canvasMenu, orgDropdownOpen, userMenuOpen]);
+
+  // Close dropdowns on Escape key
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setCanvasMenu(null);
+        setOrgDropdownOpen(false);
+        setUserMenuOpen(false);
+      }
+    };
+
+    if (canvasMenu || orgDropdownOpen || userMenuOpen) {
+      document.addEventListener('keydown', handleKeyDown);
+      return () => document.removeEventListener('keydown', handleKeyDown);
     }
   }, [canvasMenu, orgDropdownOpen, userMenuOpen]);
 
@@ -187,7 +203,7 @@ export function Sidebar() {
                   onClick={() => setOrgDropdownOpen(!orgDropdownOpen)}
                   title="Switch organization"
                 >
-                  <span className="sidebar__org-name">{currentOrg?.name}</span>
+                  <span className="sidebar__org-name">{currentOrg?.name || 'Loading...'}</span>
                   <Icon name="chevron-down" className="sidebar__org-chevron" />
                 </button>
                 <div className={`sidebar__dropdown ${orgDropdownOpen ? 'open' : ''}`}>
@@ -206,7 +222,7 @@ export function Sidebar() {
                 </div>
               </>
             ) : (
-              <span className="sidebar__org-name">{currentOrg?.name}</span>
+              <span className="sidebar__org-name">{currentOrg?.name || 'Loading...'}</span>
             )}
           </div>
           <button
