@@ -201,6 +201,7 @@ export function Sidebar() {
                 <button
                   className="sidebar__org-trigger"
                   onClick={() => setOrgDropdownOpen(!orgDropdownOpen)}
+                  aria-expanded={orgDropdownOpen}
                   title="Switch organization"
                 >
                   <span className="sidebar__org-name">{currentOrg?.name || 'Loading...'}</span>
@@ -302,6 +303,7 @@ export function Sidebar() {
           <button
             className="sidebar__user-menu-btn"
             onClick={() => setUserMenuOpen(!userMenuOpen)}
+            aria-expanded={userMenuOpen}
             title="User menu"
           >
             <Icon name="more-vertical" />

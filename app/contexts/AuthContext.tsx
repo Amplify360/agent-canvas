@@ -211,7 +211,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = useCallback(async () => {
     try {
       const response = await fetch('/api/auth/logout', { method: 'POST' });
-      const data = await response.json();
+      const data: { success: boolean; logoutUrl?: string } = await response.json();
 
       setUser(null);
       setUserOrgs([]);

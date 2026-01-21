@@ -102,10 +102,6 @@ export async function fetchUserOrgs(userId: string, apiKey: string): Promise<Wor
     return [];
   }
   const data = await response.json();
-  console.log(`[Auth] fetchUserOrgs for user ${userId}: found ${data.data?.length || 0} memberships, full response keys: ${Object.keys(data).join(', ')}`);
-  if (data.list_metadata) {
-    console.log(`[Auth] fetchUserOrgs pagination: ${JSON.stringify(data.list_metadata)}`);
-  }
   return data.data || [];
 }
 

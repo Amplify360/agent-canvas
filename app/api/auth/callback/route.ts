@@ -51,18 +51,14 @@ export async function GET(request: Request) {
     }
 
     const { user, access_token, refresh_token } = tokenData;
-    console.log(`[Auth Callback] User authenticated: ${user.id} (${user.email})`);
 
     // Fetch user's org memberships from WorkOS
     const orgs = await fetchUserOrgs(user.id, workosApiKey);
-    console.log(`[Auth Callback] Org memberships for ${user.email}: ${JSON.stringify(orgs.map(o => o.organization_id))}`);
 
     // Fetch org details to get names, then convert to OrgClaim format
-    console.log(`[Auth Callback] Fetching details for ${orgs.length} orgs`);
     const orgDetails = await Promise.all(
       orgs.map(async (om) => {
         const details = await fetchOrgDetails(om.organization_id, workosApiKey);
-        console.log(`[Auth Callback] Org ${om.organization_id}: ${details?.name || 'NO NAME'}`);
         return {
           id: om.organization_id,
           role: om.role?.slug || 'member',
@@ -70,7 +66,6 @@ export async function GET(request: Request) {
         };
       })
     );
-    console.log(`[Auth Callback] Final orgDetails: ${JSON.stringify(orgDetails)}`);
 
     // OrgClaims for JWT (without name to keep token smaller)
     const orgClaims: OrgClaim[] = orgDetails.map((org) => ({
