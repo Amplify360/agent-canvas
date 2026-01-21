@@ -2581,6 +2581,34 @@ a:hover {
     height: 20px;
 }
 
+.icon-btn--ghost {
+    width: auto;
+    height: auto;
+    padding: var(--space-1) var(--space-2);
+    position: relative;
+}
+
+.icon-btn--ghost svg {
+    width: 16px;
+    height: 16px;
+}
+
+.toolbar__copied-badge {
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--bg-elevated);
+    color: var(--text-primary);
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: var(--radius-sm);
+    white-space: nowrap;
+    box-shadow: var(--shadow-md);
+    pointer-events: none;
+    z-index: 10;
+}
+
 /* ============================================
    LOADING STATES
    ============================================ */

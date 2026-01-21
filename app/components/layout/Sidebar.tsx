@@ -101,6 +101,13 @@ export function Sidebar() {
     }
   };
 
+  // Update URL when canvas changes and select it
+  const handleSelectCanvas = (canvasId: string) => {
+    setCurrentCanvasId(canvasId);
+    // Update URL for shareable links
+    window.history.replaceState(null, '', `/c/${canvasId}`);
+  };
+
   const handleCreateCanvas = async () => {
     const title = prompt('Enter canvas name:');
     if (!title?.trim()) return;
@@ -108,7 +115,7 @@ export function Sidebar() {
     try {
       const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
       const canvasId = await createCanvas(title.trim(), slug);
-      setCurrentCanvasId(canvasId);
+      handleSelectCanvas(canvasId);
       showToast('Canvas created successfully', 'success');
     } catch (error) {
       console.error('Failed to create canvas:', error);
@@ -178,14 +185,14 @@ export function Sidebar() {
               <div
                 key={canvas._id}
                 className={`sidebar__canvas-item ${currentCanvasId === canvas._id ? 'is-active' : ''}`}
-                onClick={() => setCurrentCanvasId(canvas._id)}
+                onClick={() => handleSelectCanvas(canvas._id)}
                 onContextMenu={(e) => handleCanvasContextMenu(e, canvas._id)}
                 role="button"
                 tabIndex={0}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' || e.key === ' ') {
                     e.preventDefault();
-                    setCurrentCanvasId(canvas._id);
+                    handleSelectCanvas(canvas._id);
                   }
                 }}
               >
