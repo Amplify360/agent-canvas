@@ -51,6 +51,7 @@ export default defineSchema({
     ),
     // Fixed tag fields for grouping and filtering (same across all orgs)
     category: v.optional(v.string()), // Visual grouping: "Recruitment", "Onboarding", etc.
+    department: v.optional(v.string()), // Legacy field - use category instead
     status: v.optional(v.string()), // e.g., "active", "draft", "deprecated"
     // payload removed - we're Convex-native, no need for round-trip fidelity
     deletedAt: v.optional(v.number()), // Soft delete timestamp
