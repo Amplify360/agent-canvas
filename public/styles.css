@@ -848,6 +848,36 @@ body.is-resizing-sidebar .main-wrapper {
     opacity: 0.7;
 }
 
+.sidebar__dropdown-item.is-active {
+    color: var(--accent-primary);
+}
+
+.sidebar__dropdown-item.is-active svg {
+    opacity: 1;
+}
+
+.sidebar__dropdown-check {
+    margin-left: auto;
+    width: 14px;
+    height: 14px;
+    color: var(--accent-primary);
+}
+
+.sidebar__dropdown-header {
+    padding: var(--space-2) var(--space-3);
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+}
+
+.sidebar__dropdown-divider {
+    height: 1px;
+    background: var(--border-subtle);
+    margin: var(--space-2) 0;
+}
+
 /* User Profile in Sidebar */
 .sidebar__user {
     display: flex;

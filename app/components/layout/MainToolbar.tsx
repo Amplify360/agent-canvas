@@ -9,7 +9,6 @@ import { useCanvas } from '@/contexts/CanvasContext';
 import { useGrouping } from '@/contexts/GroupingContext';
 import { useAgents } from '@/contexts/AgentContext';
 import { Icon } from '@/components/ui/Icon';
-import { ThemeSelector } from '@/components/ui/ThemeSelector';
 import { TAG_TYPES } from '@/utils/config';
 
 /**
@@ -145,9 +144,6 @@ export function MainToolbar({ onAddAgent }: MainToolbarProps) {
 
         {/* Collapse Toggle */}
         <CollapseToggle />
-
-        {/* Theme Selector */}
-        <ThemeSelector />
 
         {/* Add Agent Button */}
         <button type="button" className="btn btn--primary" onClick={onAddAgent}>
