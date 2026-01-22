@@ -2,7 +2,7 @@
  * Configuration utilities for tools and tags
  */
 
-import { AGENT_STATUS } from '@/types/validationConstants';
+import { AGENT_STATUS, AGENT_STATUS_CONFIG, AgentStatus, getAgentStatusConfig } from '@/types/validationConstants';
 
 export interface ToolDefinition {
   label: string;
@@ -76,12 +76,12 @@ export const TAG_TYPES: Record<string, TagType> = {
     description: 'Agent lifecycle status',
     isGroupable: true,
     icon: 'activity',
-    values: [
-      { id: AGENT_STATUS.ACTIVE, label: 'Active', color: '#10B981', icon: 'check-circle' },
-      { id: AGENT_STATUS.DRAFT, label: 'Draft', color: '#6B7280', icon: 'edit-3' },
-      { id: AGENT_STATUS.REVIEW, label: 'In Review', color: '#F59E0B', icon: 'eye' },
-      { id: AGENT_STATUS.DEPRECATED, label: 'Deprecated', color: '#EF4444', icon: 'archive' },
-    ],
+    values: Object.entries(AGENT_STATUS_CONFIG).map(([id, config]) => ({
+      id: id as AgentStatus,
+      label: config.label,
+      color: config.color,
+      icon: config.icon,
+    })),
   },
 };
 
@@ -134,31 +134,19 @@ export function getAvailableTools(): string[] {
 }
 
 /**
- * Status color definitions
- */
-export const STATUS_COLORS: Record<string, { color: string; bgColor: string; label: string }> = {
-  active: { color: '#10B981', bgColor: 'rgba(16, 185, 129, 0.1)', label: 'Active' },
-  draft: { color: '#A8A29E', bgColor: 'rgba(168, 162, 158, 0.1)', label: 'Draft' },
-  deprecated: { color: '#EF4444', bgColor: 'rgba(239, 68, 68, 0.1)', label: 'Deprecated' },
-  default: { color: '#6366F1', bgColor: 'rgba(99, 102, 241, 0.1)', label: 'Unknown' },
-};
-
-/**
  * Get status color by status name
+ * @deprecated Use getAgentStatusConfig from validationConstants instead
  */
 export function getStatusColor(status?: string): string {
-  return STATUS_COLORS[status || 'default']?.color || STATUS_COLORS.default.color;
+  return getAgentStatusConfig(status).color;
 }
 
 /**
  * Get full status configuration (color, bgColor, label)
+ * @deprecated Use getAgentStatusConfig from validationConstants instead
  */
 export function getStatusConfig(status?: string): { color: string; bgColor: string; label: string } {
-  const config = STATUS_COLORS[status || 'default'];
-  if (config) {
-    return { ...config, label: config.label === 'Unknown' && status ? status : config.label };
-  }
-  return { ...STATUS_COLORS.default, label: status || 'Unknown' };
+  return getAgentStatusConfig(status);
 }
 
 /**

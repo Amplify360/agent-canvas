@@ -9,7 +9,7 @@ import { Agent } from '@/types/agent';
 import { getToolDisplay, getStatusColor } from '@/utils/config';
 import { formatCurrency } from '@/utils/formatting';
 import { Icon } from '@/components/ui/Icon';
-import { AGENT_STATUS } from '@/types/validationConstants';
+import { getAgentStatusConfig } from '@/types/validationConstants';
 
 interface AgentCardProps {
   agent: Agent;
@@ -82,9 +82,9 @@ export function AgentCard({ agent, index = 0, onEdit, onDelete, onQuickLook }: A
             {(agent.agentOrder ?? 0) + 1}
           </span>
           {agent.status && (
-            <span className={`agent-card__status-badge badge badge--${agent.status === AGENT_STATUS.ACTIVE ? 'success' : agent.status === AGENT_STATUS.DRAFT ? 'default' : 'error'}`}>
+            <span className={`agent-card__status-badge badge badge--${getAgentStatusConfig(agent.status).badgeVariant}`}>
               <span className={`status-dot status-dot--${agent.status}`} />
-              {agent.status}
+              {getAgentStatusConfig(agent.status).label}
             </span>
           )}
         </div>
