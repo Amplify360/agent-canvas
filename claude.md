@@ -54,7 +54,7 @@ pnpm test:ui     # browser UI
 | Change Type | Workflow |
 |-------------|----------|
 | Minor fixes (typos, <3 files) | Commit to `dev` → PR to `main` |
-| Features (3+ files, new functionality, behavior changes) | Feature branch → PR to `dev` → PR to `main` |
+| Features (3+ files, new functionality, behavior changes) | Feature branch off `dev` → PR to `dev` → merge. Promote to `main` only when instructed. |
 
 ## Convex Deployments
 
