@@ -15,7 +15,7 @@ function generateUniqueSlug(
   const existingSlugs = new Set(existingCanvases.map((c) => c.slug));
 
   // Try the base slug with -copy suffix first
-  let candidate = `${baseSlug}-copy`;
+  const candidate = `${baseSlug}-copy`;
   if (!existingSlugs.has(candidate)) {
     return candidate;
   }
@@ -251,6 +251,10 @@ export const remove = mutation({
 
 /**
  * Copy a canvas (with all its agents) to one or more other organizations
+ *
+ * Note: This operation is NOT atomic across organizations. If copying to org 3 of 5
+ * fails (e.g., due to slug validation), orgs 1-2 will have copies but 3-5 won't.
+ * The mutation will throw on the first failure.
  */
 export const copyToOrgs = mutation({
   args: {
@@ -324,8 +328,9 @@ export const copyToOrgs = mutation({
         .filter((q) => q.eq(q.field("deletedAt"), undefined))
         .collect();
 
-      // Generate unique slug for target org
+      // Generate unique slug for target org and validate it
       const uniqueSlug = generateUniqueSlug(baseSlug, existingCanvases);
+      validateSlug(uniqueSlug);
 
       // Create canvas copy
       const newCanvasId = await ctx.db.insert("canvases", {

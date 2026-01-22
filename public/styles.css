@@ -346,6 +346,8 @@
 .u-flex-1 { flex: 1 1 auto; }
 .u-flex-shrink-0 { flex-shrink: 0; }
 .u-text-center { text-align: center; }
+.u-mt-3 { margin-top: var(--space-3); }
+.u-mt-4 { margin-top: var(--space-4); }
 .u-truncate {
     overflow: hidden;
     text-overflow: ellipsis;

@@ -29,6 +29,7 @@ export function CopyCanvasModal({ isOpen, onClose, canvasId, canvasTitle }: Copy
   const [newTitle, setNewTitle] = useState(`${canvasTitle} (Copy)`);
   const [selectedOrgIds, setSelectedOrgIds] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   // Filter out current org from available targets
   const availableOrgs = userOrgs.filter((org) => org.id !== currentOrgId);
@@ -39,6 +40,7 @@ export function CopyCanvasModal({ isOpen, onClose, canvasId, canvasTitle }: Copy
       setNewTitle(`${canvasTitle} (Copy)`);
       setSelectedOrgIds([]);
       setError(null);
+      setIsLoading(false);
     }
   }, [isOpen, canvasTitle]);
 
@@ -60,6 +62,7 @@ export function CopyCanvasModal({ isOpen, onClose, canvasId, canvasTitle }: Copy
     }
 
     setError(null);
+    setIsLoading(true);
 
     await executeOperation(
       async () => {
@@ -74,7 +77,10 @@ export function CopyCanvasModal({ isOpen, onClose, canvasId, canvasTitle }: Copy
         successMessage: `Canvas copied to ${selectedOrgIds.length} organization${selectedOrgIds.length > 1 ? 's' : ''}`,
         errorMessage: 'Failed to copy canvas',
         onSuccess: handleClose,
-        onError: (err) => setError(err.message),
+        onError: (err) => {
+          setError(err.message);
+          setIsLoading(false);
+        },
       }
     );
   };
@@ -135,7 +141,7 @@ export function CopyCanvasModal({ isOpen, onClose, canvasId, canvasTitle }: Copy
 
         {/* Error Message */}
         {error && (
-          <div className="alert alert--error" style={{ marginTop: '1rem' }}>
+          <div className="alert alert--error u-mt-4">
             {error}
           </div>
         )}
@@ -149,11 +155,13 @@ export function CopyCanvasModal({ isOpen, onClose, canvasId, canvasTitle }: Copy
           type="button"
           className="btn btn--primary"
           onClick={handleCopy}
-          disabled={selectedCount === 0 || !newTitle.trim()}
+          disabled={isLoading || selectedCount === 0 || !newTitle.trim()}
         >
-          {selectedCount === 0
-            ? 'Select organizations'
-            : `Copy to ${selectedCount} organization${selectedCount !== 1 ? 's' : ''}`}
+          {isLoading
+            ? 'Copying...'
+            : selectedCount === 0
+              ? 'Select organizations'
+              : `Copy to ${selectedCount} organization${selectedCount !== 1 ? 's' : ''}`}
         </button>
       </div>
     </Modal>

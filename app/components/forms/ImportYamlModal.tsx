@@ -193,13 +193,13 @@ export function ImportYamlModal({ isOpen, onClose, onSuccess }: ImportYamlModalP
 
         {/* Error Message */}
         {error && (
-          <div className="alert alert--error" style={{ marginTop: '1rem' }}>
+          <div className="alert alert--error u-mt-4">
             {error}
           </div>
         )}
 
         {/* Help Text */}
-        <div className="alert alert--info" style={{ marginTop: '1rem' }}>
+        <div className="alert alert--info u-mt-4">
           <p style={{ margin: 0 }}>
             <strong>Legacy YAML Import:</strong> This is a one-way import. The YAML file will be
             converted to Convex-native storage. All future editing happens in the app.
