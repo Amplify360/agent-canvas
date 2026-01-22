@@ -256,7 +256,7 @@ export function Sidebar() {
                 aria-expanded={canvasActionsOpen}
                 title="Canvas actions"
               >
-                <Icon name="more-horizontal" />
+                <Icon name="more-vertical" />
               </button>
               <div className={`sidebar__dropdown ${canvasActionsOpen ? 'open' : ''}`}>
                 <button
