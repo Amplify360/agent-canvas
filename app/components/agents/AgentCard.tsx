@@ -171,93 +171,98 @@ export function AgentCard({ agent, index = 0, onEdit, onDelete, onQuickLook }: A
         <p className="agent-card__objective">{agent.objective}</p>
       )}
 
-      {/* Footer with Links, Metrics, and Journey */}
+      {/* Footer with Links, Metrics, and Journey - icons only with tooltips */}
       <div className="agent-card__footer">
-        <div className="agent-card__footer-left">
-          {agent.demoLink && (
-            <a
-              href={agent.demoLink}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn-link"
+        {agent.demoLink && (
+          <a
+            href={agent.demoLink}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="agent-card__footer-icon"
+            title="View Demo"
+            aria-label="View Demo"
+          >
+            <Icon name="play-circle" />
+          </a>
+        )}
+        {agent.videoLink && (
+          <a
+            href={agent.videoLink}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="agent-card__footer-icon"
+            title="Watch Video"
+            aria-label="Watch Video"
+          >
+            <Icon name="video" />
+          </a>
+        )}
+        {(metrics.numberOfUsers !== undefined || metrics.timesUsed !== undefined ||
+          metrics.timeSaved !== undefined || metrics.roi !== undefined) && (
+          <div className="agent-card__stats">
+            <button
+              type="button"
+              className="agent-card__footer-icon"
+              title="View Stats"
+              aria-label="View performance stats"
             >
-              <Icon name="play-circle" />
-              Demo
-            </a>
-          )}
-          {agent.videoLink && (
-            <a
-              href={agent.videoLink}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn-link"
-            >
-              <Icon name="video" />
-              Video
-            </a>
-          )}
-        </div>
-
-        <div className="agent-card__footer-right">
-          {(metrics.numberOfUsers !== undefined || metrics.timesUsed !== undefined ||
-            metrics.timeSaved !== undefined || metrics.roi !== undefined) && (
-            <div className="agent-card__stats">
-              <button type="button" className="btn-link" aria-label="View performance stats">
-                <Icon name="bar-chart-2" />
-                <span>Stats</span>
-              </button>
-              <div className="agent-card__stats-tooltip">
-                <div className="stats-tooltip__title">Performance</div>
-                <div className="stats-tooltip__grid">
-                  {metrics.numberOfUsers !== undefined && (
-                    <div className="stats-tooltip__item">
-                      <Icon name="users" />
-                      <span className="stats-tooltip__label">Users</span>
-                      <span className="stats-tooltip__value">{metrics.numberOfUsers}</span>
-                    </div>
-                  )}
-                  {metrics.timesUsed !== undefined && (
-                    <div className="stats-tooltip__item">
-                      <Icon name="activity" />
-                      <span className="stats-tooltip__label">Uses</span>
-                      <span className="stats-tooltip__value">{metrics.timesUsed}</span>
-                    </div>
-                  )}
-                  {metrics.timeSaved !== undefined && (
-                    <div className="stats-tooltip__item">
-                      <Icon name="clock" />
-                      <span className="stats-tooltip__label">Saved</span>
-                      <span className="stats-tooltip__value">{metrics.timeSaved}h</span>
-                    </div>
-                  )}
-                  {metrics.roi !== undefined && (
-                    <div className="stats-tooltip__item">
-                      <Icon name="trending-up" />
-                      <span className="stats-tooltip__label">ROI</span>
-                      <span className="stats-tooltip__value">{formatCurrency(metrics.roi)}</span>
-                    </div>
-                  )}
-                </div>
+              <Icon name="bar-chart-2" />
+            </button>
+            <div className="agent-card__stats-tooltip">
+              <div className="stats-tooltip__title">Performance</div>
+              <div className="stats-tooltip__grid">
+                {metrics.numberOfUsers !== undefined && (
+                  <div className="stats-tooltip__item">
+                    <Icon name="users" />
+                    <span className="stats-tooltip__label">Users</span>
+                    <span className="stats-tooltip__value">{metrics.numberOfUsers}</span>
+                  </div>
+                )}
+                {metrics.timesUsed !== undefined && (
+                  <div className="stats-tooltip__item">
+                    <Icon name="activity" />
+                    <span className="stats-tooltip__label">Uses</span>
+                    <span className="stats-tooltip__value">{metrics.timesUsed}</span>
+                  </div>
+                )}
+                {metrics.timeSaved !== undefined && (
+                  <div className="stats-tooltip__item">
+                    <Icon name="clock" />
+                    <span className="stats-tooltip__label">Saved</span>
+                    <span className="stats-tooltip__value">{metrics.timeSaved}h</span>
+                  </div>
+                )}
+                {metrics.roi !== undefined && (
+                  <div className="stats-tooltip__item">
+                    <Icon name="trending-up" />
+                    <span className="stats-tooltip__label">ROI</span>
+                    <span className="stats-tooltip__value">{formatCurrency(metrics.roi)}</span>
+                  </div>
+                )}
               </div>
             </div>
-          )}
-          {agent.journeySteps && agent.journeySteps.length > 0 && (
-            <div className="agent-card__journey">
-              <button type="button" className="btn-link" aria-label="View user journey steps">
-                <Icon name="route" />
-                <span>{agent.journeySteps.length} steps</span>
-              </button>
-              <div className="agent-card__journey-tooltip">
-                <div className="journey-tooltip__title">User Journey</div>
-                <ol className="journey-tooltip__steps">
-                  {agent.journeySteps.map((step, i) => (
-                    <li key={i}>{step}</li>
-                  ))}
-                </ol>
-              </div>
+          </div>
+        )}
+        {agent.journeySteps && agent.journeySteps.length > 0 && (
+          <div className="agent-card__journey">
+            <button
+              type="button"
+              className="agent-card__footer-icon"
+              title={`${agent.journeySteps.length} Journey Steps`}
+              aria-label="View user journey steps"
+            >
+              <Icon name="route" />
+            </button>
+            <div className="agent-card__journey-tooltip">
+              <div className="journey-tooltip__title">User Journey</div>
+              <ol className="journey-tooltip__steps">
+                {agent.journeySteps.map((step, i) => (
+                  <li key={i}>{step}</li>
+                ))}
+              </ol>
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );

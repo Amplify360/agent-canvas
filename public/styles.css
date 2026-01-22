@@ -1916,27 +1916,41 @@ body.is-resizing-sidebar .main-wrapper {
 .agent-card__footer {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: var(--space-3);
+    gap: var(--space-2);
     padding-top: var(--space-3);
     border-top: 1px solid var(--border-subtle);
-    flex-wrap: wrap;
 }
 
-.agent-card__footer-left {
-    display: flex;
+/* Footer icon buttons - icons only, no labels */
+.agent-card__footer-icon {
+    display: inline-flex;
     align-items: center;
-    gap: var(--space-3);
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    background: transparent;
+    border: none;
+    border-radius: var(--radius-sm);
+    color: var(--text-tertiary);
+    cursor: pointer;
+    transition: all var(--duration-fast) var(--ease-out);
+    text-decoration: none;
 }
 
-.agent-card__footer-right {
-    display: flex;
-    align-items: center;
-    gap: var(--space-3);
+.agent-card__footer-icon:hover {
+    background: var(--bg-tertiary);
+    color: var(--accent-primary);
 }
 
-/* Journey indicator */
-.agent-card__journey {
+.agent-card__footer-icon svg {
+    width: 16px;
+    height: 16px;
+}
+
+/* Journey and Stats containers */
+.agent-card__journey,
+.agent-card__stats {
     display: flex;
     align-items: center;
 }
