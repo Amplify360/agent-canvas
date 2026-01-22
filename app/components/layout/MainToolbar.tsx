@@ -97,16 +97,6 @@ export function MainToolbar({ onAddAgent }: MainToolbarProps) {
         <div className="view-mode-toggle">
           <button
             type="button"
-            className={`view-mode-toggle__btn ${viewMode === 'compact' ? 'is-active' : ''}`}
-            onClick={() => setViewMode('compact')}
-            title="Compact view"
-            aria-pressed={viewMode === 'compact'}
-          >
-            <Icon name="list" />
-            <span>Compact</span>
-          </button>
-          <button
-            type="button"
             className={`view-mode-toggle__btn ${viewMode === 'grid' ? 'is-active' : ''}`}
             onClick={() => setViewMode('grid')}
             title="Normal view"
