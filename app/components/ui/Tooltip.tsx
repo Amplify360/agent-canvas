@@ -27,11 +27,14 @@ interface TooltipProps {
   disabled?: boolean;
   /** Whether to render as inline (span) or block (div) wrapper */
   inline?: boolean;
+  /** Only show tooltip when child text is truncated (useful for overflow text) */
+  showOnlyWhenTruncated?: boolean;
 }
 
 interface Position {
   top: number;
   left: number;
+  arrowOffset?: number; // Horizontal offset for top/bottom, vertical for left/right
 }
 
 const TOOLTIP_OFFSET = 8;
@@ -45,6 +48,7 @@ export function Tooltip({
   triggerClassName = '',
   disabled = false,
   inline = true,
+  showOnlyWhenTruncated = false,
 }: TooltipProps) {
   const [isVisible, setIsVisible] = useState(false);
   const [position, setPosition] = useState<Position | null>(null);
@@ -96,24 +100,52 @@ export function Tooltip({
         break;
     }
 
-    // Keep tooltip within viewport
+    // Keep tooltip within viewport and calculate arrow offset
     const padding = 8;
     const maxLeft = window.innerWidth - tooltipRect.width - padding;
     const maxTop = window.innerHeight - tooltipRect.height - padding;
 
+    const originalLeft = left;
+    const originalTop = top;
+
     left = Math.max(padding, Math.min(left, maxLeft));
     top = Math.max(padding, Math.min(top, maxTop));
 
-    setPosition({ top, left });
+    // Calculate arrow offset when tooltip is clamped
+    let arrowOffset = 0;
+    if (placement === 'top' || placement === 'bottom') {
+      arrowOffset = originalLeft - left; // Horizontal offset
+    } else {
+      arrowOffset = originalTop - top; // Vertical offset
+    }
+
+    setPosition({ top, left, arrowOffset });
   }, [placement]);
+
+  // Check if any child element has truncated text
+  const isTruncated = useCallback(() => {
+    if (!triggerRef.current) return false;
+
+    // Check the trigger's first child element for text overflow
+    const child = triggerRef.current.firstElementChild as HTMLElement;
+    if (child) {
+      return child.scrollWidth > child.clientWidth || child.scrollHeight > child.clientHeight;
+    }
+
+    // Fallback: check the trigger itself
+    return triggerRef.current.scrollWidth > triggerRef.current.clientWidth;
+  }, []);
 
   const showTooltip = useCallback(() => {
     if (disabled || !content) return;
 
+    // Skip showing if truncation check is enabled and text isn't truncated
+    if (showOnlyWhenTruncated && !isTruncated()) return;
+
     timeoutRef.current = setTimeout(() => {
       setIsVisible(true);
     }, delay);
-  }, [delay, disabled, content]);
+  }, [delay, disabled, content, showOnlyWhenTruncated, isTruncated]);
 
   const hideTooltip = useCallback(() => {
     if (timeoutRef.current) {
@@ -154,6 +186,19 @@ export function Tooltip({
     }
   }, [isVisible]);
 
+  // Calculate arrow inline style based on offset
+  const getArrowStyle = (): React.CSSProperties | undefined => {
+    if (!position?.arrowOffset) return undefined;
+
+    if (placement === 'top' || placement === 'bottom') {
+      // Horizontal adjustment: offset from center
+      return { marginLeft: position.arrowOffset };
+    } else {
+      // Vertical adjustment: offset from center
+      return { marginTop: position.arrowOffset };
+    }
+  };
+
   const tooltipElement = isVisible && mounted ? (
     <div
       ref={tooltipRef}
@@ -169,7 +214,7 @@ export function Tooltip({
       <div className="tooltip__content">
         {content}
       </div>
-      <div className="tooltip__arrow" />
+      <div className="tooltip__arrow" style={getArrowStyle()} />
     </div>
   ) : null;
 

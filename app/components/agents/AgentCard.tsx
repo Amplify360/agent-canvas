@@ -165,8 +165,8 @@ export function AgentCard({ agent, index = 0, onEdit, onDelete, onQuickLook }: A
         </div>
       </div>
 
-      {/* Title - line clamped to 2 lines, tooltip shows full name on hover */}
-      <Tooltip content={agent.name} placement="top">
+      {/* Title - line clamped to 2 lines, tooltip shows full name when truncated */}
+      <Tooltip content={agent.name} placement="top" showOnlyWhenTruncated>
         <h3 className="agent-card__name">{agent.name}</h3>
       </Tooltip>
 

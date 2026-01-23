@@ -304,7 +304,7 @@ export function Sidebar() {
                 }}
               >
                 <Icon name="file-text" />
-                <Tooltip content={canvas.title} placement="right">
+                <Tooltip content={canvas.title} placement="right" showOnlyWhenTruncated>
                   <span className="sidebar__canvas-title">{canvas.title}</span>
                 </Tooltip>
                 <button
