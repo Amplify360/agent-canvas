@@ -101,8 +101,10 @@ export const create = mutation({
     workosOrgId: v.string(),
     title: v.string(),
     slug: v.string(),
+    phases: v.optional(v.array(v.string())),
+    categories: v.optional(v.array(v.string())),
   },
-  handler: async (ctx, { workosOrgId, title, slug }) => {
+  handler: async (ctx, { workosOrgId, title, slug, phases, categories }) => {
     const auth = await requireAuth(ctx);
     requireOrgAccess(auth, workosOrgId);
 
@@ -129,8 +131,8 @@ export const create = mutation({
       workosOrgId,
       title,
       slug,
-      phases: ["Backlog"],
-      categories: ["Uncategorized"],
+      phases: phases ?? ["Backlog"],
+      categories: categories ?? ["Uncategorized"],
       createdBy: auth.workosUserId,
       updatedBy: auth.workosUserId,
       createdAt: now,
