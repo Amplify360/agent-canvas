@@ -127,8 +127,8 @@ This will include:
 ✓ Relevant tools for each agent
 ✓ User journey steps (3-7 steps per agent)
 ✓ Sample metrics for visual appeal
-✓ Department categorization
-✓ Status tags (defaulting to "in_concept")
+✓ Category grouping by department/function
+✓ Status field (defaulting to "in_concept")
 
 Proceed with generation?
 ```
@@ -162,11 +162,11 @@ Proceed with generation?
 - Format: Start with a verb (e.g., "Upload contract document", "Review analysis results", "Approve recommendations")
 - Keep each step under 10 words
 
-### Grouping Strategy
+### Category Strategy
 - Organize by business function/department (e.g., "Sales & Marketing", "Operations", "Finance", "HR", "IT & Security", "Customer Service")
-- Typical portfolios have 3-6 groups
-- Each group should have 2-8 agents
-- Group names: max 50 characters
+- Typical portfolios have 3-6 categories
+- Each category should have 2-8 agents
+- Category names: max 50 characters
 
 ### Sample Metrics (for visual appeal)
 Populate with representative values:
@@ -175,7 +175,7 @@ Populate with representative values:
 - `timeSaved`: 10-500 hours (cumulative)
 - `roi`: 5000-100000 (currency value, scale to agent impact)
 
-### Status Tags
+### Status
 - Default all agents to `in_concept` for new portfolios
 - Valid statuses: `in_concept`, `approved`, `in_development`, `in_testing`, `deployed`, `abandoned`
 
@@ -186,30 +186,34 @@ Generate valid YAML following this structure:
 ```yaml
 documentTitle: [Company Name] AI Agent Portfolio - [Industry/Focus Area]
 
-agentGroups:
-  - groupName: [Department/Function Name]
-    agents:
-      - name: [Agent Name]
-        objective: [One-sentence objective]
-        description: |
-          [Multi-line description with specific details about
-          capabilities, tools used, and value delivered]
-        tools:
-          - [tool1]
-          - [tool2]
-        journeySteps:
-          - [Step 1]
-          - [Step 2]
-          - [Step 3]
-        metrics:
-          numberOfUsers: [number]
-          timesUsed: [number]
-          timeSaved: [number]
-          roi: [number]
-        tags:
-          department: [Department Name]
-          status: in_concept
+agents:
+  - name: [Agent Name]
+    phase: Backlog
+    category: [Department/Function Name]
+    objective: [One-sentence objective]
+    description: |
+      [Multi-line description with specific details about
+      capabilities, tools used, and value delivered]
+    tools:
+      - [tool1]
+      - [tool2]
+    journeySteps:
+      - [Step 1]
+      - [Step 2]
+      - [Step 3]
+    metrics:
+      numberOfUsers: [number]
+      timesUsed: [number]
+      timeSaved: [number]
+      roi: [number]
+    status: in_concept
 ```
+
+### Field Notes
+- **category** (required): Business function/department for grouping (e.g., "Sales & Marketing", "HR")
+- **phase** (optional): Implementation timeline, defaults to "Backlog". Use "Phase 1", "Phase 2", etc. when planning rollout
+- **agentOrder** (optional): Sort order within the phase, defaults to 0
+- **status** (optional): Defaults to `in_concept` for new agents
 
 ## Quality Checklist
 
@@ -235,7 +239,7 @@ After generating the YAML:
 4. **Next Steps**: Remind user they can:
    - Import into Agent Canvas
    - Request modifications to specific agents
-   - Add/remove agents or groups
+   - Add/remove agents or categories
    - Adjust any details
 
 ## Interaction Principles
