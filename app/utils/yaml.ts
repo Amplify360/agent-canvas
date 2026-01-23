@@ -4,7 +4,21 @@
 
 import * as yaml from 'js-yaml';
 import { Agent, AgentFormData } from '@/types/agent';
-import { VALIDATION_CONSTANTS } from '@/types/validationConstants';
+import { VALIDATION_CONSTANTS, AGENT_STATUS, AgentStatus } from '@/types/validationConstants';
+
+/**
+ * Valid status values for validation
+ */
+const VALID_STATUSES = new Set<string>(Object.values(AGENT_STATUS));
+
+/**
+ * Parse and validate status value from YAML
+ * Returns undefined for invalid/missing values
+ */
+function parseStatus(value: string | undefined): AgentStatus | undefined {
+  if (!value) return undefined;
+  return VALID_STATUSES.has(value) ? (value as AgentStatus) : undefined;
+}
 
 /**
  * YAML document structure (legacy format)
@@ -162,7 +176,7 @@ function yamlToConvexAgents(yamlDoc: YamlDocument): YamlConversionResult {
           videoLink: agent.videoLink?.trim() || undefined,
           metrics: Object.keys(metrics).length > 0 ? metrics : undefined,
           category, // YAML uses 'department', schema uses 'category'
-          status: agent.tags?.status as AgentFormData['status'] || undefined,
+          status: parseStatus(agent.tags?.status),
         });
       }
     }

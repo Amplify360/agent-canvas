@@ -122,6 +122,44 @@ agentGroups:
 
     expect(() => parseYaml(yamlText)).toThrow(/missing a name/);
   });
+
+  it('ignores invalid status values', () => {
+    const yamlText = `
+documentTitle: Test Canvas
+agentGroups:
+  - groupName: Phase
+    agents:
+      - name: Agent with invalid status
+        tags:
+          status: invalid_status_value
+    `.trim();
+
+    const result = parseYaml(yamlText);
+
+    expect(result.agents).toHaveLength(1);
+    expect(result.agents[0].status).toBeUndefined();
+  });
+
+  it('parses valid status values', () => {
+    const yamlText = `
+documentTitle: Test Canvas
+agentGroups:
+  - groupName: Phase
+    agents:
+      - name: Active Agent
+        tags:
+          status: active
+      - name: Draft Agent
+        tags:
+          status: draft
+    `.trim();
+
+    const result = parseYaml(yamlText);
+
+    expect(result.agents).toHaveLength(2);
+    expect(result.agents[0].status).toBe('active');
+    expect(result.agents[1].status).toBe('draft');
+  });
 });
 
 describe('slug utilities', () => {

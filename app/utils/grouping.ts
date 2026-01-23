@@ -6,6 +6,12 @@ import { Agent, AgentGroup } from '@/types/agent';
 import { TAG_TYPES, TAG_TYPE_ID, DEFAULT_GROUPING_TAG, DEFAULT_CATEGORY, DEFAULT_PHASE, SECTION_COLOR_PALETTE, getTagValue, isValidTagTypeId } from './config';
 
 /**
+ * Sort index for items not found in the ordering array.
+ * Places unknown items at the end of the sorted list.
+ */
+const UNKNOWN_ORDER_INDEX = Number.MAX_SAFE_INTEGER;
+
+/**
  * Get tag value from agent for the specified tag type
  * Returns undefined if tag type is unknown or agent doesn't have the value
  */
@@ -123,14 +129,14 @@ export function groupAgentsByTag(
       const aIndex = phaseOrder.indexOf(a.id);
       const bIndex = phaseOrder.indexOf(b.id);
       // Unknown phases go to the end
-      return (aIndex === -1 ? 999 : aIndex) - (bIndex === -1 ? 999 : bIndex);
+      return (aIndex === -1 ? UNKNOWN_ORDER_INDEX : aIndex) - (bIndex === -1 ? UNKNOWN_ORDER_INDEX : bIndex);
     });
   } else if (tagType === TAG_TYPE_ID.CATEGORY && categoryOrder) {
     sortedGroups.sort((a, b) => {
       const aIndex = categoryOrder.indexOf(a.id);
       const bIndex = categoryOrder.indexOf(b.id);
       // Unknown categories go to the end
-      return (aIndex === -1 ? 999 : aIndex) - (bIndex === -1 ? 999 : bIndex);
+      return (aIndex === -1 ? UNKNOWN_ORDER_INDEX : aIndex) - (bIndex === -1 ? UNKNOWN_ORDER_INDEX : bIndex);
     });
   }
 
