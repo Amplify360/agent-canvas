@@ -2,7 +2,7 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { Doc } from "./_generated/dataModel";
 import { requireAuth, requireOrgAccess, hasOrgAccess } from "./lib/auth";
-import { getAgentSnapshot } from "./lib/helpers";
+import { getAgentSnapshot, getCanvasWithAccess } from "./lib/helpers";
 import { validateSlug, validateTitle } from "./lib/validation";
 
 /**
@@ -202,13 +202,7 @@ export const reorderPhases = mutation({
   },
   handler: async (ctx, { canvasId, phases }) => {
     const auth = await requireAuth(ctx);
-
-    const canvas = await ctx.db.get(canvasId);
-    if (!canvas || canvas.deletedAt) {
-      throw new Error("NotFound: Canvas not found");
-    }
-
-    requireOrgAccess(auth, canvas.workosOrgId);
+    await getCanvasWithAccess(ctx, auth, canvasId);
 
     await ctx.db.patch(canvasId, {
       phases,
@@ -228,13 +222,7 @@ export const reorderCategories = mutation({
   },
   handler: async (ctx, { canvasId, categories }) => {
     const auth = await requireAuth(ctx);
-
-    const canvas = await ctx.db.get(canvasId);
-    if (!canvas || canvas.deletedAt) {
-      throw new Error("NotFound: Canvas not found");
-    }
-
-    requireOrgAccess(auth, canvas.workosOrgId);
+    await getCanvasWithAccess(ctx, auth, canvasId);
 
     await ctx.db.patch(canvasId, {
       categories,
