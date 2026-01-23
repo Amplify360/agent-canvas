@@ -138,11 +138,9 @@ function yamlToConvexAgents(yamlDoc: YamlDocument): YamlConversionResult {
     if (!agent.name?.trim()) {
       throw new Error('Agent is missing a name');
     }
-    if (!agent.phase?.trim()) {
-      throw new Error(`Agent "${agent.name}" is missing a phase`);
-    }
 
-    const phase = agent.phase.trim();
+    // Phase is optional, defaults to "Backlog"
+    const phase = agent.phase?.trim() || 'Backlog';
     phasesSet.add(phase);
 
     // Parse metrics - convert string values to numbers

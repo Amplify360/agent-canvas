@@ -167,14 +167,18 @@ agents:
     expect(() => parseYaml(yamlText)).toThrow(/missing a name/);
   });
 
-  it('throws error for agents without phase', () => {
+  it('defaults phase to Backlog when not specified', () => {
     const yamlText = `
 documentTitle: Test
 agents:
   - name: Agent without phase
     `.trim();
 
-    expect(() => parseYaml(yamlText)).toThrow(/missing a phase/);
+    const result = parseYaml(yamlText);
+
+    expect(result.agents).toHaveLength(1);
+    expect(result.agents[0].phase).toBe('Backlog');
+    expect(result.phases).toEqual(['Backlog']);
   });
 
   it('ignores invalid status values', () => {
