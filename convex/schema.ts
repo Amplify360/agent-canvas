@@ -57,14 +57,19 @@ export default defineSchema({
     // Status includes legacy values for backward compatibility with existing data
     status: v.optional(
       v.union(
-        // New status values (preferred)
-        v.literal("in_concept"),
+        // Current status values (preferred)
+        v.literal("idea"),
         v.literal("approved"),
+        v.literal("wip"),
+        v.literal("testing"),
+        v.literal("live"),
+        v.literal("shelved"),
+        // Legacy values (for existing data - do not use in new code)
+        v.literal("in_concept"),
         v.literal("in_development"),
         v.literal("in_testing"),
         v.literal("deployed"),
         v.literal("abandoned"),
-        // Legacy values (for existing data)
         v.literal("draft"),
         v.literal("active"),
         v.literal("review"),
