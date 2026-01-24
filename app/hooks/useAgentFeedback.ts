@@ -10,6 +10,7 @@ import { api } from '../../convex/_generated/api';
 import { Id } from '../../convex/_generated/dataModel';
 import { useCallback } from 'react';
 import { useCurrentUser } from '@/contexts/AuthContext';
+import { useAppState } from '@/contexts/AppStateContext';
 
 interface UseAgentFeedbackOptions {
   agentId: Id<"agents"> | undefined;
@@ -18,6 +19,7 @@ interface UseAgentFeedbackOptions {
 export function useAgentFeedback({ agentId }: UseAgentFeedbackOptions) {
   // Get current user for email (used for comments)
   const currentUser = useCurrentUser();
+  const { showToast } = useAppState();
 
   // Queries - skip when no agentId
   const voteCounts = useQuery(
@@ -42,48 +44,70 @@ export function useAgentFeedback({ agentId }: UseAgentFeedbackOptions) {
   const updateCommentMutation = useMutation(api.agentComments.update);
   const removeCommentMutation = useMutation(api.agentComments.remove);
 
-  // Vote actions
+  // Vote actions with error handling
   const handleVote = useCallback(
     async (voteType: "up" | "down") => {
       if (!agentId) return;
-      const id = agentId; // TypeScript narrowing
-      // Toggle behavior: clicking same vote removes it
-      if (userVote === voteType) {
-        await removeVoteMutation({ agentId: id });
-      } else {
-        await voteMutation({ agentId: id, vote: voteType });
+      const id = agentId;
+      try {
+        // Toggle behavior: clicking same vote removes it
+        if (userVote === voteType) {
+          await removeVoteMutation({ agentId: id });
+        } else {
+          await voteMutation({ agentId: id, vote: voteType });
+        }
+      } catch (error) {
+        console.error('Vote error:', error);
+        showToast('Failed to update vote', 'error');
       }
     },
-    [agentId, userVote, voteMutation, removeVoteMutation]
+    [agentId, userVote, voteMutation, removeVoteMutation, showToast]
   );
 
-  // Comment actions
+  // Comment actions with error handling
   const addComment = useCallback(
     async (content: string) => {
       if (!agentId) return;
-      const id = agentId; // TypeScript narrowing
-      // Pass user email from frontend (WorkOS access tokens may not include email)
-      await createCommentMutation({
-        agentId: id,
-        content,
-        userEmail: currentUser?.email || undefined,
-      });
+      const id = agentId;
+      try {
+        await createCommentMutation({
+          agentId: id,
+          content,
+          userEmail: currentUser?.email || undefined,
+        });
+      } catch (error) {
+        console.error('Add comment error:', error);
+        showToast('Failed to add comment', 'error');
+        throw error; // Re-throw so CommentForm can handle it
+      }
     },
-    [agentId, createCommentMutation, currentUser?.email]
+    [agentId, createCommentMutation, currentUser?.email, showToast]
   );
 
   const editComment = useCallback(
     async (commentId: Id<"agentComments">, content: string) => {
-      await updateCommentMutation({ commentId, content });
+      try {
+        await updateCommentMutation({ commentId, content });
+      } catch (error) {
+        console.error('Edit comment error:', error);
+        showToast('Failed to update comment', 'error');
+        throw error;
+      }
     },
-    [updateCommentMutation]
+    [updateCommentMutation, showToast]
   );
 
   const deleteComment = useCallback(
     async (commentId: Id<"agentComments">) => {
-      await removeCommentMutation({ commentId });
+      try {
+        await removeCommentMutation({ commentId });
+      } catch (error) {
+        console.error('Delete comment error:', error);
+        showToast('Failed to delete comment', 'error');
+        throw error;
+      }
     },
-    [removeCommentMutation]
+    [removeCommentMutation, showToast]
   );
 
   return {

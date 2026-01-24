@@ -7,6 +7,7 @@
 
 import React, { useState } from 'react';
 import { Icon } from '@/components/ui/Icon';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { Id } from '../../../convex/_generated/dataModel';
 import { useAgentFeedback } from '@/hooks/useAgentFeedback';
 
@@ -45,7 +46,7 @@ interface CommentItemProps {
     isOwner: boolean;
   };
   onEdit: (commentId: Id<"agentComments">, content: string) => Promise<void>;
-  onDelete: (commentId: Id<"agentComments">) => Promise<void>;
+  onRequestDelete: (commentId: Id<"agentComments">) => void;
 }
 
 // Get initials from email for avatar
@@ -78,7 +79,7 @@ function isUnknownUser(email: string): boolean {
   return !email;
 }
 
-function CommentItem({ comment, onEdit, onDelete }: CommentItemProps) {
+function CommentItem({ comment, onEdit, onRequestDelete }: CommentItemProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(comment.content);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -94,14 +95,8 @@ function CommentItem({ comment, onEdit, onDelete }: CommentItemProps) {
     }
   };
 
-  const handleDelete = async () => {
-    if (isSubmitting) return;
-    setIsSubmitting(true);
-    try {
-      await onDelete(comment._id);
-    } finally {
-      setIsSubmitting(false);
-    }
+  const handleDeleteClick = () => {
+    onRequestDelete(comment._id);
   };
 
   const handleCancel = () => {
@@ -180,7 +175,7 @@ function CommentItem({ comment, onEdit, onDelete }: CommentItemProps) {
               <button
                 type="button"
                 className="comment__action-btn comment__action-btn--danger"
-                onClick={handleDelete}
+                onClick={handleDeleteClick}
                 aria-label="Delete comment"
               >
                 <Icon name="trash-2" />
@@ -196,6 +191,29 @@ function CommentItem({ comment, onEdit, onDelete }: CommentItemProps) {
 
 export function CommentList({ agentId }: CommentListProps) {
   const { comments, editComment, deleteComment, isLoading } = useAgentFeedback({ agentId });
+  const [deletingCommentId, setDeletingCommentId] = useState<Id<"agentComments"> | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleRequestDelete = (commentId: Id<"agentComments">) => {
+    setDeletingCommentId(commentId);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deletingCommentId || isDeleting) return;
+    setIsDeleting(true);
+    try {
+      await deleteComment(deletingCommentId);
+      setDeletingCommentId(null);
+    } catch {
+      // Error already shown via toast in useAgentFeedback
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleCancelDelete = () => {
+    setDeletingCommentId(null);
+  };
 
   if (isLoading) {
     return (
@@ -219,15 +237,27 @@ export function CommentList({ agentId }: CommentListProps) {
   }
 
   return (
-    <div className="comment-list">
-      {comments.map((comment) => (
-        <CommentItem
-          key={comment._id}
-          comment={comment}
-          onEdit={editComment}
-          onDelete={deleteComment}
-        />
-      ))}
-    </div>
+    <>
+      <div className="comment-list">
+        {comments.map((comment) => (
+          <CommentItem
+            key={comment._id}
+            comment={comment}
+            onEdit={editComment}
+            onRequestDelete={handleRequestDelete}
+          />
+        ))}
+      </div>
+      <ConfirmDialog
+        isOpen={deletingCommentId !== null}
+        title="Delete Comment"
+        message="Are you sure you want to delete this comment? This action cannot be undone."
+        confirmLabel={isDeleting ? "Deleting..." : "Delete"}
+        cancelLabel="Cancel"
+        confirmVariant="danger"
+        onConfirm={handleConfirmDelete}
+        onCancel={handleCancelDelete}
+      />
+    </>
   );
 }
