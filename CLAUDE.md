@@ -14,7 +14,7 @@ This file provides guidance to Claude Code when working with this repository.
 - **Backend**: Convex (real-time backend-as-a-service)
 - **Auth**: WorkOS AuthKit (magic link, social login, SSO)
 - **Hosting**: Vercel (Next.js deployment)
-- **Libraries**: `next`, `react`, `react-dom`, `lucide-react` (icons), `@workos-inc/authkit-nextjs` (auth SDK), `convex`, `js-yaml` (legacy YAML import)
+- **Libraries**: `next`, `react`, `react-dom`, `lucide-react` (icons), `@workos-inc/authkit-nextjs` (auth SDK), `@workos-inc/widgets` (member management UI), `@tanstack/react-query`, `convex`, `js-yaml` (legacy YAML import)
 
 ## Development Commands
 
@@ -112,7 +112,10 @@ BASE_URL=http://localhost:3000
 │   │   │   ├── LoadingOverlay.tsx
 │   │   │   ├── Modal.tsx
 │   │   │   └── Toast.tsx
+│   │   ├── org/                # Organization components
+│   │   │   └── MembersWidget.tsx   # WorkOS members management widget
 │   │   ├── MembershipSync.tsx  # Syncs org memberships on app load
+│   │   ├── WorkOSWidgetsProvider.tsx  # WorkOS widgets context provider
 │   │   └── AppProviders.tsx    # Provider hierarchy wrapper
 │   ├── contexts/           # React Context providers
 │   │   ├── AgentContext.tsx
@@ -125,7 +128,8 @@ BASE_URL=http://localhost:3000
 │   │   ├── useConvex.ts
 │   │   ├── useLocalStorage.ts
 │   │   ├── useLucideIcons.ts
-│   │   └── useResizable.ts
+│   │   ├── useResizable.ts
+│   │   └── useWidgetToken.ts   # WorkOS widget token management
 │   ├── types/              # TypeScript type definitions
 │   │   ├── agent.ts
 │   │   ├── auth.ts
@@ -137,12 +141,14 @@ BASE_URL=http://localhost:3000
 │   │   └── validation.ts
 │   └── api/                # Next.js Route Handlers
 │       ├── config/route.ts         # App configuration endpoint
+│       ├── widgets/
+│       │   └── token/route.ts      # WorkOS widget token generation
 │       └── auth/
 │           └── [...authkit]/route.ts  # WorkOS AuthKit SDK catch-all (handles callback, session, logout)
 ├── middleware.ts            # WorkOS AuthKit middleware
 ├── server/                  # Shared server utilities (TypeScript)
 │   ├── org-utils.ts        # Organization access helpers
-│   └── workos.ts           # WorkOS member management API helpers
+│   └── workos.ts           # WorkOS org API helpers
 ├── public/                  # Static assets served by Next.js
 │   └── styles.css          # Main CSS stylesheet
 ├── convex/                  # Convex backend (TypeScript)

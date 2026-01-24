@@ -16,7 +16,7 @@ import { ImportYamlModal } from '../forms/ImportYamlModal';
 import { CanvasRenameModal } from '../forms/CanvasRenameModal';
 import { CopyCanvasModal } from '../forms/CopyCanvasModal';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
-import { MembersModal } from '../org/MembersModal';
+import { MembersWidget } from '../org/MembersWidget';
 import { Tooltip } from '../ui/Tooltip';
 import { THEMES, SYSTEM_THEME_OPTION, THEME_VALUES } from '@/constants/themes';
 
@@ -434,12 +434,11 @@ export function Sidebar() {
           onClose={() => setIsImportModalOpen(false)}
         />
 
-        {currentOrgId && user && (
-          <MembersModal
+        {currentOrgId && (
+          <MembersWidget
             isOpen={isMembersModalOpen}
             onClose={() => setIsMembersModalOpen(false)}
             orgId={currentOrgId}
-            currentUserId={user.id}
           />
         )}
 

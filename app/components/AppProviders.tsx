@@ -15,6 +15,7 @@ import { CanvasProvider } from '@/contexts/CanvasContext';
 import { AgentProvider } from '@/contexts/AgentContext';
 import { GroupingProvider } from '@/contexts/GroupingContext';
 import { AppStateProvider } from '@/contexts/AppStateContext';
+import { WorkOSWidgetsProvider } from '@/components/WorkOSWidgetsProvider';
 
 interface AppProvidersProps {
   children: React.ReactNode;
@@ -24,21 +25,23 @@ interface AppProvidersProps {
 export function AppProviders({ children, initialCanvasId }: AppProvidersProps) {
   return (
     <AuthKitProvider>
-      <AuthProvider>
-        <ConvexClientProvider>
-          <MembershipSync>
-            <CanvasProvider initialCanvasId={initialCanvasId}>
-              <AgentProvider>
-                <GroupingProvider>
-                  <AppStateProvider>
-                    {children}
-                  </AppStateProvider>
-                </GroupingProvider>
-              </AgentProvider>
-            </CanvasProvider>
-          </MembershipSync>
-        </ConvexClientProvider>
-      </AuthProvider>
+      <WorkOSWidgetsProvider>
+        <AuthProvider>
+          <ConvexClientProvider>
+            <MembershipSync>
+              <CanvasProvider initialCanvasId={initialCanvasId}>
+                <AgentProvider>
+                  <GroupingProvider>
+                    <AppStateProvider>
+                      {children}
+                    </AppStateProvider>
+                  </GroupingProvider>
+                </AgentProvider>
+              </CanvasProvider>
+            </MembershipSync>
+          </ConvexClientProvider>
+        </AuthProvider>
+      </WorkOSWidgetsProvider>
     </AuthKitProvider>
   );
 }
