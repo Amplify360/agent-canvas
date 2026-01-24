@@ -57,7 +57,6 @@ export default defineSchema({
     status: v.optional(
       v.union(
         v.literal("idea"),
-        v.literal("in_concept"), // Legacy value, kept for backward compatibility
         v.literal("approved"),
         v.literal("wip"),
         v.literal("testing"),
