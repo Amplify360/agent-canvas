@@ -56,7 +56,6 @@ export function CommentsPanel({ agent, isOpen, onClose }: CommentsPanelProps) {
         <header className="comments-panel__header">
           <div className="comments-panel__title-row">
             <h2 className="comments-panel__title">
-              <Icon name="message-circle" />
               Comments
               {commentCount > 0 && (
                 <span className="comments-panel__count">{commentCount}</span>
