@@ -10,6 +10,7 @@ import React from 'react';
 import { AuthKitProvider } from '@workos-inc/authkit-nextjs/components';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { ConvexClientProvider } from '@/contexts/ConvexClientProvider';
+import { MembershipSync } from '@/components/MembershipSync';
 import { CanvasProvider } from '@/contexts/CanvasContext';
 import { AgentProvider } from '@/contexts/AgentContext';
 import { GroupingProvider } from '@/contexts/GroupingContext';
@@ -25,15 +26,17 @@ export function AppProviders({ children, initialCanvasId }: AppProvidersProps) {
     <AuthKitProvider>
       <AuthProvider>
         <ConvexClientProvider>
-          <CanvasProvider initialCanvasId={initialCanvasId}>
-            <AgentProvider>
-              <GroupingProvider>
-                <AppStateProvider>
-                  {children}
-                </AppStateProvider>
-              </GroupingProvider>
-            </AgentProvider>
-          </CanvasProvider>
+          <MembershipSync>
+            <CanvasProvider initialCanvasId={initialCanvasId}>
+              <AgentProvider>
+                <GroupingProvider>
+                  <AppStateProvider>
+                    {children}
+                  </AppStateProvider>
+                </GroupingProvider>
+              </AgentProvider>
+            </CanvasProvider>
+          </MembershipSync>
         </ConvexClientProvider>
       </AuthProvider>
     </AuthKitProvider>

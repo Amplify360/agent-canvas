@@ -5,8 +5,8 @@
  * Tokens are verified against WorkOS public JWKS.
  */
 
-// WorkOS Client ID (public, safe to hardcode)
-const clientId = "client_01KEZ54DWP5SNBAFC1DE08FMF9";
+// WorkOS Client ID from environment variable
+const clientId = process.env.WORKOS_CLIENT_ID || "client_01KEZ54DKHJ14TRQF2NVH5B73X";
 
 export default {
   providers: [

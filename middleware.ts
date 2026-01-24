@@ -19,6 +19,8 @@ export default authkitMiddleware({
       '/api/config',    // Config endpoint for Convex URL
     ],
   },
+  // Redirect URI for OAuth callback (also set via WORKOS_REDIRECT_URI env var)
+  redirectUri: process.env.WORKOS_REDIRECT_URI || 'http://localhost:3000/api/auth/callback',
   // Debug mode for development (will log auth state)
   debug: process.env.NODE_ENV === 'development',
 });
