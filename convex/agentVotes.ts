@@ -76,20 +76,33 @@ export const getVoteCountsForCanvas = query({
       .filter((q) => q.eq(q.field("deletedAt"), undefined))
       .collect();
 
-    // Get votes for all agents
+    // Fetch votes for all agents in parallel using Promise.all
+    //
+    // Why parallel instead of sequential for loop:
+    // - Convex doesn't support SQL-like JOINs or WHERE IN clauses
+    // - Each agent requires a separate indexed query
+    // - Sequential: queries run one-by-one (slow)
+    // - Parallel: all queries start immediately, results collected together (fast)
+    // - Convex queries run server-side close to the database, so N parallel
+    //   queries have minimal overhead compared to traditional client-server setups
+    const votesPerAgent = await Promise.all(
+      agents.map((agent) =>
+        ctx.db
+          .query("agentVotes")
+          .withIndex("by_agent", (q) => q.eq("agentId", agent._id))
+          .collect()
+      )
+    );
+
+    // Build result map from parallel query results
     const result: Record<string, { up: number; down: number }> = {};
-
-    for (const agent of agents) {
-      const votes = await ctx.db
-        .query("agentVotes")
-        .withIndex("by_agent", (q) => q.eq("agentId", agent._id))
-        .collect();
-
+    agents.forEach((agent, index) => {
+      const votes = votesPerAgent[index];
       result[agent._id] = {
         up: votes.filter((v) => v.vote === "up").length,
         down: votes.filter((v) => v.vote === "down").length,
       };
-    }
+    });
 
     return result;
   },
@@ -122,21 +135,26 @@ export const getUserVotesForCanvas = query({
       .filter((q) => q.eq(q.field("deletedAt"), undefined))
       .collect();
 
-    // Get user's votes for these agents
+    // Fetch user's votes for all agents in parallel (see getVoteCountsForCanvas for rationale)
+    const userVotes = await Promise.all(
+      agents.map((agent) =>
+        ctx.db
+          .query("agentVotes")
+          .withIndex("by_user_agent", (q) =>
+            q.eq("workosUserId", auth.workosUserId).eq("agentId", agent._id)
+          )
+          .first()
+      )
+    );
+
+    // Build result map from parallel query results
     const result: Record<string, "up" | "down"> = {};
-
-    for (const agent of agents) {
-      const vote = await ctx.db
-        .query("agentVotes")
-        .withIndex("by_user_agent", (q) =>
-          q.eq("workosUserId", auth.workosUserId).eq("agentId", agent._id)
-        )
-        .first();
-
+    agents.forEach((agent, index) => {
+      const vote = userVotes[index];
       if (vote) {
         result[agent._id] = vote.vote;
       }
-    }
+    });
 
     return result;
   },

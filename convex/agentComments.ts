@@ -63,18 +63,22 @@ export const getCommentCountsForCanvas = query({
       .filter((q) => q.eq(q.field("deletedAt"), undefined))
       .collect();
 
-    // Get comment counts for all agents
+    // Fetch comments for all agents in parallel (see agentVotes.ts for detailed rationale)
+    const commentsPerAgent = await Promise.all(
+      agents.map((agent) =>
+        ctx.db
+          .query("agentComments")
+          .withIndex("by_agent", (q) => q.eq("agentId", agent._id))
+          .filter((q) => q.eq(q.field("deletedAt"), undefined))
+          .collect()
+      )
+    );
+
+    // Build result map from parallel query results
     const result: Record<string, number> = {};
-
-    for (const agent of agents) {
-      const comments = await ctx.db
-        .query("agentComments")
-        .withIndex("by_agent", (q) => q.eq("agentId", agent._id))
-        .filter((q) => q.eq(q.field("deletedAt"), undefined))
-        .collect();
-
-      result[agent._id] = comments.length;
-    }
+    agents.forEach((agent, index) => {
+      result[agent._id] = commentsPerAgent[index].length;
+    });
 
     return result;
   },
