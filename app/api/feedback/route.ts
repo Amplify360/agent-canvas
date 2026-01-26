@@ -28,6 +28,7 @@ interface FeedbackRequest {
   type: FeedbackType;
   description: string;
   pageUrl?: string;
+  screenshotUrl?: string;
 }
 
 export async function POST(request: Request) {
@@ -53,7 +54,7 @@ export async function POST(request: Request) {
 
   try {
     const body: FeedbackRequest = await request.json();
-    const { type, description, pageUrl } = body;
+    const { type, description, pageUrl, screenshotUrl } = body;
 
     // Validate feedback type
     if (!type || !VALID_FEEDBACK_TYPES.includes(type)) {
@@ -103,6 +104,11 @@ export async function POST(request: Request) {
       issueBody += `**Page URL:** ${pageUrl}\n`;
     }
     issueBody += `\n## Description\n\n${sanitizedDescription}`;
+
+    // Add screenshot if provided
+    if (screenshotUrl) {
+      issueBody += `\n\n## Screenshot\n\n![Screenshot](${screenshotUrl})`;
+    }
 
     // Create GitHub issue
     const response = await fetch(
