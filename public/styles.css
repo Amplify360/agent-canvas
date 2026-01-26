@@ -5956,6 +5956,16 @@ body.is-resizing-sidebar .main-wrapper {
     border-color: var(--accent-primary);
 }
 
+.feedback-type-btn:focus-visible {
+    outline: 2px solid var(--accent-primary);
+    outline-offset: 2px;
+}
+
+.feedback-type-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
 .feedback-type-btn svg {
     width: 24px;
     height: 24px;

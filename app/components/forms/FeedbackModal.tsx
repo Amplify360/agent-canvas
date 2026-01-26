@@ -87,6 +87,7 @@ export function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
                 type="button"
                 className={`feedback-type-btn ${feedbackType === type.value ? 'is-selected' : ''}`}
                 onClick={() => setFeedbackType(type.value)}
+                disabled={isSubmitting}
               >
                 <Icon name={type.icon} />
                 <span className="feedback-type-btn__label">{type.label}</span>
@@ -113,6 +114,8 @@ export function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
             }
             required
             minLength={10}
+            maxLength={5000}
+            disabled={isSubmitting}
           />
         </div>
 
@@ -122,6 +125,7 @@ export function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
               type="checkbox"
               checked={includeUrl}
               onChange={(e) => setIncludeUrl(e.target.checked)}
+              disabled={isSubmitting}
             />
             Include current page URL for context
           </label>

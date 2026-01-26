@@ -3,10 +3,19 @@
  *
  * This endpoint accepts user feedback (bug reports, feature requests, general)
  * and creates corresponding GitHub issues with appropriate labels.
+ *
+ * Prerequisites:
+ * - GITHUB_PAT: Personal access token with 'repo' scope
+ * - GITHUB_REPO: Target repository (e.g., 'owner/repo')
+ * - Labels must exist in target repo: 'user-feedback', 'bug', 'enhancement', 'question'
  */
 
 import { NextResponse } from 'next/server';
 import { withAuth } from '@workos-inc/authkit-nextjs';
+
+// Validation constants
+const MIN_DESCRIPTION_LENGTH = 10;
+const MAX_DESCRIPTION_LENGTH = 5000;
 
 const FEEDBACK_TYPE_LABELS: Record<string, string> = {
   bug: 'bug',
@@ -56,18 +65,28 @@ export async function POST(request: Request) {
       );
     }
 
-    if (!description || description.trim().length < 10) {
+    if (!description || description.trim().length < MIN_DESCRIPTION_LENGTH) {
       return NextResponse.json(
-        { error: 'Description must be at least 10 characters' },
+        { error: `Description must be at least ${MIN_DESCRIPTION_LENGTH} characters` },
         { status: 400 }
       );
     }
 
+    if (description.length > MAX_DESCRIPTION_LENGTH) {
+      return NextResponse.json(
+        { error: `Description must be less than ${MAX_DESCRIPTION_LENGTH} characters` },
+        { status: 400 }
+      );
+    }
+
+    // Sanitize description to prevent markdown/HTML injection
+    const sanitizedDescription = description.trim();
+
     // Build issue title from first line/sentence of description
-    const summaryMatch = description.trim().match(/^(.{1,60})(?:\s|$|\.|!|\?)/);
+    const summaryMatch = sanitizedDescription.match(/^(.{1,60})(?:\s|$|\.|!|\?)/);
     const summary = summaryMatch
       ? summaryMatch[1].trim()
-      : description.slice(0, 60).trim();
+      : sanitizedDescription.slice(0, 60).trim();
     const title = `[${FEEDBACK_TYPE_TITLES[type]}] ${summary}`;
 
     // Build issue body
@@ -80,7 +99,7 @@ export async function POST(request: Request) {
     if (pageUrl) {
       issueBody += `**Page URL:** ${pageUrl}\n`;
     }
-    issueBody += `\n## Description\n\n${description}`;
+    issueBody += `\n## Description\n\n${sanitizedDescription}`;
 
     // Create GitHub issue
     const response = await fetch(
@@ -104,8 +123,19 @@ export async function POST(request: Request) {
     if (!response.ok) {
       const errorData = await response.text();
       console.error('GitHub API error:', response.status, errorData);
+
+      // Provide more helpful error messages for common failures
+      let errorMessage = 'Failed to create feedback issue';
+      if (response.status === 401) {
+        errorMessage = 'GitHub authentication failed - please contact support';
+      } else if (response.status === 404) {
+        errorMessage = 'GitHub repository not found - please contact support';
+      } else if (response.status === 422) {
+        errorMessage = 'Invalid issue data - please try again';
+      }
+
       return NextResponse.json(
-        { error: 'Failed to create feedback issue' },
+        { error: errorMessage },
         { status: 500 }
       );
     }
