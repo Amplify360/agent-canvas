@@ -12,7 +12,7 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { useMutation, useConvex } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
-import { Id } from '../../../convex/_generated/dataModel';
+import type { Id } from '../../../convex/_generated/dataModel';
 import { Modal } from '../ui/Modal';
 import { useAppState } from '@/contexts/AppStateContext';
 import { Icon } from '@/components/ui/Icon';
@@ -172,12 +172,10 @@ export function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
             throw new Error('Failed to upload screenshot');
           }
 
-          const { storageId } = await uploadResponse.json();
+          const { storageId } = await uploadResponse.json() as { storageId: Id<"_storage"> };
 
           // Get the public URL from Convex storage
-          const url = await convex.query(api.files.getUrl, {
-            storageId: storageId as Id<"_storage">
-          });
+          const url = await convex.query(api.files.getUrl, { storageId });
           if (url) {
             screenshotUrl = url;
           }

@@ -106,10 +106,15 @@ export async function POST(request: Request) {
     issueBody += `\n## Description\n\n${sanitizedDescription}`;
 
     // Add screenshot if provided (validate it's from Convex storage)
-    // Convex storage URLs typically contain the deployment name and use convex.cloud domain
     if (screenshotUrl) {
-      const isValidConvexUrl = screenshotUrl.includes('.convex.cloud/') ||
-        screenshotUrl.includes('.convex.site/');
+      let isValidConvexUrl = false;
+      try {
+        const parsedUrl = new URL(screenshotUrl);
+        isValidConvexUrl = parsedUrl.hostname.endsWith('.convex.cloud') ||
+          parsedUrl.hostname.endsWith('.convex.site');
+      } catch {
+        // Invalid URL format
+      }
 
       if (isValidConvexUrl) {
         issueBody += `\n\n## Screenshot\n\n![Screenshot](${screenshotUrl})`;
