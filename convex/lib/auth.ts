@@ -109,6 +109,12 @@ export async function requireAuth(
 ): Promise<AuthContext> {
   const auth = await getAuth(ctx);
   if (!auth) {
+    // Log to help debug token refresh issues
+    const identity = await ctx.auth.getUserIdentity();
+    console.error("[Auth] Authentication failed", {
+      hasIdentity: !!identity,
+      identitySubject: identity?.subject?.slice(0, 8) + "...",
+    });
     throw new Error("Auth: Authentication required");
   }
   return auth;
