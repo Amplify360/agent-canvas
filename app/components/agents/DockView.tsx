@@ -7,7 +7,7 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Agent } from '@/types/agent';
 import { getToolDisplay } from '@/utils/config';
 import { getAgentStatusConfig } from '@/types/validationConstants';
@@ -19,27 +19,41 @@ interface DockViewProps {
 }
 
 export function DockView({ agents, onAgentClick }: DockViewProps) {
-  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+  // Track by agent ID for stability with real-time updates
+  const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
+
+  // Derive index and agent from ID
+  const selectedIndex = selectedAgentId
+    ? agents.findIndex(a => a._id === selectedAgentId)
+    : -1;
+  const selectedAgent = selectedIndex >= 0 ? agents[selectedIndex] : null;
+
+  // Reset selection if agent no longer exists (e.g., deleted by another user)
+  useEffect(() => {
+    if (selectedAgentId && !agents.some(a => a._id === selectedAgentId)) {
+      setSelectedAgentId(null);
+    }
+  }, [agents, selectedAgentId]);
 
   const handlePrev = () => {
-    if (selectedIndex === null) return;
-    setSelectedIndex(selectedIndex > 0 ? selectedIndex - 1 : agents.length - 1);
+    if (selectedIndex < 0) return;
+    const newIndex = selectedIndex > 0 ? selectedIndex - 1 : agents.length - 1;
+    setSelectedAgentId(agents[newIndex]._id);
   };
 
   const handleNext = () => {
-    if (selectedIndex === null) return;
-    setSelectedIndex(selectedIndex < agents.length - 1 ? selectedIndex + 1 : 0);
+    if (selectedIndex < 0) return;
+    const newIndex = selectedIndex < agents.length - 1 ? selectedIndex + 1 : 0;
+    setSelectedAgentId(agents[newIndex]._id);
   };
 
-  const handleItemClick = (index: number) => {
-    setSelectedIndex(selectedIndex === index ? null : index);
+  const handleItemClick = (agent: Agent) => {
+    setSelectedAgentId(selectedAgentId === agent._id ? null : agent._id);
   };
 
   const handleClose = () => {
-    setSelectedIndex(null);
+    setSelectedAgentId(null);
   };
-
-  const selectedAgent = selectedIndex !== null ? agents[selectedIndex] : null;
 
   return (
     <div className="dock-view">
@@ -47,13 +61,13 @@ export function DockView({ agents, onAgentClick }: DockViewProps) {
       <div className="dock-view__track">
         {agents.map((agent, index) => {
           const statusConfig = getAgentStatusConfig(agent.status);
-          const isSelected = selectedIndex === index;
+          const isSelected = selectedAgentId === agent._id;
 
           return (
             <button
               key={agent._id}
               className={`dock-item ${isSelected ? 'dock-item--selected' : ''}`}
-              onClick={() => handleItemClick(index)}
+              onClick={() => handleItemClick(agent)}
             >
               <span className="dock-item__order">
                 {(agent.agentOrder ?? index) + 1}
@@ -71,7 +85,7 @@ export function DockView({ agents, onAgentClick }: DockViewProps) {
                   : agent.name}
               </span>
               <div className="dock-item__tools-compact">
-                {agent.tools.slice(0, 3).map((tool) => {
+                {agent.tools.slice(0, 3).map((tool: string) => {
                   const toolDisplay = getToolDisplay(tool);
                   return (
                     <span
@@ -121,7 +135,7 @@ export function DockView({ agents, onAgentClick }: DockViewProps) {
                 {getAgentStatusConfig(selectedAgent.status).label}
               </span>
               <span className="dock-carousel__counter">
-                {selectedIndex! + 1} of {agents.length}
+                {selectedIndex + 1} of {agents.length}
               </span>
             </div>
 
@@ -132,7 +146,7 @@ export function DockView({ agents, onAgentClick }: DockViewProps) {
             )}
 
             <div className="dock-carousel__tools">
-              {selectedAgent.tools.map((tool) => {
+              {selectedAgent.tools.map((tool: string) => {
                 const toolDisplay = getToolDisplay(tool);
                 return (
                   <span
