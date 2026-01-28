@@ -95,7 +95,7 @@ export function CopyCanvasModal({ isOpen, onClose, canvasId, canvasTitle }: Copy
   const selectedCount = selectedOrgIds.length;
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} title="Copy Canvas">
+    <Modal isOpen={isOpen} onClose={handleClose} title="Copy Canvas" closeOnOverlayClick={false}>
       <div className="modal__body">
         {/* Title Input */}
         <div className="form-group">

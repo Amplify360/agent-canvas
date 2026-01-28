@@ -213,7 +213,7 @@ export function AgentModal({ isOpen, onClose, agent, defaultPhase }: AgentModalP
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={agent ? 'Edit Agent' : 'New Agent'} size="large">
+    <Modal isOpen={isOpen} onClose={onClose} title={agent ? 'Edit Agent' : 'New Agent'} size="large" closeOnOverlayClick={false}>
       <form onSubmit={handleSubmit} className="agent-form">
         {/* Basic Info Section */}
         <FormSection title="Basic Info">
