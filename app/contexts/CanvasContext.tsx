@@ -37,7 +37,7 @@ interface CanvasProviderProps {
 }
 
 export function CanvasProvider({ children, initialCanvasId }: CanvasProviderProps) {
-  const { currentOrgId, isInitialized, isAuthenticated, userOrgs, setCurrentOrgId } = useAuth();
+  const { currentOrgId, isInitialized, userOrgs, setCurrentOrgId } = useAuth();
   // Use Convex's auth state to gate queries - this ensures token is actually set
   const { isAuthenticated: isConvexAuthenticated } = useConvexAuth();
   const [currentCanvasId, setCurrentCanvasIdState] = useLocalStorage<string | null>(STORAGE_KEYS.CURRENT_CANVAS, null);

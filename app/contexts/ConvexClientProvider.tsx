@@ -15,6 +15,9 @@ interface ConvexClientProviderProps {
   children: React.ReactNode;
 }
 
+// Cooldown to prevent rapid consecutive token refreshes that could cause infinite loops
+const REFRESH_COOLDOWN_MS = 2000;
+
 /**
  * Custom hook that adapts WorkOS AuthKit to Convex's useAuth interface.
  * This is passed to ConvexProviderWithAuth to handle token management.
@@ -42,7 +45,6 @@ function useAuthForConvex() {
   // Track last refresh to prevent rapid consecutive refreshes
   // This breaks the loop where refresh() -> state change -> force refresh request
   const lastRefreshTime = useRef<number>(0);
-  const REFRESH_COOLDOWN_MS = 2000;
 
   // Keep refs up to date
   useEffect(() => {
