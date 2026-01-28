@@ -248,7 +248,7 @@ export function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
   // Success state
   if (submissionResult) {
     return (
-      <Modal isOpen={isOpen} onClose={handleClose} title="Feedback Submitted" size="medium">
+      <Modal isOpen={isOpen} onClose={handleClose} title="Feedback Submitted" size="medium" closeOnOverlayClick={false}>
         <div className="feedback-success">
           <div className="feedback-success__icon">
             <Icon name="CheckCircle" />
@@ -288,7 +288,7 @@ export function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} title="Send Feedback" size="medium">
+    <Modal isOpen={isOpen} onClose={handleClose} title="Send Feedback" size="medium" closeOnOverlayClick={false}>
       <form onSubmit={handleSubmit} className="feedback-form" onPaste={handlePaste}>
         <div className="form-group">
           <label className="form-label">What type of feedback?</label>

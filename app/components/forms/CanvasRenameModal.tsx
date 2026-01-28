@@ -60,7 +60,7 @@ export function CanvasRenameModal({ isOpen, canvasId, currentTitle, onClose }: C
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Rename Canvas" size="small">
+    <Modal isOpen={isOpen} onClose={onClose} title="Rename Canvas" size="small" closeOnOverlayClick={false}>
       <form onSubmit={handleSubmit}>
         <div className="form-group">
           <label htmlFor="canvas-title" className="form-label">

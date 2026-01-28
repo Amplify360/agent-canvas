@@ -17,6 +17,8 @@ interface QuickLookPanelProps {
   onClose: () => void;
   onEdit: () => void;
   onDelete: () => void;
+  /** Whether clicking outside the panel closes it. Defaults to false to prevent accidental closure. */
+  closeOnOverlayClick?: boolean;
 }
 
 export function QuickLookPanel({
@@ -24,7 +26,8 @@ export function QuickLookPanel({
   isOpen,
   onClose,
   onEdit,
-  onDelete
+  onDelete,
+  closeOnOverlayClick = false
 }: QuickLookPanelProps) {
   // Close on Escape key
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
@@ -58,7 +61,7 @@ export function QuickLookPanel({
   return (
     <div
       className={`quick-look-overlay ${isOpen ? 'is-open' : ''}`}
-      onClick={onClose}
+      onClick={closeOnOverlayClick ? onClose : undefined}
       role="presentation"
     >
       {/* Modal */}
