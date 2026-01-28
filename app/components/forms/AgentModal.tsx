@@ -309,7 +309,7 @@ export function AgentModal({ isOpen, onClose, agent, defaultPhase }: AgentModalP
               className={getInputClassName('objective', 'form-textarea')}
               value={formData.objective}
               onChange={(e) => setFormData((prev) => ({ ...prev, objective: e.target.value }))}
-              onBlur={(e) => e.target.value && validateField('objective', e.target.value)}
+              onBlur={(e) => validateField('objective', e.target.value)}
               rows={2}
               placeholder="What does this agent aim to achieve?"
             />
@@ -325,7 +325,7 @@ export function AgentModal({ isOpen, onClose, agent, defaultPhase }: AgentModalP
               className={getInputClassName('description', 'form-textarea')}
               value={formData.description}
               onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
-              onBlur={(e) => e.target.value && validateField('description', e.target.value)}
+              onBlur={(e) => validateField('description', e.target.value)}
               rows={3}
               placeholder="Detailed description of the agent's functionality..."
             />

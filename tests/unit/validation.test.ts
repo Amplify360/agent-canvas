@@ -7,13 +7,20 @@ import { validateAgentForm } from '../../app/utils/validation';
  */
 
 // Replicate validation functions for testing
-function validateMetric(value, fieldName) {
+function validateMetric(value: number, fieldName: string): void {
   if (value < 0) {
     throw new Error(`Validation: ${fieldName} must be 0 or greater`);
   }
 }
 
-function validateMetrics(metrics) {
+interface Metrics {
+  numberOfUsers?: number;
+  timesUsed?: number;
+  timeSaved?: number;
+  roi?: number;
+}
+
+function validateMetrics(metrics: Metrics | null | undefined): void {
   if (!metrics) return;
   if (metrics.numberOfUsers !== undefined) validateMetric(metrics.numberOfUsers, 'numberOfUsers');
   if (metrics.timesUsed !== undefined) validateMetric(metrics.timesUsed, 'timesUsed');
@@ -21,13 +28,13 @@ function validateMetrics(metrics) {
   // roi can be negative (loss), so no validation needed
 }
 
-function validateNonEmptyString(value, fieldName) {
+function validateNonEmptyString(value: string, fieldName: string): void {
   if (!value || value.trim().length === 0) {
     throw new Error(`Validation: ${fieldName} cannot be empty`);
   }
 }
 
-function validateSlug(slug) {
+function validateSlug(slug: string): void {
   validateNonEmptyString(slug, 'slug');
 
   if (slug !== slug.toLowerCase()) {
@@ -46,21 +53,21 @@ function validateSlug(slug) {
   }
 }
 
-function validateTitle(title) {
+function validateTitle(title: string): void {
   validateNonEmptyString(title, 'title');
   if (title.length > 200) {
     throw new Error('Validation: title must be 200 characters or less');
   }
 }
 
-function validateAgentName(name) {
+function validateAgentName(name: string): void {
   validateNonEmptyString(name, 'name');
   if (name.length > 100) {
     throw new Error('Validation: agent name must be 100 characters or less');
   }
 }
 
-function validateOptionalUrl(url, fieldName) {
+function validateOptionalUrl(url: string | null | undefined, fieldName: string): void {
   if (!url) return;
   try {
     new URL(url);
