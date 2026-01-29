@@ -150,21 +150,21 @@ export function MainToolbar({ onAddAgent }: MainToolbarProps) {
         <div className="view-mode-toggle">
           <button
             type="button"
+            className={`view-mode-toggle__btn ${viewMode === 'dock' ? 'is-active' : ''}`}
+            onClick={() => setViewMode('dock')}
+            aria-pressed={viewMode === 'dock'}
+          >
+            <Icon name="rows-3" />
+            <span>Overview</span>
+          </button>
+          <button
+            type="button"
             className={`view-mode-toggle__btn ${viewMode === 'grid' ? 'is-active' : ''}`}
             onClick={() => setViewMode('grid')}
             aria-pressed={viewMode === 'grid'}
           >
             <Icon name="layout-grid" />
-            <span>Normal</span>
-          </button>
-          <button
-            type="button"
-            className={`view-mode-toggle__btn ${viewMode === 'dock' ? 'is-active' : ''}`}
-            onClick={() => setViewMode('dock')}
-            aria-pressed={viewMode === 'dock'}
-          >
-            <Icon name="panel-bottom" />
-            <span>Dock</span>
+            <span>Detail</span>
           </button>
         </div>
 
