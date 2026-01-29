@@ -59,6 +59,31 @@ function useAuthForConvex() {
     refreshRef.current = refresh;
   }, [getAccessToken, refresh]);
 
+  // Log auth state changes to diagnose idle reconnection hangs
+  const prevAuthState = useRef({ authLoading, tokenLoading, isRefreshing, hasUser: !!user, hasToken: !!accessToken });
+  useEffect(() => {
+    const prev = prevAuthState.current;
+    const next = { authLoading, tokenLoading, isRefreshing, hasUser: !!user, hasToken: !!accessToken };
+    const isLoading = authLoading || tokenLoading || isRefreshing;
+    const isAuthenticated = !!user && !!accessToken;
+
+    // Only log when something changed
+    if (
+      prev.authLoading !== next.authLoading ||
+      prev.tokenLoading !== next.tokenLoading ||
+      prev.isRefreshing !== next.isRefreshing ||
+      prev.hasUser !== next.hasUser ||
+      prev.hasToken !== next.hasToken
+    ) {
+      console.log('[ConvexAuth] State changed:', {
+        authLoading, tokenLoading, isRefreshing,
+        isLoading, isAuthenticated,
+        hasUser: !!user, hasToken: !!accessToken,
+      });
+    }
+    prevAuthState.current = next;
+  }, [authLoading, tokenLoading, isRefreshing, user, accessToken]);
+
   // Stable callback that doesn't change on re-renders
   const fetchAccessToken = useCallback(
     async ({ forceRefreshToken }: { forceRefreshToken: boolean }): Promise<string | null> => {
@@ -70,6 +95,7 @@ function useAuthForConvex() {
         // This handles the case where refresh() triggers state changes that
         // cause Convex to immediately request another refresh
         if (timeSinceLastRefresh < REFRESH_COOLDOWN_MS && lastRefreshTime.current > 0) {
+          console.log('[ConvexAuth] Force refresh requested but within cooldown (%dms ago), returning cached token', timeSinceLastRefresh);
           try {
             const token = await getAccessTokenRef.current();
             return token ?? null;
@@ -81,23 +107,34 @@ function useAuthForConvex() {
         // Convex is requesting a fresh token (e.g., after WebSocket reconnect)
         // Set isRefreshing to signal that auth is loading, preventing queries
         // from firing with stale tokens
+        console.log('[ConvexAuth] Force refresh started');
         lastRefreshTime.current = now;
         setIsRefreshing(true);
 
+        // Watchdog: log if refresh() hasn't resolved after 5s
+        const watchdog = setTimeout(() => {
+          console.warn('[ConvexAuth] Force refresh still pending after 5s — refresh() may be hanging');
+        }, 5000);
+
         try {
           const freshToken = await refreshRef.current();
+          const elapsed = Date.now() - now;
+          console.log('[ConvexAuth] Force refresh completed in %dms, got token: %s', elapsed, !!freshToken);
           return freshToken ?? null;
         } catch (error) {
-          console.error('[ConvexAuth] Token refresh failed:', error);
+          const elapsed = Date.now() - now;
+          console.error('[ConvexAuth] Token refresh failed after %dms:', elapsed, error);
           return null;
         } finally {
+          clearTimeout(watchdog);
           setIsRefreshing(false);
         }
       }
 
-      // Normal token fetch
+      // Normal token fetch (forceRefreshToken=false)
       try {
         const token = await getAccessTokenRef.current();
+        console.log('[ConvexAuth] Token fetch (non-force), got token: %s', !!token);
         return token ?? null;
       } catch (error) {
         console.error('[ConvexAuth] getAccessToken failed:', error);
@@ -107,10 +144,13 @@ function useAuthForConvex() {
     [] // Empty deps - callback is stable, uses refs for latest values
   );
 
+  const isLoading = authLoading || tokenLoading || isRefreshing;
+  const isAuthenticated = !!user && !!accessToken;
+
   return {
     // Include isRefreshing to prevent queries during reconnection token refresh
-    isLoading: authLoading || tokenLoading || isRefreshing,
-    isAuthenticated: !!user && !!accessToken,
+    isLoading,
+    isAuthenticated,
     fetchAccessToken,
   };
 }
