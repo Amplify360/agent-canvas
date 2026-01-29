@@ -80,9 +80,7 @@ export function DockView({ agents, onAgentClick }: DockViewProps) {
                 <Icon name="bot" />
               </div>
               <span className="dock-item__compact-name">
-                {agent.name.length > 18
-                  ? agent.name.substring(0, 17) + '…'
-                  : agent.name}
+                {agent.name}
               </span>
               <div className="dock-item__tools-compact">
                 {agent.tools.slice(0, 3).map((tool: string) => {
