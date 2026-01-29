@@ -1568,6 +1568,53 @@ body.is-resizing-sidebar .main-wrapper {
     flex-shrink: 0;
 }
 
+/* Grid View Layout - similar to dock view */
+.agent-group--grid {
+    background: var(--bg-secondary);
+    border-radius: var(--radius-xl);
+    border: 1px solid var(--border-subtle);
+    overflow: hidden;
+}
+
+.agent-group__grid-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-3) var(--space-4);
+    border-bottom: 1px solid var(--border-subtle);
+    background: var(--bg-tertiary);
+}
+
+.agent-group__header-left {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+}
+
+.agent-group__grid-header .group-icon {
+    width: 40px;
+    height: 40px;
+}
+
+.agent-group__grid-header .group-icon svg {
+    width: 20px;
+    height: 20px;
+}
+
+.agent-group__grid-header .group-title h2 {
+    font-size: var(--text-base);
+    font-weight: 600;
+    margin-bottom: 2px;
+}
+
+.agent-group__grid-header .group-subtitle {
+    font-size: var(--text-xs);
+}
+
+.agent-group--grid .agent-group__content {
+    padding: var(--space-4);
+}
+
 .group-menu-trigger {
     width: 40px;
     height: 40px;
