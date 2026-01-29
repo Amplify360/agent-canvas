@@ -5793,7 +5793,7 @@ body.is-resizing-sidebar .main-wrapper {
    ============================================ */
 
 .dock-view {
-    --dock-item-size: 115px;
+    --dock-item-size: 160px;
     --dock-item-gap: 8px;
     --dock-bg: rgba(255, 255, 255, 0.9);
     --dock-border: rgba(0, 0, 0, 0.08);
@@ -5842,8 +5842,8 @@ body.is-resizing-sidebar .main-wrapper {
     align-items: center;
     justify-content: flex-start;
     width: var(--dock-item-size);
-    height: 80px;
-    padding: 12px var(--space-1) var(--space-2);
+    height: 90px;
+    padding: 10px var(--space-2) var(--space-2);
     background: var(--bg-secondary);
     border: 1px solid var(--border-subtle);
     border-radius: var(--radius-lg);
@@ -5919,16 +5919,18 @@ body.is-resizing-sidebar .main-wrapper {
 }
 
 .dock-item__compact-name {
-    font-size: 9px;
+    font-size: 10px;
     font-weight: 500;
     color: var(--text-secondary);
     text-align: center;
-    line-height: 1.2;
+    line-height: 1.3;
     max-width: 100%;
     overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    padding: 0 2px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    word-break: break-word;
+    padding: 0 4px;
 }
 
 .dock-item:hover .dock-item__compact-name {
@@ -6185,12 +6187,12 @@ body.is-resizing-sidebar .main-wrapper {
     }
 
     .dock-view {
-        --dock-item-size: 90px;
+        --dock-item-size: 120px;
     }
 
     .dock-item {
-        height: 72px;
-        padding: 10px var(--space-1) var(--space-1);
+        height: 80px;
+        padding: 8px var(--space-1) var(--space-1);
     }
 
     .dock-item__order {
@@ -6200,7 +6202,7 @@ body.is-resizing-sidebar .main-wrapper {
     }
 
     .dock-item__compact-name {
-        font-size: 8px;
+        font-size: 9px;
     }
 
     .dock-carousel__card {

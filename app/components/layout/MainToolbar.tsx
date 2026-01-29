@@ -12,32 +12,6 @@ import { Icon } from '@/components/ui/Icon';
 import { Tooltip } from '@/components/ui/Tooltip';
 import { TAG_TYPES } from '@/utils/config';
 
-/**
- * CollapseToggle - Button to collapse/expand all agent group sections
- * Only renders when there are 2+ groups
- */
-function CollapseToggle() {
-  const { computedGroups, collapsedSections, collapseAll } = useGrouping();
-
-  if (computedGroups.length < 1) return null;
-
-  const collapsedCount = computedGroups.filter(g => collapsedSections[g.id]).length;
-  const allCollapsed = collapsedCount === computedGroups.length;
-
-  return (
-    <Tooltip content={allCollapsed ? 'Expand all sections' : 'Collapse all sections'} placement="bottom">
-      <button
-        type="button"
-        className="collapse-toggle-btn"
-        onClick={() => collapseAll(!allCollapsed)}
-      >
-        <Icon name={allCollapsed ? 'unfold-vertical' : 'fold-vertical'} />
-        <span>{allCollapsed ? 'Expand' : 'Collapse'}</span>
-      </button>
-    </Tooltip>
-  );
-}
-
 interface MainToolbarProps {
   onAddAgent: () => void;
 }
@@ -167,9 +141,6 @@ export function MainToolbar({ onAddAgent }: MainToolbarProps) {
             <span>Detail</span>
           </button>
         </div>
-
-        {/* Collapse Toggle */}
-        <CollapseToggle />
 
         {/* Add Agent Button */}
         <button type="button" className="btn btn--primary" onClick={onAddAgent}>
