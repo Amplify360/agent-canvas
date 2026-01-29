@@ -142,7 +142,7 @@ export function ImportYamlModal({ isOpen, onClose, onSuccess }: ImportYamlModalP
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} title="Import from YAML">
+    <Modal isOpen={isOpen} onClose={handleClose} title="Import from YAML" closeOnOverlayClick={false}>
       <div className="modal__body">
         {/* File Input */}
         <div className="form-group">

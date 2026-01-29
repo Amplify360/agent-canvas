@@ -55,7 +55,8 @@ export function AgentModal({ isOpen, onClose, agent, defaultPhase }: AgentModalP
   const { showToast } = useAppState();
   const { currentOrgId } = useAuth();
   // Use Convex's auth state to gate queries - this ensures token is actually set
-  const { isAuthenticated: isConvexAuthenticated } = useConvexAuth();
+  const { isAuthenticated: isConvexAuthenticated, isLoading: isConvexAuthLoading } = useConvexAuth();
+  const canQuery = isConvexAuthenticated && !isConvexAuthLoading;
   const executeOperation = useAsyncOperation();
 
   // Get existing categories from org for autocomplete
@@ -63,7 +64,7 @@ export function AgentModal({ isOpen, onClose, agent, defaultPhase }: AgentModalP
   // (currentOrgId loads from localStorage before auth is initialized)
   const existingCategories = useQuery(
     api.agents.getDistinctCategories,
-    isConvexAuthenticated && currentOrgId ? { workosOrgId: currentOrgId } : 'skip'
+    canQuery && currentOrgId ? { workosOrgId: currentOrgId } : 'skip'
   ) || [];
   const categoryDatalistId = useId();
 
@@ -213,7 +214,7 @@ export function AgentModal({ isOpen, onClose, agent, defaultPhase }: AgentModalP
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={agent ? 'Edit Agent' : 'New Agent'} size="large">
+    <Modal isOpen={isOpen} onClose={onClose} title={agent ? 'Edit Agent' : 'New Agent'} size="large" closeOnOverlayClick={false}>
       <form onSubmit={handleSubmit} className="agent-form">
         {/* Basic Info Section */}
         <FormSection title="Basic Info">

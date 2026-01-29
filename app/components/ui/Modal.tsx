@@ -13,9 +13,11 @@ interface ModalProps {
   title: string;
   children: React.ReactNode;
   size?: 'small' | 'medium' | 'large';
+  /** Whether clicking outside the modal closes it. Defaults to true. Set to false for forms with unsaved data. */
+  closeOnOverlayClick?: boolean;
 }
 
-export function Modal({ isOpen, onClose, title, children, size = 'medium' }: ModalProps) {
+export function Modal({ isOpen, onClose, title, children, size = 'medium', closeOnOverlayClick = true }: ModalProps) {
 
   // Handle escape key
   useEffect(() => {
@@ -51,7 +53,7 @@ export function Modal({ isOpen, onClose, title, children, size = 'medium' }: Mod
   }[size];
 
   return (
-    <div className="modal-overlay show" onClick={onClose}>
+    <div className="modal-overlay show" onClick={closeOnOverlayClick ? onClose : undefined}>
       <div className={`modal ${sizeClass}`} onClick={(e) => e.stopPropagation()}>
         <div className="modal__header">
           <h2>{title}</h2>
