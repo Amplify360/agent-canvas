@@ -1573,7 +1573,7 @@ body.is-resizing-sidebar .main-wrapper {
     background: var(--bg-secondary);
     border-radius: var(--radius-xl);
     border: 1px solid var(--border-subtle);
-    overflow: hidden;
+    /* Note: No overflow:hidden here to allow dropdown menus to escape container */
 }
 
 .agent-group__grid-header {
@@ -1583,6 +1583,7 @@ body.is-resizing-sidebar .main-wrapper {
     padding: var(--space-3) var(--space-4);
     border-bottom: 1px solid var(--border-subtle);
     background: var(--bg-tertiary);
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
 }
 
 .agent-group__header-left {
