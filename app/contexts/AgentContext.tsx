@@ -4,7 +4,7 @@
 
 'use client';
 
-import React, { createContext, useContext, useCallback, useEffect, useRef } from 'react';
+import React, { createContext, useContext, useCallback, useEffect, useState } from 'react';
 import { Agent, AgentFormData } from '@/types/agent';
 import { useQuery, useMutation, useConvexAuth } from '@/hooks/useConvex';
 import { useAuth } from './AuthContext';
@@ -28,6 +28,9 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
   const canQuery = isConvexAuthenticated && !isConvexAuthLoading;
   const { currentCanvasId, currentCanvas, isLoading: isCanvasLoading } = useCanvas();
 
+  const [lastAgents, setLastAgents] = useState<Agent[]>([]);
+  const [hasLoadedAgents, setHasLoadedAgents] = useState(false);
+
   // Subscribe to agents using official Convex hook
   // Only query if Convex has the token AND has a valid canvas (not just canvasId, as it may be stale after deletion)
   const agentsQueryResult = useQuery(
@@ -35,36 +38,16 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
     canQuery && currentCanvas ? { canvasId: currentCanvasId as any } : 'skip'
   );
 
+  useEffect(() => {
+    if (agentsQueryResult !== undefined) {
+      setLastAgents(agentsQueryResult);
+      setHasLoadedAgents(true);
+    }
+  }, [agentsQueryResult]);
+
   // Track loading state: loading if auth not initialized, canvas loading, or agents query pending
   const isQueryLoading = canQuery && !!currentCanvasId && agentsQueryResult === undefined;
-  const agents = agentsQueryResult || [];
-
-  // Log loading state changes to diagnose idle reconnection hangs
-  const prevState = useRef({ isInitialized, isCanvasLoading, isQueryLoading, isConvexAuthLoading, canQuery, agentCount: agents.length, queryIsUndefined: agentsQueryResult === undefined });
-  useEffect(() => {
-    const prev = prevState.current;
-    const next = { isInitialized, isCanvasLoading, isQueryLoading, isConvexAuthLoading, canQuery, agentCount: agents.length, queryIsUndefined: agentsQueryResult === undefined };
-    const isLoading = !isInitialized || isCanvasLoading || isQueryLoading || isConvexAuthLoading;
-
-    if (
-      prev.isInitialized !== next.isInitialized ||
-      prev.isCanvasLoading !== next.isCanvasLoading ||
-      prev.isQueryLoading !== next.isQueryLoading ||
-      prev.isConvexAuthLoading !== next.isConvexAuthLoading ||
-      prev.canQuery !== next.canQuery ||
-      prev.queryIsUndefined !== next.queryIsUndefined ||
-      prev.agentCount !== next.agentCount
-    ) {
-      console.log('[AgentCtx] State changed:', {
-        isLoading, canQuery,
-        isInitialized, isCanvasLoading, isQueryLoading, isConvexAuthLoading,
-        queryIsUndefined: agentsQueryResult === undefined,
-        agentCount: agents.length,
-        currentCanvasId: currentCanvasId ?? null,
-      });
-    }
-    prevState.current = next;
-  }, [isInitialized, isCanvasLoading, isQueryLoading, isConvexAuthLoading, canQuery, agents.length, agentsQueryResult, currentCanvasId]);
+  const agents = agentsQueryResult ?? lastAgents;
 
   const createAgentMutation = useMutation(api.agents.create);
   const updateAgentMutation = useMutation(api.agents.update);
@@ -89,7 +72,7 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
 
   const value: AgentContextValue = {
     agents,
-    isLoading: !isInitialized || isCanvasLoading || isQueryLoading || isConvexAuthLoading,
+    isLoading: (!isInitialized || isCanvasLoading || isConvexAuthLoading || isQueryLoading) && !hasLoadedAgents,
     createAgent,
     updateAgent,
     deleteAgent,

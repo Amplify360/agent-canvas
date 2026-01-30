@@ -23,7 +23,7 @@ interface AgentGridProps {
 export function AgentGrid({ onEditAgent, onAddAgent, onQuickLook, onOpenComments }: AgentGridProps) {
   const { computedGroups } = useGrouping();
   const { deleteAgent, isLoading } = useAgents();
-  const { isAuthenticated: isConvexAuthenticated, isLoading: isConvexAuthLoading } = useConvexAuth();
+  const { isAuthenticated: isConvexAuthenticated } = useConvexAuth();
   const executeOperation = useAsyncOperation();
 
   const handleDeleteAgent = async (agent: Agent) => {
@@ -42,7 +42,7 @@ export function AgentGrid({ onEditAgent, onAddAgent, onQuickLook, onOpenComments
   };
 
   // Show loading state while data is being fetched
-  if (isLoading || isConvexAuthLoading || !isConvexAuthenticated) {
+  if (isLoading || !isConvexAuthenticated) {
     return (
       <div className="empty-state">
         <div className="empty-state__icon">

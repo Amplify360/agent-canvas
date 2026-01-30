@@ -38,6 +38,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [currentOrgId, setCurrentOrgIdState] = useLocalStorage<string | null>(STORAGE_KEYS.CURRENT_ORG, null);
   const [isInitialized, setIsInitialized] = useState(false);
   const currentOrgIdRef = useRef(currentOrgId);
+  const lastFocusRefreshAt = useRef(0);
+  const FOCUS_REFRESH_MIN_INTERVAL_MS = 2 * 60 * 1000;
 
   // Keep ref in sync with state
   useEffect(() => {
@@ -126,6 +128,44 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Re-fetch org memberships
     await fetchOrgMemberships();
   }, [authKit, fetchOrgMemberships]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const shouldRefresh = () => {
+      if (!authKitUser || isLoading) return false;
+      const now = Date.now();
+      if (now - lastFocusRefreshAt.current < FOCUS_REFRESH_MIN_INTERVAL_MS) {
+        return false;
+      }
+      lastFocusRefreshAt.current = now;
+      return true;
+    };
+
+    const handleFocus = () => {
+      if (shouldRefresh()) {
+        refreshAuth().catch((error) => {
+          console.error('Focus refreshAuth failed:', error);
+        });
+      }
+    };
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible' && shouldRefresh()) {
+        refreshAuth().catch((error) => {
+          console.error('Visibility refreshAuth failed:', error);
+        });
+      }
+    };
+
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, [authKitUser, isLoading, refreshAuth]);
 
   // Manual sync button action - triggers sync from Convex
   const syncMemberships = useCallback(async () => {
