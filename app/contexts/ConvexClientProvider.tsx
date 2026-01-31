@@ -82,6 +82,7 @@ function useAuthForConvex({
   const shouldDebug = (() => {
     if (typeof window === 'undefined') return false;
     try {
+      // Debug flag is read on load; changing it requires a reload.
       return window.localStorage.getItem('debug-session') === '1';
     } catch {
       return false;
@@ -94,6 +95,7 @@ function useAuthForConvex({
     }
   };
 
+  // Telemetry hook for optional external listeners (e.g., window.addEventListener('session-telemetry', ...)).
   const emitTelemetry = (type: string, detail?: Record<string, unknown>) => {
     if (typeof window === 'undefined') return;
     window.dispatchEvent(new CustomEvent('session-telemetry', { detail: { type, ...detail } }));
@@ -139,6 +141,7 @@ function useAuthForConvex({
         if (!isBrowser) return true;
         const now = Date.now();
         const current = readLock();
+        // localStorage is not atomic; two tabs can acquire simultaneously. This is acceptable.
         if (!current || current.expiresAt <= now) {
           writeLock({ owner: tabIdRef.current, expiresAt: now + REFRESH_LOCK_TTL_MS });
           return true;
@@ -162,6 +165,9 @@ function useAuthForConvex({
             if (!resolved) {
               resolved = true;
               cleanup();
+              setSessionStatus('expired');
+              setIsRefreshing(false);
+              emitTelemetry('refresh-wait-timeout', { tabId: tabIdRef.current });
               resolve(null);
             }
           }, REFRESH_TIMEOUT_MS);
@@ -175,9 +181,13 @@ function useAuthForConvex({
                 try {
                   const token = await getAccessTokenRef.current();
                   cleanup();
+                  setIsRefreshing(false);
+                  setSessionStatus(token ? 'ready' : 'expired');
                   resolve(token ?? null);
                 } catch {
                   cleanup();
+                  setIsRefreshing(false);
+                  setSessionStatus('expired');
                   resolve(null);
                 }
               }

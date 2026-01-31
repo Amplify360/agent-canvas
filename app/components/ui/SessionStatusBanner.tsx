@@ -18,7 +18,7 @@ export function SessionStatusBanner() {
     window.location.reload();
   };
 
-  const handleSignIn = async () => {
+  const handleReauth = async () => {
     try {
       await signOut();
     } finally {
@@ -41,7 +41,7 @@ export function SessionStatusBanner() {
             <button className="btn btn--ghost" onClick={handleReload}>
               Reload
             </button>
-            <button className="btn btn--primary" onClick={handleSignIn}>
+            <button className="btn btn--primary" onClick={handleReauth}>
               Sign in
             </button>
           </div>
