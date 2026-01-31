@@ -13,7 +13,7 @@ import { useAgents } from './AgentContext';
 import { useCanvas } from './CanvasContext';
 import { STORAGE_KEYS } from '@/constants/storageKeys';
 
-export type ViewMode = 'grid' | 'detail' | 'dock';
+export type ViewMode = 'grid' | 'dock';
 
 interface GroupingPreferences {
   activeTagType: string;
@@ -25,13 +25,10 @@ interface GroupingPreferences {
 interface GroupingContextValue {
   activeTagType: string;
   filters: Record<string, string[]>;
-  collapsedSections: Record<string, boolean>;
   computedGroups: AgentGroup[];
   viewMode: ViewMode;
   setActiveTagType: (tagType: string) => void;
   setFilters: (filters: Record<string, string[]>) => void;
-  toggleSectionCollapse: (groupId: string) => void;
-  collapseAll: (collapsed: boolean) => void;
   setViewMode: (mode: ViewMode) => void;
 }
 
@@ -51,21 +48,16 @@ export function GroupingProvider({ children }: { children: React.ReactNode }) {
     }
   );
 
-  // Migrate 'compact' viewMode to 'grid' for existing users (one-time migration)
+  // Migrate legacy viewMode values ('compact', 'detail') to 'grid' for existing users
   const hasMigrated = useRef(false);
   useEffect(() => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const currentViewMode = preferences.viewMode as any;
-    if (!hasMigrated.current && currentViewMode === 'compact') {
+    if (!hasMigrated.current && (currentViewMode === 'compact' || currentViewMode === 'detail')) {
       hasMigrated.current = true;
       setPreferences((prev) => ({ ...prev, viewMode: 'grid' }));
     }
   }, [preferences.viewMode, setPreferences]);
-
-  const [collapsedSections, setCollapsedSections] = useLocalStorage<Record<string, boolean>>(
-    STORAGE_KEYS.COLLAPSED_SECTIONS,
-    {}
-  );
 
   // Compute grouped agents with filters
   const computedGroups = useMemo(() => {
@@ -93,21 +85,6 @@ export function GroupingProvider({ children }: { children: React.ReactNode }) {
     setPreferences((prev) => ({ ...prev, filters }));
   }, [setPreferences]);
 
-  const toggleSectionCollapse = useCallback((groupId: string) => {
-    setCollapsedSections((prev) => ({
-      ...prev,
-      [groupId]: !prev[groupId],
-    }));
-  }, [setCollapsedSections]);
-
-  const collapseAll = useCallback((collapsed: boolean) => {
-    const newCollapsedState: Record<string, boolean> = {};
-    for (const group of computedGroups) {
-      newCollapsedState[group.id] = collapsed;
-    }
-    setCollapsedSections(newCollapsedState);
-  }, [computedGroups, setCollapsedSections]);
-
   const setViewMode = useCallback((mode: ViewMode) => {
     setPreferences((prev) => ({ ...prev, viewMode: mode }));
   }, [setPreferences]);
@@ -115,13 +92,10 @@ export function GroupingProvider({ children }: { children: React.ReactNode }) {
   const value: GroupingContextValue = {
     activeTagType: preferences.activeTagType,
     filters: preferences.filters,
-    collapsedSections,
     computedGroups,
     viewMode: preferences.viewMode,
     setActiveTagType,
     setFilters,
-    toggleSectionCollapse,
-    collapseAll,
     setViewMode,
   };
 

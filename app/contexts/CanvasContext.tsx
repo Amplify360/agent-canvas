@@ -51,12 +51,24 @@ export function CanvasProvider({ children, initialCanvasId }: CanvasProviderProp
   // and causes the query to switch to 'skip' (fixes race condition)
   const [initialCanvasHandled, setInitialCanvasHandled] = useState(false);
 
+  const [lastCanvases, setLastCanvases] = useState<Canvas[]>([]);
+  const [hasLoadedCanvases, setHasLoadedCanvases] = useState(false);
+
   // Subscribe to canvases using official Convex hook
   // Only query if Convex has the token AND has orgId
-  const canvases = useQuery(
+  const canvasesResult = useQuery(
     api.canvases.list,
     canQuery && currentOrgId ? { workosOrgId: currentOrgId } : 'skip'
-  ) || [];
+  );
+
+  useEffect(() => {
+    if (canvasesResult !== undefined) {
+      setLastCanvases(canvasesResult);
+      setHasLoadedCanvases(true);
+    }
+  }, [canvasesResult]);
+
+  const canvases = canvasesResult ?? lastCanvases;
 
   // Query the initial canvas by ID if provided (for shareable links)
   // Using state for initialCanvasHandled ensures query skips after handling
@@ -176,7 +188,7 @@ export function CanvasProvider({ children, initialCanvasId }: CanvasProviderProp
     currentCanvas,
     phases,
     categories,
-    isLoading: !isInitialized || isConvexAuthLoading,
+    isLoading: (!isInitialized || isConvexAuthLoading) && !hasLoadedCanvases,
     initialCanvasError,
     setCurrentCanvasId,
     createCanvas,

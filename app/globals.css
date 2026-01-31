@@ -120,6 +120,45 @@
   border-top: 1px solid var(--border-subtle);
 }
 
+/* Session status banner */
+.session-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+}
+
+.session-banner--refreshing {
+  background: color-mix(in srgb, var(--accent-primary) 8%, var(--bg-secondary));
+}
+
+.session-banner--expired {
+  background: color-mix(in srgb, var(--error) 8%, var(--bg-secondary));
+}
+
+.session-banner__label {
+  font-weight: 600;
+}
+
+.session-banner__hint {
+  color: var(--text-secondary);
+}
+
+.session-banner__actions {
+  margin-left: auto;
+  display: flex;
+  gap: 0.5rem;
+}
+
 .features ul {
   list-style: none;
   padding: 0;

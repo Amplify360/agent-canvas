@@ -4,7 +4,7 @@
 
 'use client';
 
-import React, { createContext, useContext, useCallback } from 'react';
+import React, { createContext, useContext, useCallback, useEffect, useState } from 'react';
 import { Agent, AgentFormData } from '@/types/agent';
 import { useQuery, useMutation, useConvexAuth } from '@/hooks/useConvex';
 import { useAuth } from './AuthContext';
@@ -28,6 +28,9 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
   const canQuery = isConvexAuthenticated && !isConvexAuthLoading;
   const { currentCanvasId, currentCanvas, isLoading: isCanvasLoading } = useCanvas();
 
+  const [lastAgents, setLastAgents] = useState<Agent[]>([]);
+  const [hasLoadedAgents, setHasLoadedAgents] = useState(false);
+
   // Subscribe to agents using official Convex hook
   // Only query if Convex has the token AND has a valid canvas (not just canvasId, as it may be stale after deletion)
   const agentsQueryResult = useQuery(
@@ -35,9 +38,16 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
     canQuery && currentCanvas ? { canvasId: currentCanvasId as any } : 'skip'
   );
 
+  useEffect(() => {
+    if (agentsQueryResult !== undefined) {
+      setLastAgents(agentsQueryResult);
+      setHasLoadedAgents(true);
+    }
+  }, [agentsQueryResult]);
+
   // Track loading state: loading if auth not initialized, canvas loading, or agents query pending
   const isQueryLoading = canQuery && !!currentCanvasId && agentsQueryResult === undefined;
-  const agents = agentsQueryResult || [];
+  const agents = agentsQueryResult ?? lastAgents;
 
   const createAgentMutation = useMutation(api.agents.create);
   const updateAgentMutation = useMutation(api.agents.update);
@@ -62,7 +72,7 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
 
   const value: AgentContextValue = {
     agents,
-    isLoading: !isInitialized || isCanvasLoading || isQueryLoading || isConvexAuthLoading,
+    isLoading: (!isInitialized || isCanvasLoading || isConvexAuthLoading || isQueryLoading) && !hasLoadedAgents,
     createAgent,
     updateAgent,
     deleteAgent,
