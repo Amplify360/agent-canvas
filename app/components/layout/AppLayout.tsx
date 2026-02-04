@@ -14,7 +14,6 @@ import { LoadingOverlay } from '../ui/LoadingOverlay';
 import { ToastContainer } from '../ui/Toast';
 import { QuickLookPanel } from '../ui/QuickLookPanel';
 import { CommentsPanel } from '../ui/CommentsPanel';
-import { SessionStatusBanner } from '../ui/SessionStatusBanner';
 import { useAppState } from '@/contexts/AppStateContext';
 import { useAgents } from '@/contexts/AgentContext';
 import { useAsyncOperation } from '@/hooks/useAsyncOperation';
@@ -89,7 +88,6 @@ export function AppLayout() {
 
   return (
     <>
-      <SessionStatusBanner />
       <Sidebar />
       <div
         className={`main-wrapper ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}

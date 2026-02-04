@@ -17,6 +17,9 @@ import { GroupingProvider } from '@/contexts/GroupingContext';
 import { AppStateProvider } from '@/contexts/AppStateContext';
 import { WorkOSWidgetsProvider } from '@/components/WorkOSWidgetsProvider';
 
+// Noop: keeps AuthKit session checks active without triggering default page reload
+const onSessionExpired = () => {};
+
 interface AppProvidersProps {
   children: React.ReactNode;
   initialCanvasId?: string;
@@ -24,7 +27,7 @@ interface AppProvidersProps {
 
 export function AppProviders({ children, initialCanvasId }: AppProvidersProps) {
   return (
-    <AuthKitProvider>
+    <AuthKitProvider onSessionExpired={onSessionExpired}>
       <WorkOSWidgetsProvider>
         <AuthProvider>
           <ConvexClientProvider>
