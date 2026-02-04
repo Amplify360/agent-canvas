@@ -57,6 +57,7 @@ pnpm test:ui     # browser UI
 | Features (3+ files, new functionality, behavior changes) | Feature branch off `dev` → PR to `dev` → merge. Promote to `main` only when instructed. |
 
 **Wait for explicit instruction before merging PRs.**
+**Before merging: verify target branch and ancestry match the workflow above.**
 
 ## Deployments
 
@@ -73,8 +74,7 @@ pnpm test:ui     # browser UI
 ```bash
 # Convex
 CONVEX_DEPLOYMENT=your-deployment-name
-NEXT_PUBLIC_CONVEX_URL=https://your-deployment.convex.cloud  # Preferred for Next.js
-# Fallback: VITE_CONVEX_URL or CONVEX_URL
+NEXT_PUBLIC_CONVEX_URL=https://your-deployment.convex.cloud
 
 # WorkOS AuthKit SDK
 WORKOS_API_KEY=sk_live_xxxxx
@@ -142,7 +142,6 @@ BASE_URL=http://localhost:3000
 │   │   ├── grouping.ts
 │   │   └── validation.ts
 │   └── api/                # Next.js Route Handlers
-│       ├── config/route.ts         # App configuration endpoint
 │       ├── widgets/
 │       │   └── token/route.ts      # WorkOS widget token generation
 │       └── auth/
