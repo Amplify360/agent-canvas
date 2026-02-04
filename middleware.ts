@@ -16,7 +16,6 @@ export default authkitMiddleware({
     unauthenticatedPaths: [
       '/login',
       '/api/auth/(.*)', // Auth endpoints
-      '/api/config',    // Config endpoint for Convex URL
     ],
   },
   // Redirect URI for OAuth callback (also set via WORKOS_REDIRECT_URI env var)
