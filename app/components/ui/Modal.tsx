@@ -25,7 +25,7 @@ export function Modal({ isOpen, onClose, title, children, size = 'medium', close
 
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        e.stopPropagation();
+        e.stopImmediatePropagation();
         onClose();
       }
     };
