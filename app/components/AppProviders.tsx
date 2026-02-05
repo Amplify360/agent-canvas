@@ -17,8 +17,10 @@ import { GroupingProvider } from '@/contexts/GroupingContext';
 import { AppStateProvider } from '@/contexts/AppStateContext';
 import { WorkOSWidgetsProvider } from '@/components/WorkOSWidgetsProvider';
 
-// Noop: keeps AuthKit session checks active without triggering default page reload
-const onSessionExpired = () => {};
+// Signal session expiry to ConnectionRecoveryBanner instead of AuthKit's default page reload
+const onSessionExpired = () => {
+  window.dispatchEvent(new CustomEvent('workos-session-expired'));
+};
 
 interface AppProvidersProps {
   children: React.ReactNode;

@@ -12,6 +12,7 @@ import { AgentModal } from '../forms/AgentModal';
 import { AgentGrid } from '../agents/AgentGrid';
 import { LoadingOverlay } from '../ui/LoadingOverlay';
 import { ToastContainer } from '../ui/Toast';
+import { ConnectionRecoveryBanner } from '../ui/ConnectionRecoveryBanner';
 import { QuickLookPanel } from '../ui/QuickLookPanel';
 import { CommentsPanel } from '../ui/CommentsPanel';
 import { useAppState } from '@/contexts/AppStateContext';
@@ -88,6 +89,7 @@ export function AppLayout() {
 
   return (
     <>
+      <ConnectionRecoveryBanner />
       <Sidebar />
       <div
         className={`main-wrapper ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}
