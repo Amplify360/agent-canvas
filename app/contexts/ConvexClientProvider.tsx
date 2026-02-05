@@ -25,7 +25,7 @@ function useAuthFromAuthKit() {
   const lastRefreshTime = useRef(0);
 
   // Reset cooldown when tab becomes visible so the next Convex retry
-  // gets a fresh token immediately instead of waiting out the cooldown.
+  // calls refresh() immediately instead of returning stale cached token.
   useEffect(() => {
     const handleVisibility = () => {
       if (document.visibilityState === 'visible') {
@@ -41,7 +41,7 @@ function useAuthFromAuthKit() {
       if (forceRefreshToken) {
         const now = Date.now();
         if (now - lastRefreshTime.current < REFRESH_COOLDOWN_MS && lastRefreshTime.current > 0) {
-          return null;
+          return (await getAccessTokenRef.current()) ?? null;
         }
         lastRefreshTime.current = now;
         try {
