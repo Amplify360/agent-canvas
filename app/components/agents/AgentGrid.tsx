@@ -23,7 +23,7 @@ interface AgentGridProps {
 export function AgentGrid({ onEditAgent, onAddAgent, onQuickLook, onOpenComments }: AgentGridProps) {
   const { computedGroups } = useGrouping();
   const { deleteAgent, isLoading } = useAgents();
-  const { isAuthenticated: isConvexAuthenticated } = useConvexAuth();
+  const { isAuthenticated: isConvexAuthenticated, isLoading: isConvexAuthLoading } = useConvexAuth();
   const executeOperation = useAsyncOperation();
 
   const handleDeleteAgent = async (agent: Agent) => {
@@ -41,14 +41,29 @@ export function AgentGrid({ onEditAgent, onAddAgent, onQuickLook, onOpenComments
     );
   };
 
-  // Show loading state while data is being fetched
-  if (isLoading || !isConvexAuthenticated) {
+  // Show loading spinner while data is being fetched
+  if (isLoading) {
     return (
       <div className="empty-state">
         <div className="empty-state__icon">
           <Icon name="loader-2" className="loading-icon" />
         </div>
         <h3 className="empty-state__title">Loading...</h3>
+      </div>
+    );
+  }
+
+  // Show reconnecting state when Convex auth has definitively failed (not just loading)
+  if (!isConvexAuthenticated && !isConvexAuthLoading) {
+    return (
+      <div className="empty-state">
+        <div className="empty-state__icon">
+          <Icon name="wifi-off" />
+        </div>
+        <h3 className="empty-state__title">Reconnecting...</h3>
+        <p className="empty-state__description">
+          Waiting for connection to be restored
+        </p>
       </div>
     );
   }

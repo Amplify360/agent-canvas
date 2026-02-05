@@ -2980,6 +2980,90 @@ body.is-resizing-sidebar .main-wrapper {
 }
 
 /* ============================================
+   CONNECTION RECOVERY BANNER
+   ============================================ */
+
+.connection-recovery-banner {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 2100;
+    animation: banner-slide-down var(--duration-base) var(--ease-spring);
+}
+
+@keyframes banner-slide-down {
+    from {
+        transform: translateY(-100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.connection-recovery-banner__content {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    padding: var(--space-3) var(--space-6);
+    background: var(--warning-bg);
+    border-bottom: 1px solid var(--warning);
+    color: var(--text-primary);
+}
+
+.connection-recovery-banner__icon {
+    width: 18px;
+    height: 18px;
+    color: var(--warning);
+    flex-shrink: 0;
+}
+
+.connection-recovery-banner__message {
+    flex: 1;
+    font-size: var(--text-sm);
+    font-weight: 500;
+}
+
+.connection-recovery-banner__actions {
+    display: flex;
+    gap: var(--space-3);
+    flex-shrink: 0;
+}
+
+.connection-recovery-banner__btn {
+    padding: var(--space-2) var(--space-4);
+    border-radius: var(--radius-md);
+    font-size: var(--text-sm);
+    font-weight: 500;
+    cursor: pointer;
+    border: none;
+    transition: all var(--duration-fast) var(--ease-out);
+}
+
+.connection-recovery-banner__btn--primary {
+    background: var(--warning);
+    color: white;
+}
+
+.connection-recovery-banner__btn--primary:hover {
+    filter: brightness(0.9);
+}
+
+.connection-recovery-banner__btn--secondary {
+    background: transparent;
+    color: var(--text-secondary);
+    text-decoration: underline;
+    padding-left: var(--space-2);
+    padding-right: var(--space-2);
+}
+
+.connection-recovery-banner__btn--secondary:hover {
+    color: var(--text-primary);
+}
+
+/* ============================================
    TOOLTIPS
    ============================================ */
 

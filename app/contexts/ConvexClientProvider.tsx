@@ -7,7 +7,7 @@
 
 'use client';
 
-import { useState, useCallback, useRef, type ReactNode } from 'react';
+import { useState, useCallback, useEffect, useRef, type ReactNode } from 'react';
 import { ConvexReactClient, ConvexProviderWithAuth } from 'convex/react';
 import { useAuth as useAuthKit, useAccessToken } from '@workos-inc/authkit-nextjs/components';
 
@@ -24,12 +24,24 @@ function useAuthFromAuthKit() {
 
   const lastRefreshTime = useRef(0);
 
+  // Reset cooldown when tab becomes visible so the next Convex retry
+  // gets a fresh token immediately instead of waiting out the cooldown.
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        lastRefreshTime.current = 0;
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, []);
+
   const fetchAccessToken = useCallback(
     async ({ forceRefreshToken }: { forceRefreshToken: boolean }): Promise<string | null> => {
       if (forceRefreshToken) {
         const now = Date.now();
         if (now - lastRefreshTime.current < REFRESH_COOLDOWN_MS && lastRefreshTime.current > 0) {
-          return (await getAccessTokenRef.current()) ?? null;
+          return null;
         }
         lastRefreshTime.current = now;
         try {
