@@ -483,7 +483,7 @@ a:hover {
 }
 
 .sidebar__resize-handle.is-dragging {
-    background: var(--accent-primary-alpha);
+    background: var(--accent-primary-muted);
 }
 
 .sidebar__resize-handle:focus {
@@ -492,7 +492,7 @@ a:hover {
 
 .sidebar__resize-handle:focus-visible::after {
     background: var(--accent-primary);
-    box-shadow: 0 0 0 2px var(--accent-primary-alpha);
+    box-shadow: 0 0 0 2px var(--accent-primary-muted);
 }
 
 /* Disable transitions while resizing for smooth drag */
@@ -1762,7 +1762,7 @@ body.is-resizing-sidebar .main-wrapper {
     font-weight: 700;
     color: var(--text-primary);
     margin-bottom: var(--space-2);
-    line-height: var(--leading-snug);
+    line-height: var(--leading-tight);
     letter-spacing: -0.01em;
     /* Line clamp to 2 lines */
     display: -webkit-box;
@@ -2027,7 +2027,7 @@ body.is-resizing-sidebar .main-wrapper {
     border: none;
     outline: none;
     border-radius: var(--radius-sm);
-    color: var(--text-tertiary);
+    color: var(--text-muted);
     cursor: pointer;
     transition: all var(--duration-fast) var(--ease-out);
     text-decoration: none;
@@ -4083,7 +4083,7 @@ body.is-resizing-sidebar .main-wrapper {
 }
 
 .dropdown-item--danger {
-    color: var(--color-error);
+    color: var(--error);
 }
 
 .dropdown-item--danger:hover {
@@ -4102,7 +4102,7 @@ body.is-resizing-sidebar .main-wrapper {
     gap: 0.5rem;
     padding: 0.5rem 1rem;
     font-size: var(--text-xs);
-    color: var(--color-error);
+    color: var(--error);
     background: rgba(239, 68, 68, 0.1);
 }
 
@@ -4119,7 +4119,7 @@ body.is-resizing-sidebar .main-wrapper {
 
 .form-error {
     background: rgba(239, 68, 68, 0.1);
-    color: var(--color-error);
+    color: var(--error);
 }
 
 .form-success {
@@ -4201,7 +4201,7 @@ body.is-resizing-sidebar .main-wrapper {
     padding: 1.5rem;
     background: rgba(239, 68, 68, 0.1);
     border-radius: var(--radius-md);
-    color: var(--color-error);
+    color: var(--error);
     text-align: center;
 }
 
@@ -5031,7 +5031,7 @@ body.is-resizing-sidebar .main-wrapper {
     font-size: var(--text-sm);
     font-weight: 500;
     cursor: pointer;
-    transition: all var(--transition-fast);
+    transition: all var(--duration-fast) var(--ease-out);
 }
 
 .vote-btn:hover {
@@ -5056,7 +5056,7 @@ body.is-resizing-sidebar .main-wrapper {
     width: 60px;
     height: 32px;
     background: var(--bg-tertiary);
-    animation: skeleton-pulse 1.5s ease-in-out infinite;
+    animation: skeleton-shimmer 1.5s ease-in-out infinite;
 }
 
 .vote-btn__count {
@@ -5129,7 +5129,7 @@ body.is-resizing-sidebar .main-wrapper {
     background: var(--bg-secondary);
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-card);
-    transition: box-shadow var(--transition-fast);
+    transition: box-shadow var(--duration-fast) var(--ease-out);
 }
 
 .comment:hover {
@@ -5239,7 +5239,7 @@ body.is-resizing-sidebar .main-wrapper {
     gap: 2px;
     margin-left: auto;
     opacity: 0;
-    transition: opacity var(--transition-fast);
+    transition: opacity var(--duration-fast) var(--ease-out);
 }
 
 .comment:hover .comment__actions {
@@ -5258,7 +5258,7 @@ body.is-resizing-sidebar .main-wrapper {
     background: transparent;
     color: var(--text-muted);
     cursor: pointer;
-    transition: all var(--transition-fast);
+    transition: all var(--duration-fast) var(--ease-out);
 }
 
 .comment__action-btn:hover {
@@ -5323,7 +5323,7 @@ body.is-resizing-sidebar .main-wrapper {
     resize: none;
     min-height: 48px;
     max-height: 120px;
-    transition: all var(--transition-fast);
+    transition: all var(--duration-fast) var(--ease-out);
 }
 
 .comment-form__input::placeholder {
@@ -5357,7 +5357,7 @@ body.is-resizing-sidebar .main-wrapper {
     color: var(--text-muted);
     font-variant-numeric: tabular-nums;
     opacity: 0;
-    transition: opacity var(--transition-fast);
+    transition: opacity var(--duration-fast) var(--ease-out);
 }
 
 .comment-form__input:focus ~ .comment-form__footer .comment-form__char-count,
@@ -5388,7 +5388,7 @@ body.is-resizing-sidebar .main-wrapper {
     border-left: 1px solid var(--border-subtle);
     opacity: 0;
     transform: translateX(var(--space-2));
-    transition: all var(--transition-fast);
+    transition: all var(--duration-fast) var(--ease-out);
 }
 
 .agent-card:hover .agent-card__feedback-bar {
@@ -5409,7 +5409,7 @@ body.is-resizing-sidebar .main-wrapper {
     font-size: var(--text-xs);
     font-variant-numeric: tabular-nums;
     cursor: pointer;
-    transition: all var(--transition-fast);
+    transition: all var(--duration-fast) var(--ease-out);
 }
 
 .agent-card__vote-btn:hover,
@@ -5487,7 +5487,7 @@ body.is-resizing-sidebar .main-wrapper {
     backdrop-filter: blur(4px);
     opacity: 0;
     visibility: hidden;
-    transition: all var(--transition-normal);
+    transition: all var(--duration-base) var(--ease-out);
     z-index: 1000;
 }
 
@@ -5509,7 +5509,7 @@ body.is-resizing-sidebar .main-wrapper {
     border-left: 1px solid var(--border-muted);
     box-shadow: -8px 0 32px rgba(0, 0, 0, 0.15);
     transform: translateX(100%);
-    transition: transform var(--transition-normal) cubic-bezier(0.32, 0.72, 0, 1);
+    transition: transform var(--duration-base) cubic-bezier(0.32, 0.72, 0, 1);
     z-index: 1001;
 }
 
@@ -5576,7 +5576,7 @@ body.is-resizing-sidebar .main-wrapper {
     background: transparent;
     color: var(--text-muted);
     cursor: pointer;
-    transition: all var(--transition-fast);
+    transition: all var(--duration-fast) var(--ease-out);
 }
 
 .comments-panel__close:hover {

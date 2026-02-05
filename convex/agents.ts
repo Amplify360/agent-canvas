@@ -141,6 +141,8 @@ export const update = mutation({
     // Validate provided fields
     if (updates.name !== undefined) validateAgentName(updates.name);
     if (updates.phase !== undefined) validatePhase(updates.phase);
+    if (updates.objective !== undefined) validateObjective(updates.objective);
+    if (updates.description !== undefined) validateDescription(updates.description);
     validateMetrics(updates.metrics);
     validateOptionalUrl(updates.demoLink, "demoLink");
     validateOptionalUrl(updates.videoLink, "videoLink");

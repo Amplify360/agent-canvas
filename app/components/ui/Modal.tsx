@@ -19,10 +19,13 @@ interface ModalProps {
 
 export function Modal({ isOpen, onClose, title, children, size = 'medium', closeOnOverlayClick = true }: ModalProps) {
 
-  // Handle escape key
+  // Handle escape key — stopPropagation prevents panels behind the modal from also closing
   useEffect(() => {
+    if (!isOpen) return;
+
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOpen) {
+      if (e.key === 'Escape') {
+        e.stopImmediatePropagation();
         onClose();
       }
     };
