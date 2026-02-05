@@ -6,7 +6,8 @@
  */
 
 // WorkOS Client ID from environment variable
-const clientId = process.env.WORKOS_CLIENT_ID || "client_01KEZ54DKHJ14TRQF2NVH5B73X";
+const clientId = process.env.WORKOS_CLIENT_ID;
+if (!clientId) throw new Error("WORKOS_CLIENT_ID environment variable is required");
 
 export default {
   providers: [
