@@ -23,7 +23,7 @@ interface AgentGridProps {
 export function AgentGrid({ onEditAgent, onAddAgent, onQuickLook, onOpenComments }: AgentGridProps) {
   const { computedGroups } = useGrouping();
   const { deleteAgent, isLoading } = useAgents();
-  const { isAuthenticated: isConvexAuthenticated } = useConvexAuth();
+  const { isAuthenticated: isConvexAuthenticated, isLoading: isConvexAuthLoading } = useConvexAuth();
   const executeOperation = useAsyncOperation();
 
   const handleDeleteAgent = async (agent: Agent) => {
@@ -53,8 +53,8 @@ export function AgentGrid({ onEditAgent, onAddAgent, onQuickLook, onOpenComments
     );
   }
 
-  // Show reconnecting state when Convex auth has failed
-  if (!isConvexAuthenticated) {
+  // Show reconnecting state when Convex auth has definitively failed (not just loading)
+  if (!isConvexAuthenticated && !isConvexAuthLoading) {
     return (
       <div className="empty-state">
         <div className="empty-state__icon">
