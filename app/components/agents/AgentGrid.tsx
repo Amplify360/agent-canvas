@@ -41,20 +41,8 @@ export function AgentGrid({ onEditAgent, onAddAgent, onQuickLook, onOpenComments
     );
   };
 
-  // Show loading spinner while data is being fetched
-  if (isLoading) {
-    return (
-      <div className="empty-state">
-        <div className="empty-state__icon">
-          <Icon name="loader-2" className="loading-icon" />
-        </div>
-        <h3 className="empty-state__title">Loading...</h3>
-      </div>
-    );
-  }
-
-  // Show reconnecting state when Convex auth has definitively failed (not just loading)
-  if (!isConvexAuthenticated && !isConvexAuthLoading) {
+  // Auth has definitively failed (not loading, not authenticated) — show reconnecting
+  if (!isConvexAuthLoading && !isConvexAuthenticated) {
     return (
       <div className="empty-state">
         <div className="empty-state__icon">
@@ -64,6 +52,18 @@ export function AgentGrid({ onEditAgent, onAddAgent, onQuickLook, onOpenComments
         <p className="empty-state__description">
           Waiting for connection to be restored
         </p>
+      </div>
+    );
+  }
+
+  // Block rendering while data or auth is still loading
+  if (isLoading || !isConvexAuthenticated) {
+    return (
+      <div className="empty-state">
+        <div className="empty-state__icon">
+          <Icon name="loader-2" className="loading-icon" />
+        </div>
+        <h3 className="empty-state__title">Loading...</h3>
       </div>
     );
   }
