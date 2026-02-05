@@ -196,3 +196,4 @@ yarn.lock
 
 # Utility scripts (may contain local test data)
 clear-rate-limits.js
+.claude/tmp/

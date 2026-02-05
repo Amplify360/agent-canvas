@@ -1,0 +1,1048 @@
+documentTitle: Danucem AI Agent Portfolio - Complete Workshop (Jan 8, 28, 29, 30,
+  2026)
+agents:
+- name: Business Acquisition Proposal Agent
+  phase: ideation
+  category: Finance & Controlling
+  objective: Ensuring high quality & standardised acquisition proposals that can be
+    submitted to higher executive functions (International President / CRH CEO / CRH
+    Board) for approval.
+  description: "Agent would be used to draft proposals for business acquisitions which\
+    \ are then submitted to International President / CRH CEO / CRH Board for approval.\
+    \ Currently local teams (often non-native English speakers) draft proposals and\
+    \ require a lot of redrafting / editing before they are in suitable condition\
+    \ to share with Senior Management. \n\nWe have a large backlog of approved Proposals\
+    \ and clear formatting / style guidelines to support the agent. For each proposal\
+    \ there is also a acquisition model (again a template version) ... it would be\
+    \ helpful if the proposal could be updated quickly to capture model outputs as\
+    \ these often change late in the process.\n\nVALUE MEASUREMENT: At an International\
+    \ level we probably draft 40+ proposals a year (including business acquisitions\
+    \ / divestments / real estate transactions) ... proposals are typically 10-15\
+    \ pages long. Often local teams (opco level) might draft one or two a year and\
+    \ with staff churn we end up having to reteach how to draft proposals in the appropriate\
+    \ style which is very time consuming. KPI would be number of hours spent by Development\
+    \ (International and local level), Strategic Finance (International level), Investment\
+    \ Assurance (Group) level."
+  tools:
+  - rag
+  - code
+  journeySteps:
+  - Upload acquisition model and guidelines
+  - Draft proposal using templates
+  - Review and refine proposal
+  - Submit to senior management
+  status: idea
+- name: Safety Alert Creation Agent
+  phase: ideation
+  category: Health & Safety
+  objective: Reduce time taken to prepare safety alerts after an incident.
+  description: 'Safety Alert creator
+
+
+    VALUE MEASUREMENT: Time saving. Quick communication is essential. (We need to
+    prepare the Safety Alert within 2 days after the incident). Time-saving impact
+    unknown.'
+  tools:
+  - rag
+  - code
+  journeySteps:
+  - Report incident details
+  - Generate safety alert draft
+  - Review and approve alert
+  - Distribute to stakeholders within 2 days
+  status: idea
+- name: Contract Standardisation & Revision Agent
+  phase: ideation
+  category: Procurement & Supply Chain
+  objective: Ensuring standardisation of CRH contracts & improved quality, based on
+    internal guidelines & policies.
+  description: '- contract revision based on defined CRH/Danucem standards (source
+    -> internal guidlines, policies, etc. available on intraned or Danucem public
+    web page)
+
+    - creation of specification for sourcing (source -> defined parameters necessary
+    for RFQ, look for information/specs on public web page to complete missing information)
+
+    - Supplier Background Check (source -> public information, government tax portals,
+    internal policies & standards)
+
+
+    VALUE MEASUREMENT: the tools should help reduce workload of the buyers and standardize
+    the outputs in P2P process'
+  tools:
+  - rag
+  - code
+  - web-search
+  journeySteps:
+  - Upload contract for review
+  - Review compliance against CRH/Danucem standards
+  - Address identified gaps
+  - Finalize standardized contract
+  status: idea
+- name: Contractor Safety Pre-Qualification Agent
+  phase: ideation
+  category: Health & Safety
+  objective: Save costs by assisting with contractor safety pre-qualification, which
+    is currently done using external contractors.
+  description: 'This agent would be linked with Intelex and would assist with contracts
+    safety pre-qualifcation, preventing the need for external contractors to be brought
+    in to provide this service and thus saving time and commoditising this capability.
+
+
+    VALUE MEASUREMENT: Saving money that we need to pay for external requalification.'
+  tools:
+  - rag
+  - api
+  - code
+  journeySteps:
+  - Submit contractor information
+  - Agent queries Intelex database
+  - Review pre-qualification assessment
+  - Approve or request additional documentation
+  status: idea
+- name: Supplier Recon Agent
+  phase: ideation
+  category: Procurement & Supply Chain
+  objective: Mitigate the setup of new vendors when existing supplier base could settle
+    the purchase. Potential cost optimisation.
+  description: 'Before requesting set up of new vendor, review existing supplier base
+    if such purchase could provided by such vendor or who would be the most fit supplier
+    for purchase requested
+
+
+    VALUE MEASUREMENT: Time saving on the side of buyer, Tail spent consolidation
+    (measured by reduction of vendors) and potential cash back rabate'
+  tools:
+  - rag
+  - code
+  - api
+  journeySteps:
+  - Input purchase requirements
+  - Review existing supplier matches
+  - Select supplier or justify new vendor
+  - Proceed with procurement
+  status: idea
+- name: Waste Processing Permit Agent
+  phase: ideation
+  category: Logistics & Operations
+  objective: Consolidated database of waste processing permits for each Opco
+  description: 'Consolidated database of waste processing permits for each Opco
+
+
+    VALUE MEASUREMENT: Saving 30 to 60 minutes of work each week'
+  tools:
+  - rag
+  - code
+  journeySteps:
+  - Search for Opco waste permits
+  - Review consolidated permit database
+  - Verify permit validity
+  - Download required documentation
+  status: idea
+- name: Site Actions Agent
+  phase: ideation
+  category: Logistics & Operations
+  objective: Improve safety of sites through optimised safety action categorisation
+    & prioritisation.
+  description: 'For a given operational site, the agent searches through and lists
+    all actions that are recorded in Intellex, making a tabular summary of the open
+    items. This will be used by all site managers & OHS officers across all of CRH.
+    Integration with Intellex is required.
+
+
+    VALUE MEASUREMENT: Decreased number of closed/unresolved action items. Prevention
+    of recurring incidents due to know issues. Reduces liability for CRH and potential
+    loss of life.'
+  tools:
+  - api
+  - code
+  - rag
+  journeySteps:
+  - Select operational site
+  - Agent retrieves Intellex actions
+  - Review tabular summary of open items
+  - Prioritize and assign actions
+  status: idea
+- name: Delivery Planning Agent
+  phase: ideation
+  category: Logistics & Operations
+  objective: Improve effectiveness & efficiency of scheduling and transported fuels
+  description: 'The agent will generate order of the transport for contracted carriers,
+    which are delivering alternative fuels to cement plants either from our plant
+    (ecorec), or from customers. I will put every destination for each carrier with
+    transport prices, and when I plan the deliveries for upcoming week, I will write
+    to agent that this and that carrier is doing these transports (how many transports
+    per day, from whom, to where) and agent will put these numbers to the template
+    table (xsl, pdf)
+
+
+    VALUE MEASUREMENT: 30 min time savings; lack of dependence on single persons knowledge
+    of process; improved orders will lead to cost savings and efficiency gains'
+  tools:
+  - rag
+  - code
+  - forms
+  journeySteps:
+  - Input weekly delivery requirements
+  - Specify carriers and routes
+  - Agent generates transport orders
+  - Review and distribute to carriers
+  status: idea
+- name: GDPR agent
+  phase: ideation
+  category: Legal & Compliance
+  objective: Review input (docs, policies etc) and determine GDPR compliance.
+  description: 'GDPR agent
+
+
+    VALUE MEASUREMENT: Significant time savings as well as preventing potential non-compliance
+    and resulting liability.'
+  tools:
+  - rag
+  - code
+  journeySteps:
+  - Upload documents or policies
+  - Agent analyzes GDPR compliance
+  - Review identified issues
+  - Implement corrective actions
+  status: idea
+  submitter: Pavol Krivulcik
+  department: Legal&Compliance
+- name: Sales Assistant
+  phase: ideation
+  category: Sales & Marketing
+  objective: 'Pain point
+
+    Sales teams can tap into multiple data sources to understand market conditions,
+    customer needs, competitor activity, and upcoming construction projects. But the
+    challenge is simple: all this work is still done manually!'
+  description: 'Pain point
+
+    Sales teams can tap into multiple data sources to understand market conditions,
+    customer needs, competitor activity, and upcoming construction projects. But the
+    challenge is simple: all this work is still done manually!
+
+
+    Solution
+
+    Build GEN AI assistant leveraging Multiply platform to support Sales with easy
+    access single source of truth for all market intelligence data and ready-to-use
+    prompts to accelerate daily work!
+
+
+    Sales daily incremental wins
+
+    Express preparation to customer visit
+
+    Tailor made offer including specific market conditions
+
+    Competition monitoring based on publicly available data
+
+
+    VALUE MEASUREMENT: Estimated Benefits
+
+    14 days of work for each sales rep (x16 reps)
+
+    Using the tool to grow cement bag volumes (assumption of certain amount of volue
+    increase) and secure just one additional infrastructure contract can generate
+    approximately €800k in value.'
+  tools:
+  - rag
+  - code
+  - web-search
+  - api
+  journeySteps:
+  - Input customer or project details
+  - Agent compiles market intelligence
+  - Review competitor and market analysis
+  - Generate tailored offer
+  status: idea
+  submitter: Maciej Nowak
+  department: CEE Data Science Team
+- name: Procurement Compliance Agent
+  phase: ideation
+  category: Procurement & Supply Chain
+  objective: My Agent will ensure mutual compliance (or identify inconsistencies)
+    of information in several documents (call for price offers, technical description,
+    contract proposal, etc.) for Public Procurement
+  description: 'My Agent will ensure mutual compliance (or identify inconsistencies)
+    of information in several documents (call for price offers, technical description,
+    contract proposal, etc.) for Public Procurement Tenders which are send to potential
+    contractors when tender is kicked-off, presence of all annexes, etc.
+
+
+    The Agent will be used by Procurement specialist during the public tender preparation.
+
+
+    "Tender documentation Package" - Call for Price Offers, Technical description
+    of the tender, Contract template, annexes, etc.
+
+
+    VALUE MEASUREMENT: Inconsistencies cannot be resolved once the contract or document
+    has been put out to tender. Inconsistencies result in fines of 100k - 200k Euros.
+    Just the other day, CRH was hit with a 120k Euro fine for inconsistencies on a
+    tender document.'
+  tools:
+  - rag
+  - code
+  journeySteps:
+  - Upload tender documentation package
+  - Agent checks cross-document consistency
+  - Review identified inconsistencies
+  - Resolve issues before tender release
+  status: idea
+  submitter: Michal Filípek
+  department: General Management (Danucem) - Public Tenders
+- name: CAPEX Status Report Updater
+  phase: ideation
+  category: Finance & Controlling
+  objective: 'Update CAPEX status report on 2x per day
+
+    How? Download full list from CX workflow tool and upload to the CX excel file
+
+    Will be integrated to excel file'
+  description: 'Update CAPEX status report on 2x per day
+
+    How? Download full list from CX workflow tool and upload to the CX excel file
+
+    Will be integrated to excel file
+
+
+    VALUE MEASUREMENT: CX report is up to date- this leads to <insert here>'
+  tools:
+  - api
+  - code
+  journeySteps:
+  - Agent downloads CX workflow data
+  - Agent updates Excel report automatically
+  - Review updated CAPEX status
+  - Distribute to stakeholders
+  status: idea
+  submitter: Adrienn Mihatsch
+  department: Controlling and Strategy
+- name: Learning path/ Individual Development plan  agent
+  phase: ideation
+  category: HR & Talent Management
+  objective: Learning path/ Individual Development plan  agent
+  description: 'Every employee has an individual development plan (IDP) - This agent
+    can help facilitate the users IDP and ensure relevant and tailored training
+
+
+    VALUE MEASUREMENT: Improve learning quality for all employees and reduce their
+    associated cost'
+  tools:
+  - rag
+  - code
+  - forms
+  journeySteps:
+  - Input employee role and goals
+  - Agent generates personalized learning path
+  - Review recommended training
+  - Track progress and update IDP
+  status: idea
+  submitter: Andrea Ulahelova
+  department: Talent Management, Learning & Development
+- name: Due Diligence Agent
+  phase: ideation
+  category: Strategy & Management
+  objective: My agent will help with the due diligence process, keep track of the
+    progress, translate and analyze submitted documents and identify potential risks
+    and related penalties for the company.
+  description: 'My agent will help with the due diligence process, keep track of the
+    progress, translate and analyze submitted documents and identify potential risks
+    and related penalties for the company.
+
+
+    VALUE MEASUREMENT: time saving, risk mitigation and higher quality due diligence
+    ensuring broader research and higher quality assessments.'
+  tools:
+  - rag
+  - code
+  - web-search
+  journeySteps:
+  - Upload due diligence documents
+  - Agent translates and analyzes documents
+  - Review risk assessment and penalties
+  - Track progress and address issues
+  status: idea
+  submitter: Romana Kunková
+  department: Strategy & Development
+- name: Cash Forecasting Agent
+  phase: ideation
+  category: Finance & Controlling
+  objective: Reduce cash surprises and increase confidence in cash outlook through
+    continuous learning from historical cash behavior.
+  description: 'Rolling monthly cash forecasting agent focusing on SK and HU operations.
+    Learns real cash behaviour from historical & ERP data, continuously improving
+    forecast accuracy by learning from how cash actually moved. Built on exports from
+    ERP and planning tools (Anaplan, ExQL), with future plans to connect SAP, Anaplan,
+    ClickView and other internal data sources for real-time data flow.
+
+
+    VALUE MEASUREMENT: Reduce cash surprises, increase confidence in cash outlook,
+    and decrease manual forecasting effort, taking about 1 day of work for 2-3 colleagues.'
+  tools:
+  - code
+  - api
+  - rag
+  journeySteps:
+  - Connect to ERP and planning tools
+  - Review historical cash patterns
+  - Generate rolling monthly forecast
+  - Track forecast accuracy
+  - Refine predictions
+  status: idea
+- name: Executive Summary Agent
+  phase: ideation
+  category: Strategy & Management
+  objective: Create unified management steering narrative that aligns Operations,
+    Macro, Safety and Finance into one clear, decision-ready story.
+  description: 'Executive summary agent generating 1-2 page summaries covering performance,
+    forecast reality & forward outlook. Creates a unified story across Divisions and
+    Finance, enabling faster, higher-quality management discussions. Built-in forecast
+    accountability could potentially replace standard long deck monthly business reviews.
+
+
+    VALUE MEASUREMENT: A unified story across Divisions and Finance, enabling faster,
+    higher-quality management discussions. Built-in forecast accountability could
+    potentially replace the standard long deck monthly business reviews, involving
+    a few days of work for Controlling, Operations, Strategy, and others.'
+  tools:
+  - code
+  - rag
+  - api
+  journeySteps:
+  - Aggregate data from multiple sources
+  - Generate executive summary draft
+  - Review unified narrative
+  - Distribute to management
+  - Track forecast accountability
+  status: idea
+- name: Network Security Assessment Agent
+  phase: ideation
+  category: IT & Cybersecurity
+  objective: Check network segmentation effectiveness and advise on more secure firewall
+    rules following zero-trust & least privilege principles.
+  description: 'Technical agent that analyzes existing network diagrams, network security
+    policy, firewall management policy, firewall rules, data-flows, ports & protocols.
+    Connects with Zabbix network monitoring tool, FortiManager and other firewall
+    management tools to check network segmentation''s effectiveness and advise on
+    more secure network segmentation firewall rules and alerts by following zero-trust
+    & least privilege principles.
+
+
+    VALUE MEASUREMENT: Improve resilience of CRH cyber security, reducing manual efforts
+    and increasing overall IT effectiveness'
+  tools:
+  - rag
+  - api
+  - code
+  journeySteps:
+  - Upload network diagrams and policies
+  - Connect to monitoring tools
+  - Review security assessment
+  - Implement recommended firewall rules
+  status: idea
+- name: Third-Party Risk Management Agent
+  phase: ideation
+  category: IT & Cybersecurity
+  objective: Review third-party questionnaires for CRH compliance and provide concrete
+    technical instructions to mitigate identified risks, gaps, and inconsistencies.
+  description: 'Agent connects with Archer tool and ERM (Enterprise Risk Management
+    tool) or accepts uploads of CRH group policies, guidelines, and filled questionnaires.
+    Reviews third-party questionnaires and analyzes compliance with CRH requirements.
+    Advises additional controls (administrative, technical, logical) for meeting requirements
+    based on international standards and frameworks, providing concrete technical
+    instructions rather than just "policy language" to mitigate identified risks,
+    gaps, and inconsistencies.
+
+
+    VALUE MEASUREMENT: Significant time saving to prevent the need for manual review.
+    Will also improve quality of non-compliance detection preventing downstream repercussions'
+  tools:
+  - rag
+  - api
+  - code
+  journeySteps:
+  - Upload questionnaires and policies
+  - Connect to Archer/ERM tools
+  - Review compliance analysis
+  - Implement recommended controls
+  status: idea
+- name: Segregation of Duties Analysis Agent
+  phase: ideation
+  category: IT & Cybersecurity
+  objective: Analyze and find conflicts in Segregation of Duties across applications
+    to avoid possible fraud and other risks.
+  description: 'Agent analyzes and finds conflicts in Segregation of Duties based
+    on SoD template and other specific inputs/data such as roles, actions, and transactions.
+    Marks out possible conflicts in SoD through different applications such as SAP,
+    dispatching, and invoicing applications to avoid possible fraud and other risks.
+    As output, besides marking and highlighting the risks, also advises on how to
+    mitigate the possible conflicts.
+
+
+    VALUE MEASUREMENT: Prevention of possible fraud - improved detection and reduced
+    manual overhead'
+  tools:
+  - rag
+  - api
+  - code
+  journeySteps:
+  - Upload SoD templates and role data
+  - Analyze across applications
+  - Review identified conflicts
+  - Implement mitigation recommendations
+  status: idea
+- name: ServiceNow Finance Ticket Assistant
+  phase: ideation
+  category: Finance & Controlling
+  objective: Help users create 100% accurate finance tickets and provide right first
+    time all necessary evidences/documents.
+  description: 'Create a SNOW chatbot agent to help users create 100% accurate finance
+    tickets and provide right first time all necessary evidences/documents
+
+
+    VALUE MEASUREMENT: reduce volume of rejected tickets and improve user experience
+    in business'
+  tools:
+  - api
+  - forms
+  - rag
+  journeySteps:
+  - Describe finance request
+  - Agent guides ticket creation
+  - Upload required documents
+  - Submit complete ticket
+  status: idea
+- name: Finance Ecosystem Advisor
+  phase: ideation
+  category: Finance & Controlling
+  objective: Help users navigate within interlinked financial applications to reduce
+    time spent on error investigation and solution finding in accounting → reporting
+    → forecasting workflow.
+  description: 'Agent helps users navigate within interlinked financial applications
+    with the aim to reduce time spent on error investigation and solution finding
+    in accounting → reporting → forecasting workflow. Integration with SAP, Anaplan,
+    Power BI and other applications would be preferable for the future.
+
+
+    VALUE MEASUREMENT: Hours spent on issue resolution and prevention of errors when
+    facing new business combinations.'
+  tools:
+  - rag
+  - api
+  - code
+  journeySteps:
+  - Describe error or issue
+  - Agent analyzes across systems
+  - Review solution recommendations
+  - Implement fix
+  status: idea
+- name: Month-End Close Tracker
+  phase: ideation
+  category: Finance & Controlling
+  objective: Measure timely completion of month end closing tasks based on monthly
+    created MEC action tracker.
+  description: 'Measure timely completion of month end closing task based on monthly
+    created MEC action tracker
+
+
+    VALUE MEASUREMENT: With KPI to show complete in time / late with reason / late
+    without reason / missed or not completed tasks status'
+  tools:
+  - api
+  - code
+  - rag
+  journeySteps:
+  - Upload MEC action tracker
+  - Track task completion status
+  - Generate KPI dashboard
+  - Review late/missed tasks
+  status: idea
+- name: Email Routing Assistant
+  phase: ideation
+  category: Operations & Support
+  objective: Automatically analyze incoming emails and PDF attachments to route them
+    to the correct department (invoicing, AP, or other).
+  description: 'When partners write to kapcsolat@danucem.com mailbox the person who
+    forwards the emails never opens the pdf files to locate where the problem should
+    be forwarded to. The agent will help to decide based on different, existing layouts
+    if the email is for invoicing or for AP or other departments
+
+
+    VALUE MEASUREMENT: -'
+  tools:
+  - rag
+  - email
+  - api
+  journeySteps:
+  - Receive email with attachments
+  - Analyze content and PDFs
+  - Determine correct department
+  - Route to appropriate team
+  status: idea
+- name: Invoice Verification Agent
+  phase: ideation
+  category: Finance & Controlling
+  objective: Compare data booked in SAP with invoice PDF files to control accuracy
+    of payment details, preventing posting errors.
+  description: "My agent will compare the data booked in SAP with the invoice (PDF\
+    \ file). My agent should control the accuracy of the following details:\n\n- payable\
+    \ amount\n- IBAN\n- due date and/or payment term\n- company name\n- VAT number\n\
+    - the document containing term 'invoice' \n\nUntil SAP connetcion is not ready\
+    \ can we use an excel database exported from SAP?\n\nVALUE MEASUREMENT: Reduced\
+    \ number of failures and incorrectly posted invoices"
+  tools:
+  - rag
+  - api
+  - code
+  journeySteps:
+  - Upload invoice PDF
+  - Compare with SAP data
+  - Review discrepancies
+  - Correct errors before posting
+  status: idea
+- name: Invoice-to-Goods Receipt Matching Agent
+  phase: ideation
+  category: Procurement & Supply Chain
+  objective: Match deliveries on invoices with available goods receipts in SAP on
+    a certain PO.
+  description: 'This agent should match the deliveries on the invoice with the available
+    goods receipts in SAP on a certain PO.
+
+
+    VALUE MEASUREMENT: Ensuring goods recieved are properly invoiced preventing losses
+    or inaccuracies resulting from invoice errors'
+  tools:
+  - api
+  - rag
+  - code
+  journeySteps:
+  - Upload invoice
+  - Query SAP for goods receipts
+  - Match deliveries to PO
+  - Flag discrepancies
+  status: idea
+- name: Meeting Memo Provider
+  phase: ideation
+  category: Operations & Support
+  objective: Automatically create meeting minutes from Teams transcriptions, highlighting
+    tasks, actions, and key decisions.
+  description: 'Connect the agent to MS Teams. Setup Teams to always create meeting
+    transcription, for every single meeting. Agent reads the transcripts after every
+    meeting & creates a meeting minutes, highlighting tasks, actions, etc etc.
+
+
+    VALUE MEASUREMENT: Number of meeting minutes created (aprox. half hour saved /
+    memo)'
+  tools:
+  - ms-teams
+  - rag
+  - code
+  journeySteps:
+  - Meeting transcription auto-generated
+  - Agent analyzes transcript
+  - Review meeting minutes draft
+  - Distribute to attendees
+  status: idea
+- name: Project Manager Assistant
+  phase: ideation
+  category: Strategy & Management
+  objective: Provide in-depth project support with knowledge of project deliverables,
+    creating documentation based on meetings and documents.
+  description: 'Very similar to Meeting Memo Provider, but more focusing on specific
+    project, with more in-depth knowledge for each topic. Connection with Teams, familiar
+    with folder structure of project deliverables, could read and create documentations
+    based on meetings and other documents.
+
+
+    VALUE MEASUREMENT: We can measure project metrics (eg.: how much project delay
+    compared to original golive) compared to when we have not been using the agent.
+    Also these agents would enable the project managers to drive more projects, making
+    them more efficient. Number of managed projects could be measured.'
+  tools:
+  - ms-teams
+  - rag
+  - code
+  - api
+  journeySteps:
+  - Connect to project folders
+  - Analyze meetings and documents
+  - Generate project documentation
+  - Track deliverables
+  status: idea
+- name: Project Manager Consultant
+  phase: ideation
+  category: Strategy & Management
+  objective: Behave like a senior consultant with combined knowledge of project management
+    best practices, recommending course of actions.
+  description: 'Behaves similar like a senior consultant, with all the combined knowledge
+    of publicly available project management best practices, lessons learnt and methodologies.
+    Gets familiar with a certain project and recommends course of actions based on
+    inputs. We could also teach the CRH requirements and Danucem project methodology.
+
+
+    VALUE MEASUREMENT: We can measure project metrics (eg.: how much project delay
+    compared to original golive) compared to when we have not been using the agent.
+    Also these agents would enable the project managers to drive more projects, making
+    them more efficient. Number of managed projects could be measured.'
+  tools:
+  - rag
+  - code
+  - deep-research
+  journeySteps:
+  - Input project details
+  - Agent analyzes against best practices
+  - Review recommendations
+  - Implement suggested actions
+  status: idea
+- name: Negotiation Expert
+  phase: ideation
+  category: Procurement & Supply Chain
+  objective: Provide valuable negotiation tactics and tips based on contracts and
+    historical partner relationships.
+  description: 'Would be useful for procurement, sales team, sometimes for IT as well.
+    We could show contracts to this agent, provide historical background information
+    on relation with partners. The agent would provide valuable negotiation tactics
+    and tips for the endusers.
+
+
+    VALUE MEASUREMENT: Hard to say, maybe how much value we saved, but those saving
+    could have been potentially achieved anyhow.'
+  tools:
+  - rag
+  - code
+  - web-search
+  journeySteps:
+  - Upload contract and partner history
+  - Agent analyzes negotiation position
+  - Review tactics and recommendations
+  - Apply in negotiation
+  status: idea
+- name: Journal Entry Tax Validation Agent
+  phase: ideation
+  category: Finance & Controlling
+  objective: Automated validation of journal entries, classifying items as tax-deductible
+    or non-deductible for corporate income tax purposes based on applicable tax laws.
+  description: 'Journal Validation agent - Automated validation of journal entries,
+    with a particular focus on classifying items as tax‑deductible or non‑deductible
+    for corporate income tax purposes, based on the applicable tax laws of selected
+    countries. Primary users: Finance, if is working the agent would download the
+    entries from the SAP
+
+
+    VALUE MEASUREMENT: The expectation is increase the tax compliance, reduction in
+    misclassification, time saving'
+  tools:
+  - api
+  - rag
+  - code
+  journeySteps:
+  - Download journal entries from SAP
+  - Analyze against tax laws
+  - Classify deductible/non-deductible items
+  - Review and approve classifications
+  status: idea
+- name: Financial Statement Review Agent
+  phase: ideation
+  category: Finance & Controlling
+  objective: Support automated preparation and review of financial statements under
+    local GAAP and IFRS by validating data, checking consistency, and identifying
+    anomalies.
+  description: 'An AI agent that supports the automated preparation and/or review
+    of financial statements prepared under local GAAP and IFRS, by validating financial
+    data, checking consistency across statements and disclosures, identifying anomalies
+    or deviations from accounting standards, and flagging items requiring professional
+    judgment or further review. Primary users: Finance; the data source would be SAP
+
+
+    VALUE MEASUREMENT: Reduction in financial statement preparation and review time
+
+    Decrease in post‑close adjustments and corrections'
+  tools:
+  - api
+  - rag
+  - code
+  journeySteps:
+  - Download financial data from SAP
+  - Validate against GAAP/IFRS standards
+  - Check cross-statement consistency
+  - Flag items for review
+  status: idea
+- name: Accounting Support Chatbot
+  phase: ideation
+  category: Finance & Controlling
+  objective: Provide instant, accurate support for accounting-related questions by
+    leveraging internal policies and accounting standards.
+  description: 'An AI‑powered chatbot that provides instant, accurate support for
+    accounting‑related questions by leveraging internal policies, accounting standards,
+    helping users resolve issues faster and more consistently. Primary users: Employees
+    who encounter accounting‑related questions in the course of their daily work,
+    including Finance and Accounting professionals, as well as other business users
+    requiring accounting guidance.
+
+
+    VALUE MEASUREMENT: Reduction in repetitive inquiries to Finance / Accounting teams
+
+    Decrease in response time to accounting questions
+
+    Reduction in inconsistent or incorrect application of accounting rules'
+  tools:
+  - rag
+  - code
+  journeySteps:
+  - Ask accounting question
+  - Agent searches policies and standards
+  - Review answer and guidance
+  - Apply to work
+  status: idea
+- name: Manual Journal Entry Validation Agent
+  phase: ideation
+  category: Finance & Controlling
+  objective: Validate Finance-related ServiceNow FA-MJE tickets by automatically checking
+    completeness, accuracy, policy compliance, and required supporting documentation.
+  description: 'The agent will validate Finance‑related ServiceNow (SNOW) requests,
+    specifically FA‑MJE (Manual Journal Entry) tickets, by automatically checking
+    completeness, accuracy, policy compliance, and required supporting documentation
+    before submission or approval. Primary users: GL Accounting, the data is available
+    in SNOW system
+
+
+    VALUE MEASUREMENT: reduction in average FA‑MJE ticket processing time
+
+    reduction in manual review effort by Finance teams
+
+    increased first‑time‑right submission'
+  tools:
+  - api
+  - rag
+  - code
+  journeySteps:
+  - Create FA-MJE ticket in SNOW
+  - Agent validates completeness and compliance
+  - Review validation results
+  - Submit approved ticket
+  status: idea
+- name: Accounting Training Material Generator
+  phase: ideation
+  category: HR & Talent Management
+  objective: 'That agent automatically generates short, role‑specific training material
+    based on accounting policies (and internal procedures if exists), ensuring consistent
+    knowledge transfer and scalable training across Finance and business teams. Primary
+    users: Finance (Accounting / GL / Reporting), and other business users who need
+    to understand and apply accounting policies in their daily work.'
+  description: 'That agent automatically generates short, role‑specific training videos
+    based on accounting policies (and internal procedures if exists), ensuring consistent
+    knowledge transfer and scalable training across Finance and business teams. Primary
+    users: Finance (Accounting / GL / Reporting), and other business users who need
+    to understand and apply accounting policies in their daily work.
+
+
+    VALUE MEASUREMENT: Reduction in time to create training materials;
+
+    Reduction in training development costs
+
+    Time saved for SMEs and policy owners'
+  tools:
+  - rag
+  - code
+  journeySteps:
+  - Input accounting policy or procedure
+  - Specify target role
+  - Agent generates training material
+  - Review and distribute
+  status: idea
+- name: Account Reconciliation Agent
+  phase: ideation
+  category: Finance & Controlling
+  objective: Support automated preparation of account reconciliations by matching
+    balances, transactions, and supporting documents, identifying discrepancies.
+  description: 'the agent supports the automated preparation of account reconciliations
+    by matching balances, transactions, and supporting documents, identifying discrepancies,
+    and highlighting reconciling items for review. Primary users: Finance (Accounting
+    / GL), the source is SAP
+
+
+    VALUE MEASUREMENT: Reduction in reconciliation preparation time;
+
+    Improved documentation completeness'
+  tools:
+  - api
+  - code
+  - rag
+  journeySteps:
+  - Download account data from SAP
+  - Match balances and transactions
+  - Identify discrepancies
+  - Review reconciling items
+  status: idea
+- name: Financial Statement Notes Review Agent
+  phase: ideation
+  category: Finance & Controlling
+  objective: Support preparation and review of notes to financial statements by validating
+    completeness, consistency, and compliance with local GAAP and IFRS disclosure
+    requirements.
+  description: 'The agent supports the preparation and/or review of notes to the financial
+    statements by validating completeness, consistency, and compliance with local
+    GAAP and IFRS disclosure requirements. Primary users: Finance
+
+
+    VALUE MEASUREMENT: Reduction in time spent preparing and reviewing notes
+
+    Reduction in manual cross‑checks between notes and financial statements
+
+    Reduction in disclosure errors and inconsistencies'
+  tools:
+  - rag
+  - code
+  - api
+  journeySteps:
+  - Upload financial statements and notes
+  - Validate against GAAP/IFRS requirements
+  - Check cross-references and consistency
+  - Review flagged issues
+  status: idea
+- name: Plant Failure Response Assistant
+  phase: ideation
+  category: Maintenance & Production
+  objective: An agent to help concrete plants operators and maintenance crew to respond
+    to mechanical/software failures. Assisting with system based and software issues
+    typically reliant on reviewing volumes of old guides and documentation.
+  description: 'An agent to help concrete plants operators and maintenance crew to
+    respond to mechanical/software failures.
+
+
+    VALUE MEASUREMENT: Reduced downtime in production. Can be calculated similar to
+    Root Cause Analysis Agent.'
+  tools:
+  - rag
+  - code
+  - web-search
+  journeySteps:
+  - Report failure symptoms
+  - Agent searches guides and documentation
+  - Review troubleshooting steps
+  - Implement solution
+  status: idea
+- name: RMC KPI Tracking Agent
+  phase: ideation
+  category: Performance & Analytics
+  objective: Collect data from month end closing and laboratory to track KPIs based
+    on defined rules and reports.
+  description: 'Agent for RMC where we collect the data from month end closing and
+    laboratory and we will assign the rules how to track the KPIs based on the reports
+    and compare them and monitor and will shows us the analyses where we need to improve
+    in which KPIs, which plants and if we need to improve it will find the proposed
+    solution on web.
+
+
+    VALUE MEASUREMENT: The agent is able to analyse the KPIs propose the improvements
+    based on the information on internet and will find based on the our internal manuals
+    the deviations where we need to focus on.'
+  tools:
+  - api
+  - code
+  - rag
+  - web-search
+  journeySteps:
+  - Collect month-end and lab data
+  - Apply KPI tracking rules
+  - Identify improvement areas
+  - Propose solutions based on research
+  status: idea
+- name: Site Visit Preparation Agent
+  phase: ideation
+  category: Operations & Support
+  objective: Show what should be checked and focused on during next site visit (factory
+    visit) for management, OH&S, maintenance and performance teams.
+  description: 'Assisting teams prepare for site visits. It will show what should
+    be checked, focused on during our next site visit (factory visit). To be used
+    by management, OH&S, maintenance and performance team will use it in Danucem Hungary.
+    It will need data integration.
+
+
+    VALUE MEASUREMENT: Value will be measurable at a Maintenance; Safety & Production
+    level of engagement'
+  tools:
+  - rag
+  - code
+  - api
+  journeySteps:
+  - Input site details
+  - Agent analyzes historical data
+  - Review focus areas checklist
+  - Conduct site visit
+  status: idea
+- name: RMC Comprehensive KPI Analysis Agent
+  phase: ideation
+  category: Performance & Analytics
+  objective: Analyze comprehensive set of KPIs (production, sales, operational, commercial,
+    quality, logistics, safety, HR) across full RMC site network.
+  description: 'Analyse comprehensive set of KPIS: production, sales, operational,
+    commercial, quality, logistics, safety, HR (approx 30) across full Danucem RMC
+    sites (approx 50) and identify outliers with potential for improvement with benefit
+    on EBITDA level. Analysis is to be focused on current period with comparison to
+    previous year, previous period, budget and forecast. Agent should advice on improvement
+    methods and if applied, what would be the forecasted development of these KPIs
+    and financial impact (ebitda level).
+
+
+    VALUE MEASUREMENT: Currently simply cannot analyse all KPIs and cannot prioritise
+    where in the business to review - the agent will allow for KPI improvement with
+    EBITDA impact'
+  tools:
+  - code
+  - api
+  - rag
+  journeySteps:
+  - Aggregate KPI data across sites
+  - Analyze performance trends
+  - Identify outliers and opportunities
+  - Generate improvement recommendations with EBITDA impact
+  status: idea
+- name: Sales Contract Generator
+  phase: ideation
+  category: Sales & Marketing
+  objective: Generate sales contracts based on received offers from customers by analyzing
+    attached images or PDFs with requirements.
+  description: 'Agent for Sales contracts based on the received offers from customers.
+    We will attach to the agent the image or pdf with requirments from the customer
+    and it will automatically prepare the offer for the customer in the Danucem form.
+    We will give the instructions for the materials how much they cost how the transport
+    need to be calculated, how the margins should be calculated etc. what is need
+    for offer to be prepared and the data for the agent will be updated on the regular
+    basis.
+
+
+    VALUE MEASUREMENT: The offer for the customer is prepared and it will save siginficant
+    amount of time for all the sales reps.'
+  tools:
+  - rag
+  - code
+  journeySteps:
+  - Upload customer requirements
+  - Agent extracts key terms
+  - Generate contract draft
+  - Review and finalize
+  status: idea
+- name: Contract Amendment Drafter
+  phase: ideation
+  category: Legal & Compliance
+  objective: Draft professional contract amendments based on user inputs and uploaded
+    contract templates.
+  description: 'Draft professional contract amendments based on user inputs and uploaded
+    contract templates.
+
+
+    VALUE MEASUREMENT: Reduced manual time and higher quality legal contract amendments.
+    Additional value measurement to be reviewed.'
+  tools:
+  - rag
+  - code
+  journeySteps:
+  - Upload contract template
+  - Specify amendment requirements
+  - Agent drafts amendment
+  - Review and approve
+  status: idea

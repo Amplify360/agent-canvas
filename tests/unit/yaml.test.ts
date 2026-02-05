@@ -286,7 +286,7 @@ describe('YAML full canvas import', () => {
     const fs = require('fs');
     const path = require('path');
     const yamlText = fs.readFileSync(
-      path.join(__dirname, '../../docs/samples/danucem_agents_complete (4).yaml'),
+      path.join(__dirname, '../fixtures/danucem-agents-complete.yaml'),
       'utf-8'
     );
 
@@ -371,7 +371,7 @@ describe('YAML full canvas import', () => {
     const fs = require('fs');
     const path = require('path');
     const yamlText = fs.readFileSync(
-      path.join(__dirname, '../../docs/samples/danucem_agents_complete (4).yaml'),
+      path.join(__dirname, '../fixtures/danucem-agents-complete.yaml'),
       'utf-8'
     );
 
