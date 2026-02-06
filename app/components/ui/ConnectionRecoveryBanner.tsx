@@ -10,7 +10,7 @@
 
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useConvexAuth } from '@/hooks/useConvex';
 import { useAuth } from '@/contexts/AuthContext';
 import { Icon } from '@/components/ui/Icon';
@@ -19,16 +19,34 @@ const FAILURE_THRESHOLD_MS = 5000;
 
 export function ConnectionRecoveryBanner() {
   const { isAuthenticated, isLoading } = useConvexAuth();
-  const { signOut } = useAuth();
+  const { signOut, refreshAuth } = useAuth();
   const [showBanner, setShowBanner] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Use ref for refreshAuth to avoid adding it to effect dependency arrays
+  const refreshAuthRef = useRef(refreshAuth);
+  refreshAuthRef.current = refreshAuth;
 
-  // Gradual failure: show banner after 5s of persistent auth failure
+  // Attempt silent reauth; returns true if it succeeds
+  const trySilentReauth = useCallback(async (): Promise<boolean> => {
+    try {
+      await refreshAuthRef.current();
+      return true;
+    } catch {
+      return false;
+    }
+  }, []);
+
+  // Gradual failure: attempt silent reauth after 5s, show banner only if it fails
   useEffect(() => {
+    let cancelled = false;
+
     if (!isAuthenticated && !isLoading) {
       if (!timerRef.current) {
-        timerRef.current = setTimeout(() => {
-          setShowBanner(true);
+        timerRef.current = setTimeout(async () => {
+          const recovered = await trySilentReauth();
+          if (!recovered && !cancelled) {
+            setShowBanner(true);
+          }
         }, FAILURE_THRESHOLD_MS);
       }
     } else {
@@ -41,19 +59,25 @@ export function ConnectionRecoveryBanner() {
     }
 
     return () => {
+      cancelled = true;
       if (timerRef.current) {
         clearTimeout(timerRef.current);
         timerRef.current = null;
       }
     };
-  }, [isAuthenticated, isLoading]);
+  }, [isAuthenticated, isLoading, trySilentReauth]);
 
-  // Immediate trigger: AuthKit detected session expiry
+  // Immediate trigger: AuthKit detected session expiry — try silent reauth first
   useEffect(() => {
-    const handleSessionExpired = () => setShowBanner(true);
+    const handleSessionExpired = async () => {
+      const recovered = await trySilentReauth();
+      if (!recovered) {
+        setShowBanner(true);
+      }
+    };
     window.addEventListener('workos-session-expired', handleSessionExpired);
     return () => window.removeEventListener('workos-session-expired', handleSessionExpired);
-  }, []);
+  }, [trySilentReauth]);
 
   if (!showBanner) return null;
 

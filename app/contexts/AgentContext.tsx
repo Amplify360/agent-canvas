@@ -34,7 +34,8 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
   // Only query if Convex has the token AND has a valid canvas (not just canvasId, as it may be stale after deletion)
   const { data: agents = [], isLoading: isQueryLoading, hasLoaded: hasLoadedAgents } = useStableQuery(
     api.agents.list,
-    canQuery && currentCanvas ? { canvasId: currentCanvasId as Id<"canvases"> } : 'skip'
+    canQuery && currentCanvas ? { canvasId: currentCanvasId as Id<"canvases"> } : 'skip',
+    currentCanvasId,
   );
 
   const createAgentMutation = useMutation(api.agents.create);

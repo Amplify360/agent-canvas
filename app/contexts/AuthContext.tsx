@@ -39,12 +39,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isInitialized, setIsInitialized] = useState(false);
   const currentOrgIdRef = useRef(currentOrgId);
   const lastFocusRefreshAt = useRef(0);
+  const lastFailedRefreshAt = useRef(0);
+  const isRefreshingRef = useRef(false);
+  const prevUserIdRef = useRef<string | null>(null);
   const FOCUS_REFRESH_MIN_INTERVAL_MS = 2 * 60 * 1000;
+  const FOCUS_REFRESH_FAILURE_COOLDOWN_MS = 5 * 1000;
 
   // Keep ref in sync with state
   useEffect(() => {
     currentOrgIdRef.current = currentOrgId;
   }, [currentOrgId]);
+
+  // Clear persisted selections when user changes (prevents cross-user leakage)
+  useEffect(() => {
+    const currentId = authKitUser?.id ?? null;
+    if (prevUserIdRef.current !== null && currentId !== prevUserIdRef.current) {
+      // User changed — clear org and canvas selections
+      window.localStorage.removeItem(STORAGE_KEYS.CURRENT_ORG);
+      window.localStorage.removeItem(STORAGE_KEYS.CURRENT_CANVAS);
+      setCurrentOrgIdState(null);
+    }
+    prevUserIdRef.current = currentId;
+  }, [authKitUser?.id, setCurrentOrgIdState]);
 
   // Transform AuthKit user to our User type (memoized to avoid new object on every render)
   const user = useMemo<User | null>(() => authKitUser ? {
@@ -112,6 +128,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Clear local state
       setUserOrgs([]);
       setCurrentOrgIdState(null);
+      // Clear canvas selection to prevent next user inheriting it
+      window.localStorage.removeItem(STORAGE_KEYS.CURRENT_CANVAS);
 
       // Use AuthKit's signOut which handles the full WorkOS session clear
       await authKit.signOut();
@@ -134,28 +152,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const shouldRefresh = () => {
       if (!authKitUser || isLoading) return false;
+      if (isRefreshingRef.current) return false;
       const now = Date.now();
+      // Respect success cooldown (2 min)
       if (now - lastFocusRefreshAt.current < FOCUS_REFRESH_MIN_INTERVAL_MS) {
         return false;
       }
-      lastFocusRefreshAt.current = now;
+      // Respect failure cooldown (5 sec) to prevent hammering
+      if (now - lastFailedRefreshAt.current < FOCUS_REFRESH_FAILURE_COOLDOWN_MS) {
+        return false;
+      }
       return true;
     };
 
-    const handleFocus = () => {
-      if (shouldRefresh()) {
-        refreshAuth().catch((error) => {
-          console.error('Focus refreshAuth failed:', error);
+    const doRefresh = () => {
+      isRefreshingRef.current = true;
+      refreshAuth()
+        .then(() => {
+          // Only set success cooldown after successful refresh
+          lastFocusRefreshAt.current = Date.now();
+        })
+        .catch((error) => {
+          console.error('Focus/visibility refreshAuth failed:', error);
+          // Set shorter failure cooldown so retry is possible soon
+          lastFailedRefreshAt.current = Date.now();
+        })
+        .finally(() => {
+          isRefreshingRef.current = false;
         });
-      }
+    };
+
+    const handleFocus = () => {
+      if (shouldRefresh()) doRefresh();
     };
 
     const handleVisibility = () => {
-      if (document.visibilityState === 'visible' && shouldRefresh()) {
-        refreshAuth().catch((error) => {
-          console.error('Visibility refreshAuth failed:', error);
-        });
-      }
+      if (document.visibilityState === 'visible' && shouldRefresh()) doRefresh();
     };
 
     window.addEventListener('focus', handleFocus);

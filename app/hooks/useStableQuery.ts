@@ -23,7 +23,8 @@ import type { OptionalRestArgsOrSkip } from 'convex/react';
  */
 export function useStableQuery<Query extends FunctionReference<"query">>(
   query: Query,
-  ...args: OptionalRestArgsOrSkip<Query>
+  args: OptionalRestArgsOrSkip<Query>[0],
+  resetKey?: unknown,
 ): {
   data: FunctionReturnType<Query> | undefined;
   isLoading: boolean;
@@ -34,9 +35,16 @@ export function useStableQuery<Query extends FunctionReference<"query">>(
   const [lastData, setLastData] = useState<ReturnT | undefined>(undefined);
   const [hasLoaded, setHasLoaded] = useState(false);
 
+  // When resetKey changes, clear cached data to prevent stale data flash on org/canvas switch
+  useEffect(() => {
+    setLastData(undefined);
+    setHasLoaded(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resetKey]);
+
   // Call Convex useQuery with the provided query and args
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const queryResult = useQuery(query, ...args as any);
+  const queryResult = useQuery(query, args as any);
 
   useEffect(() => {
     if (queryResult !== undefined) {

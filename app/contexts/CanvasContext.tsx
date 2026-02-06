@@ -56,7 +56,8 @@ export function CanvasProvider({ children, initialCanvasId }: CanvasProviderProp
   // Only query if Convex has the token AND has orgId
   const { data: canvases = [], hasLoaded: hasLoadedCanvases } = useStableQuery(
     api.canvases.list,
-    canQuery && currentOrgId ? { workosOrgId: currentOrgId } : 'skip'
+    canQuery && currentOrgId ? { workosOrgId: currentOrgId } : 'skip',
+    currentOrgId,
   );
 
   // Query the initial canvas by ID if provided (for shareable links)

@@ -80,6 +80,8 @@ export function MembershipSync({ children }: MembershipSyncProps) {
   const { isAuthenticated, isInitialized, user, refreshAuth } = useAuth();
   // Track which user ID we've completed sync for (null = not synced or logged out)
   const [syncedForUserId, setSyncedForUserId] = useState<string | null>(null);
+  // Tracks when sync attempt is done (success OR failure) — controls loading spinner
+  const [attemptDoneForUserId, setAttemptDoneForUserId] = useState<string | null>(null);
   const [syncError, setSyncError] = useState<string | null>(null);
   const syncMemberships = useAction(api.orgMemberships.syncMyMemberships);
   // Track sync attempts per user to prevent duplicates in strict mode
@@ -96,6 +98,7 @@ export function MembershipSync({ children }: MembershipSyncProps) {
     // Not authenticated - reset sync state (user logged out or not logged in)
     if (!isAuthenticated || !currentUserId) {
       setSyncedForUserId(null);
+      setAttemptDoneForUserId(null);
       setSyncError(null);
       syncAttemptedForUserRef.current = null;
       return;
@@ -115,6 +118,7 @@ export function MembershipSync({ children }: MembershipSyncProps) {
     // Check if we already synced recently for this user in this session
     if (wasSyncedRecentlyForUser(currentUserId)) {
       setSyncedForUserId(currentUserId);
+      setAttemptDoneForUserId(currentUserId);
       return;
     }
 
@@ -127,6 +131,7 @@ export function MembershipSync({ children }: MembershipSyncProps) {
         if (isMounted && currentUserId) {
           markSyncCompleteForUser(currentUserId);
           setSyncedForUserId(currentUserId);
+          setAttemptDoneForUserId(currentUserId);
           setSyncError(null);
         }
       } catch (error) {
@@ -151,8 +156,9 @@ export function MembershipSync({ children }: MembershipSyncProps) {
         if (isMounted && currentUserId) {
           // Set error but still allow app to load - queries may fail but user can retry
           setSyncError(error instanceof Error ? error.message : 'Sync failed');
-          // Mark as synced even on error to allow app to load (graceful degradation)
-          setSyncedForUserId(currentUserId);
+          // Mark attempt as done (stops loading spinner) but do NOT set syncedForUserId,
+          // so a re-mount or navigation will retry the sync
+          setAttemptDoneForUserId(currentUserId);
         }
       }
     }
@@ -169,7 +175,7 @@ export function MembershipSync({ children }: MembershipSyncProps) {
   // 1. Auth not initialized yet, OR
   // 2. User is authenticated but we haven't synced for them yet
   const shouldShowLoading = !isInitialized ||
-    (isAuthenticated && currentUserId && syncedForUserId !== currentUserId);
+    (isAuthenticated && currentUserId && attemptDoneForUserId !== currentUserId);
 
   if (shouldShowLoading) {
     return (
