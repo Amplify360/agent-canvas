@@ -7,7 +7,7 @@
 import React, { createContext, useContext, useEffect, useCallback, useState, useMemo } from 'react';
 import { Canvas } from '@/types/canvas';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
-import { useQuery, useMutation, useConvexAuth } from '@/hooks/useConvex';
+import { useQuery, useMutation, useCanQuery } from '@/hooks/useConvex';
 import { useStableQuery } from '@/hooks/useStableQuery';
 import { useAuth } from './AuthContext';
 import { api } from '../../convex/_generated/api';
@@ -39,13 +39,8 @@ interface CanvasProviderProps {
 
 export function CanvasProvider({ children, initialCanvasId }: CanvasProviderProps) {
   const { currentOrgId, isInitialized, userOrgs, setCurrentOrgId } = useAuth();
-  // Gate Convex queries on BOTH isAuthenticated AND !isLoading.
-  // This prevents queries from running during auth token refresh (e.g., after idle >5 min),
-  // which would otherwise return empty data and cause UI flicker.
-  // Pattern: `canQuery && otherConditions ? args : 'skip'`
-  // Also include isConvexAuthLoading in any loading states exposed by this context.
-  const { isAuthenticated: isConvexAuthenticated, isLoading: isConvexAuthLoading } = useConvexAuth();
-  const canQuery = isConvexAuthenticated && !isConvexAuthLoading;
+  // Gate Convex queries on auth state to prevent empty results during token refresh
+  const { canQuery, isConvexAuthLoading } = useCanQuery();
   const [currentCanvasId, setCurrentCanvasIdState] = useLocalStorage<string | null>(STORAGE_KEYS.CURRENT_CANVAS, null);
   const [initialCanvasError, setInitialCanvasError] = useState<'not_found' | 'no_access' | null>(null);
   // Use state instead of ref so that setting it to true triggers a re-render

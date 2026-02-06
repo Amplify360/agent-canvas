@@ -12,6 +12,7 @@ import { User, Organization } from '@/types/auth';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { STORAGE_KEYS } from '@/constants/storageKeys';
 import { ORG_ROLES } from '@/types/validationConstants';
+import { useTabResume } from '@/hooks/useTabResume';
 
 interface AuthContextValue {
   user: User | null;
@@ -147,57 +148,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await fetchOrgMemberships();
   }, [authKit, fetchOrgMemberships]);
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
+  // Refresh auth session when user returns to the tab (focus or visibilitychange)
+  useTabResume(() => {
+    if (!authKitUser || isLoading) return;
+    if (isRefreshingRef.current) return;
+    const now = Date.now();
+    if (now - lastFocusRefreshAt.current < FOCUS_REFRESH_MIN_INTERVAL_MS) return;
+    if (now - lastFailedRefreshAt.current < FOCUS_REFRESH_FAILURE_COOLDOWN_MS) return;
 
-    const shouldRefresh = () => {
-      if (!authKitUser || isLoading) return false;
-      if (isRefreshingRef.current) return false;
-      const now = Date.now();
-      // Respect success cooldown (2 min)
-      if (now - lastFocusRefreshAt.current < FOCUS_REFRESH_MIN_INTERVAL_MS) {
-        return false;
-      }
-      // Respect failure cooldown (5 sec) to prevent hammering
-      if (now - lastFailedRefreshAt.current < FOCUS_REFRESH_FAILURE_COOLDOWN_MS) {
-        return false;
-      }
-      return true;
-    };
-
-    const doRefresh = () => {
-      isRefreshingRef.current = true;
-      refreshAuth()
-        .then(() => {
-          // Only set success cooldown after successful refresh
-          lastFocusRefreshAt.current = Date.now();
-        })
-        .catch((error) => {
-          console.error('Focus/visibility refreshAuth failed:', error);
-          // Set shorter failure cooldown so retry is possible soon
-          lastFailedRefreshAt.current = Date.now();
-        })
-        .finally(() => {
-          isRefreshingRef.current = false;
-        });
-    };
-
-    const handleFocus = () => {
-      if (shouldRefresh()) doRefresh();
-    };
-
-    const handleVisibility = () => {
-      if (document.visibilityState === 'visible' && shouldRefresh()) doRefresh();
-    };
-
-    window.addEventListener('focus', handleFocus);
-    document.addEventListener('visibilitychange', handleVisibility);
-
-    return () => {
-      window.removeEventListener('focus', handleFocus);
-      document.removeEventListener('visibilitychange', handleVisibility);
-    };
-  }, [authKitUser, isLoading, refreshAuth]);
+    isRefreshingRef.current = true;
+    refreshAuth()
+      .then(() => {
+        lastFocusRefreshAt.current = Date.now();
+      })
+      .catch((error) => {
+        console.error('Tab resume refreshAuth failed:', error);
+        lastFailedRefreshAt.current = Date.now();
+      })
+      .finally(() => {
+        isRefreshingRef.current = false;
+      });
+  });
 
   // Manual sync button action - triggers sync from Convex
   const syncMemberships = useCallback(async () => {

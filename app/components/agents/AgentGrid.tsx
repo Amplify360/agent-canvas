@@ -9,7 +9,7 @@ import { Agent } from '@/types/agent';
 import { AgentGroupSection } from './AgentGroupSection';
 import { useGrouping } from '@/contexts/GroupingContext';
 import { useAgents } from '@/contexts/AgentContext';
-import { useConvexAuth } from '@/hooks/useConvex';
+import { useCanQuery } from '@/hooks/useConvex';
 import { useDeleteAgent } from '@/hooks/useDeleteAgent';
 import { Icon } from '@/components/ui/Icon';
 
@@ -23,7 +23,7 @@ interface AgentGridProps {
 export function AgentGrid({ onEditAgent, onAddAgent, onQuickLook, onOpenComments }: AgentGridProps) {
   const { computedGroups } = useGrouping();
   const { isLoading } = useAgents();
-  const { isAuthenticated: isConvexAuthenticated, isLoading: isConvexAuthLoading } = useConvexAuth();
+  const { isConvexAuthenticated, isConvexAuthLoading } = useCanQuery();
   const confirmAndDelete = useDeleteAgent();
 
   const handleDeleteAgent = async (agent: Agent) => {

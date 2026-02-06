@@ -6,7 +6,7 @@
 
 import React, { createContext, useContext, useCallback, useMemo } from 'react';
 import { Agent, AgentFormData } from '@/types/agent';
-import { useMutation, useConvexAuth } from '@/hooks/useConvex';
+import { useMutation, useCanQuery } from '@/hooks/useConvex';
 import { useStableQuery } from '@/hooks/useStableQuery';
 import { useAuth } from './AuthContext';
 import { useCanvas } from './CanvasContext';
@@ -25,9 +25,8 @@ const AgentContext = createContext<AgentContextValue | undefined>(undefined);
 
 export function AgentProvider({ children }: { children: React.ReactNode }) {
   const { isInitialized } = useAuth();
-  // Use Convex's auth state to gate queries - this ensures token is actually set
-  const { isAuthenticated: isConvexAuthenticated, isLoading: isConvexAuthLoading } = useConvexAuth();
-  const canQuery = isConvexAuthenticated && !isConvexAuthLoading;
+  // Gate Convex queries on auth state to prevent empty results during token refresh
+  const { canQuery, isConvexAuthLoading } = useCanQuery();
   const { currentCanvasId, currentCanvas, isLoading: isCanvasLoading } = useCanvas();
 
   // Subscribe to agents using official Convex hook with stale-data caching
