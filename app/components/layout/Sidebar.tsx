@@ -315,6 +315,7 @@ export function Sidebar() {
                 </Tooltip>
                 <button
                   className="sidebar__canvas-menu-btn"
+                  aria-label="Canvas menu"
                   onClick={(e) => {
                     e.stopPropagation();
                     handleCanvasContextMenu(e, canvas._id);
