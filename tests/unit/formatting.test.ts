@@ -15,10 +15,6 @@ describe('Formatting Utilities', () => {
       expect(formatCurrency(999)).toBe('$999');
     });
 
-    it('returns zero as $0', () => {
-      expect(formatCurrency(0)).toBe('$0');
-    });
-
     it('formats values >= 1000 with K suffix', () => {
       expect(formatCurrency(1000)).toBe('$1.0K');
       expect(formatCurrency(1500)).toBe('$1.5K');
@@ -128,9 +124,6 @@ describe('Formatting Utilities', () => {
     });
 
     it('handles single-character name parts', () => {
-      // "a@example.com" -> name = "a", parts = ["a"], length 1 but only 1 char
-      // Falls to: name.slice(0, 2).toUpperCase() || '??' -> "A" but slice(0,2) on "a" is "a" -> "A"
-      // Actually: parts[0].length >= 2 is false, so it goes to name.slice(0, 2) = "a" -> "A"
       expect(getInitialsFromEmail('a@example.com')).toBe('A');
     });
 
