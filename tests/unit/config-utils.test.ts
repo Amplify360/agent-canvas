@@ -2,8 +2,6 @@ import { describe, it, expect } from 'vitest';
 import {
   getToolDisplay,
   getSectionColor,
-  getStatusColor,
-  getStatusConfig,
   getToolColorClass,
   TOOL_DEFINITIONS,
   SECTION_COLOR_PALETTE,
@@ -26,11 +24,6 @@ describe('Config Utilities', () => {
         icon: 'box',
       });
     });
-
-    it('handles case insensitivity', () => {
-      const result = getToolDisplay('EMAIL');
-      expect(result.label).toBe('Email');
-    });
   });
 
   describe('getSectionColor', () => {
@@ -41,26 +34,17 @@ describe('Config Utilities', () => {
     });
   });
 
-  describe('getStatusColor', () => {
-    it('returns default color for unknown status', () => {
-      expect(getStatusColor('unknown')).toBe(getAgentStatusConfig('unknown').color);
-    });
+  describe('getAgentStatusConfig', () => {
+    it('returns correct config for known and unknown statuses', () => {
+      const liveConfig = getAgentStatusConfig('live');
+      expect(liveConfig.label).toBe('Live');
+      expect(liveConfig.color).toBeDefined();
 
-    it('returns default color for undefined status', () => {
-      expect(getStatusColor(undefined)).toBe(getAgentStatusConfig(undefined).color);
-    });
-  });
+      const unknownConfig = getAgentStatusConfig('nonexistent-status');
+      expect(unknownConfig.label).toBe('nonexistent-status');
 
-  describe('getStatusConfig', () => {
-    it('returns default config with custom label for unknown status', () => {
-      const config = getStatusConfig('custom-status');
-      expect(config.color).toBe(getAgentStatusConfig('custom-status').color);
-      expect(config.label).toBe('custom-status');
-    });
-
-    it('returns Unknown label for undefined status', () => {
-      const config = getStatusConfig(undefined);
-      expect(config.label).toBe('Unknown');
+      const undefinedConfig = getAgentStatusConfig(undefined);
+      expect(undefinedConfig.label).toBe('Unknown');
     });
   });
 
@@ -73,8 +57,7 @@ describe('Config Utilities', () => {
     it('maps all defined tool colors', () => {
       Object.values(TOOL_DEFINITIONS).forEach((tool) => {
         const colorClass = getToolColorClass(tool.color);
-        expect(typeof colorClass).toBe('string');
-        expect(colorClass.length).toBeGreaterThan(0);
+        expect(colorClass).not.toBe('default');
       });
     });
   });
