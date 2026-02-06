@@ -6,7 +6,7 @@
 
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useAuth as useAuthKit } from '@workos-inc/authkit-nextjs/components';
 import { User, Organization } from '@/types/auth';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
@@ -46,14 +46,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     currentOrgIdRef.current = currentOrgId;
   }, [currentOrgId]);
 
-  // Transform AuthKit user to our User type
-  const user: User | null = authKitUser ? {
+  // Transform AuthKit user to our User type (memoized to avoid new object on every render)
+  const user = useMemo<User | null>(() => authKitUser ? {
     id: authKitUser.id,
     email: authKitUser.email || '',
     firstName: authKitUser.firstName || undefined,
     lastName: authKitUser.lastName || undefined,
     profilePictureUrl: authKitUser.profilePictureUrl || undefined,
-  } : null;
+  } : null, [authKitUser]);
 
   // Fetch org memberships from API when user changes
   const fetchOrgMemberships = useCallback(async () => {
@@ -182,17 +182,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [authKitUser, fetchOrgMemberships]);
 
-  const value: AuthContextValue = {
+  const isAuthenticated = !!user;
+
+  const value = useMemo<AuthContextValue>(() => ({
     user,
     userOrgs,
     currentOrgId,
     isInitialized,
-    isAuthenticated: !!user,
+    isAuthenticated,
     setCurrentOrgId,
     signOut,
     refreshAuth,
     syncMemberships,
-  };
+  }), [
+    user, userOrgs, currentOrgId, isInitialized, isAuthenticated,
+    setCurrentOrgId, signOut, refreshAuth, syncMemberships,
+  ]);
 
   return (
     <AuthContext.Provider value={value}>

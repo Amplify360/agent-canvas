@@ -17,7 +17,6 @@ export type ViewMode = 'grid' | 'dock';
 
 interface GroupingPreferences {
   activeTagType: string;
-  sortOrder: 'asc' | 'desc';
   filters: Record<string, string[]>;
   viewMode: ViewMode;
 }
@@ -42,7 +41,6 @@ export function GroupingProvider({ children }: { children: React.ReactNode }) {
     STORAGE_KEYS.GROUPING_PREFERENCE,
     {
       activeTagType: DEFAULT_GROUPING_TAG,
-      sortOrder: 'asc',
       filters: {},
       viewMode: 'grid',
     }
@@ -89,7 +87,7 @@ export function GroupingProvider({ children }: { children: React.ReactNode }) {
     setPreferences((prev) => ({ ...prev, viewMode: mode }));
   }, [setPreferences]);
 
-  const value: GroupingContextValue = {
+  const value = useMemo<GroupingContextValue>(() => ({
     activeTagType: preferences.activeTagType,
     filters: preferences.filters,
     computedGroups,
@@ -97,7 +95,10 @@ export function GroupingProvider({ children }: { children: React.ReactNode }) {
     setActiveTagType,
     setFilters,
     setViewMode,
-  };
+  }), [
+    preferences.activeTagType, preferences.filters, computedGroups,
+    preferences.viewMode, setActiveTagType, setFilters, setViewMode,
+  ]);
 
   return <GroupingContext.Provider value={value}>{children}</GroupingContext.Provider>;
 }

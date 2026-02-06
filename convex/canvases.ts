@@ -2,7 +2,7 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { Doc } from "./_generated/dataModel";
 import { requireAuth, requireOrgAccess, hasOrgAccess } from "./lib/auth";
-import { getAgentSnapshot, getCanvasWithAccess } from "./lib/helpers";
+import { getAgentSnapshot, getCanvasWithAccess, recordHistory } from "./lib/helpers";
 import { validateSlug, validateTitle } from "./lib/validation";
 import { CHANGE_TYPE } from "./lib/validators";
 
@@ -272,14 +272,7 @@ export const remove = mutation({
 
     // Soft delete all agents (preserve history records)
     for (const agent of agents) {
-      // Record deletion in history
-      await ctx.db.insert("agentHistory", {
-        agentId: agent._id,
-        changedBy: auth.workosUserId,
-        changedAt: now,
-        changeType: CHANGE_TYPE.DELETE,
-        previousData: getAgentSnapshot(agent),
-      });
+      await recordHistory(ctx, agent._id, auth.workosUserId, CHANGE_TYPE.DELETE, getAgentSnapshot(agent));
 
       // Soft delete the agent
       await ctx.db.patch(agent._id, {
@@ -405,12 +398,7 @@ export const copyToOrgs = mutation({
         });
 
         // Record history for audit trail
-        await ctx.db.insert("agentHistory", {
-          agentId: newAgentId,
-          changedBy: auth.workosUserId,
-          changedAt: now,
-          changeType: CHANGE_TYPE.CREATE,
-        });
+        await recordHistory(ctx, newAgentId, auth.workosUserId, CHANGE_TYPE.CREATE);
       }
 
       results.push({

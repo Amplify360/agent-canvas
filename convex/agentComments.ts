@@ -23,12 +23,12 @@ export const list = query({
     const comments = await ctx.db
       .query("agentComments")
       .withIndex("by_agent_time", (q) => q.eq("agentId", agentId))
+      .order("desc")
       .filter((q) => q.eq(q.field("deletedAt"), undefined))
       .collect();
 
     // Return with isOwner flag for each comment
     return comments
-      .sort((a, b) => b.createdAt - a.createdAt)
       .map((comment) => ({
         ...comment,
         isOwner: comment.workosUserId === auth.workosUserId,

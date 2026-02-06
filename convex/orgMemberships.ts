@@ -11,6 +11,8 @@ import { internal } from "./_generated/api";
 import {
   syncUserMembershipsFromData,
   logSync,
+  upsertMembership,
+  removeMembership,
 } from "./lib/membershipSync";
 import { requireSuperAdmin, checkSuperAdmin } from "./lib/auth";
 import { ORG_ROLES, SYNC_TYPE } from "./lib/validators";
@@ -185,8 +187,6 @@ export const upsertMembershipInternal = internalMutation({
     timestamp: v.number(),
   },
   handler: async (ctx, args) => {
-    const { upsertMembership } = await import("./lib/membershipSync");
-
     const action = await upsertMembership(
       ctx,
       args.workosUserId,
@@ -217,8 +217,6 @@ export const removeMembershipInternal = internalMutation({
     timestamp: v.number(),
   },
   handler: async (ctx, args) => {
-    const { removeMembership, logSync } = await import("./lib/membershipSync");
-
     const removed = await removeMembership(
       ctx,
       args.workosUserId,

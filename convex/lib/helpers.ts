@@ -4,7 +4,8 @@
 
 import { Doc, Id } from "../_generated/dataModel";
 import { MutationCtx, QueryCtx } from "../_generated/server";
-import { AuthContext, requireAuth, requireOrgAccess } from "./auth";
+import { AuthContext, requireOrgAccess } from "./auth";
+import { ChangeType } from "./validators";
 
 /**
  * Extract serializable agent data for history records
@@ -13,6 +14,25 @@ import { AuthContext, requireAuth, requireOrgAccess } from "./auth";
 export function getAgentSnapshot(agent: Doc<"agents">): Record<string, unknown> {
   const { _id, _creationTime, ...data } = agent;
   return data;
+}
+
+/**
+ * Record a change in the agent history audit trail
+ */
+export async function recordHistory(
+  ctx: MutationCtx,
+  agentId: Id<"agents">,
+  workosUserId: string,
+  changeType: ChangeType,
+  previousData?: any
+): Promise<void> {
+  await ctx.db.insert("agentHistory", {
+    agentId,
+    changedBy: workosUserId,
+    changedAt: Date.now(),
+    changeType,
+    previousData,
+  });
 }
 
 /**
@@ -49,30 +69,3 @@ export async function getAgentWithAccess(
   return { agent, canvas };
 }
 
-/**
- * Mutation wrapper that requires authentication and canvas access
- * Reduces boilerplate in mutation handlers
- */
-export async function withCanvasAccess<T>(
-  ctx: MutationCtx,
-  canvasId: Id<"canvases">,
-  handler: (ctx: MutationCtx, auth: AuthContext, canvas: Doc<"canvases">) => Promise<T>
-): Promise<T> {
-  const auth = await requireAuth(ctx);
-  const canvas = await getCanvasWithAccess(ctx, auth, canvasId);
-  return handler(ctx, auth, canvas);
-}
-
-/**
- * Mutation wrapper that requires authentication and agent access
- * Reduces boilerplate in mutation handlers
- */
-export async function withAgentAccess<T>(
-  ctx: MutationCtx,
-  agentId: Id<"agents">,
-  handler: (ctx: MutationCtx, auth: AuthContext, agent: Doc<"agents">, canvas: Doc<"canvases">) => Promise<T>
-): Promise<T> {
-  const auth = await requireAuth(ctx);
-  const { agent, canvas } = await getAgentWithAccess(ctx, auth, agentId);
-  return handler(ctx, auth, agent, canvas);
-}

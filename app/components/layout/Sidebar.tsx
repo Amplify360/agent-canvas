@@ -4,13 +4,14 @@
 
 'use client';
 
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { useAuth, useIsOrgAdmin, useCurrentOrg } from '@/contexts/AuthContext';
 import { useCanvas } from '@/contexts/CanvasContext';
 import { useAppState } from '@/contexts/AppStateContext';
 import { useAction } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import { useResizable } from '@/hooks/useResizable';
+import { useClickOutside } from '@/hooks/useClickOutside';
 import { Icon } from '@/components/ui/Icon';
 import { ImportYamlModal } from '../forms/ImportYamlModal';
 import { CanvasRenameModal } from '../forms/CanvasRenameModal';
@@ -98,46 +99,16 @@ export function Sidebar() {
     return (first + last).toUpperCase() || user.email?.charAt(0).toUpperCase() || '??';
   }, [user]);
 
-  // Close menus on outside click
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as Node;
-      if (menuRef.current && !menuRef.current.contains(target)) {
-        setCanvasMenu(null);
-      }
-      if (orgDropdownRef.current && !orgDropdownRef.current.contains(target)) {
-        setOrgDropdownOpen(false);
-      }
-      if (userMenuRef.current && !userMenuRef.current.contains(target)) {
-        setUserMenuOpen(false);
-      }
-      if (canvasActionsRef.current && !canvasActionsRef.current.contains(target)) {
-        setCanvasActionsOpen(false);
-      }
-    };
+  // Close menus on outside click or Escape key
+  const closeCanvasMenu = useCallback(() => setCanvasMenu(null), []);
+  const closeOrgDropdown = useCallback(() => setOrgDropdownOpen(false), []);
+  const closeUserMenu = useCallback(() => setUserMenuOpen(false), []);
+  const closeCanvasActions = useCallback(() => setCanvasActionsOpen(false), []);
 
-    if (canvasMenu || orgDropdownOpen || userMenuOpen || canvasActionsOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
-    }
-  }, [canvasMenu, orgDropdownOpen, userMenuOpen, canvasActionsOpen]);
-
-  // Close dropdowns on Escape key
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        setCanvasMenu(null);
-        setOrgDropdownOpen(false);
-        setUserMenuOpen(false);
-        setCanvasActionsOpen(false);
-      }
-    };
-
-    if (canvasMenu || orgDropdownOpen || userMenuOpen || canvasActionsOpen) {
-      document.addEventListener('keydown', handleKeyDown);
-      return () => document.removeEventListener('keydown', handleKeyDown);
-    }
-  }, [canvasMenu, orgDropdownOpen, userMenuOpen, canvasActionsOpen]);
+  useClickOutside(menuRef, closeCanvasMenu, canvasMenu !== null);
+  useClickOutside(orgDropdownRef, closeOrgDropdown, orgDropdownOpen);
+  useClickOutside(userMenuRef, closeUserMenu, userMenuOpen);
+  useClickOutside(canvasActionsRef, closeCanvasActions, canvasActionsOpen);
 
   const handleCanvasContextMenu = (e: React.MouseEvent, canvasId: string) => {
     e.preventDefault();
@@ -344,6 +315,7 @@ export function Sidebar() {
                 </Tooltip>
                 <button
                   className="sidebar__canvas-menu-btn"
+                  aria-label="Canvas menu"
                   onClick={(e) => {
                     e.stopPropagation();
                     handleCanvasContextMenu(e, canvas._id);

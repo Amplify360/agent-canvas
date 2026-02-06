@@ -16,11 +16,3 @@ export interface Organization {
   role: string;
 }
 
-export interface SessionData {
-  authenticated: boolean;
-  user?: User;
-  orgs?: Organization[];
-  idToken?: string;
-  idTokenExpiresAt?: number;
-  needsRefresh?: boolean;
-}

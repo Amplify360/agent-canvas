@@ -26,9 +26,19 @@ export const get = query({
 export const update = mutation({
   args: {
     workosOrgId: v.string(),
-    toolDefinitions: v.optional(v.any()),
+    toolDefinitions: v.optional(
+      v.record(v.string(), v.object({ icon: v.string(), color: v.string() }))
+    ),
+    // colorScheme shape is org-defined and may vary; v.any() is intentional
     colorScheme: v.optional(v.any()),
-    sectionDefaults: v.optional(v.any()),
+    sectionDefaults: v.optional(
+      v.object({
+        color: v.string(),
+        iconType: v.string(),
+        showInFlow: v.boolean(),
+        isSupport: v.boolean(),
+      })
+    ),
   },
   handler: async (ctx, { workosOrgId, toolDefinitions, colorScheme, sectionDefaults }) => {
     const auth = await requireAuth(ctx);

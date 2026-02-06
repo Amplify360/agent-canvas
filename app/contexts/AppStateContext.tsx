@@ -4,7 +4,7 @@
 
 'use client';
 
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { Agent } from '@/types/agent';
 import { STORAGE_KEYS } from '@/constants/storageKeys';
@@ -85,19 +85,38 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
     setLoadingMessage('');
   }, []);
 
+  const toastTimeoutIds = useRef<Map<string, NodeJS.Timeout>>(new Map());
+
+  // Clean up all toast timeouts on unmount
+  useEffect(() => {
+    const timeouts = toastTimeoutIds.current;
+    return () => {
+      timeouts.forEach(clearTimeout);
+      timeouts.clear();
+    };
+  }, []);
+
+  const hideToast = useCallback((id: string) => {
+    // Clear any existing auto-dismiss timeout for this toast
+    const existingTimeout = toastTimeoutIds.current.get(id);
+    if (existingTimeout) {
+      clearTimeout(existingTimeout);
+      toastTimeoutIds.current.delete(id);
+    }
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+  }, []);
+
   const showToast = useCallback((message: string, type: 'success' | 'error' | 'info') => {
     const id = `toast-${Date.now()}`;
     setToasts((prev) => [...prev, { id, message, type }]);
 
     // Auto-remove toast after 3 seconds
-    setTimeout(() => {
-      setToasts((prev) => prev.filter((t) => t.id !== id));
+    const timeoutId = setTimeout(() => {
+      toastTimeoutIds.current.delete(id);
+      hideToast(id);
     }, 3000);
-  }, []);
-
-  const hideToast = useCallback((id: string) => {
-    setToasts((prev) => prev.filter((t) => t.id !== id));
-  }, []);
+    toastTimeoutIds.current.set(id, timeoutId);
+  }, [hideToast]);
 
   const toggleSidebar = useCallback(() => {
     setIsSidebarCollapsed((prev) => !prev);
@@ -107,7 +126,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
     setIsSidebarCollapsed(collapsed);
   }, [setIsSidebarCollapsed]);
 
-  const value: AppStateContextValue = {
+  const value = useMemo<AppStateContextValue>(() => ({
     isLoading,
     loadingMessage,
     toasts,
@@ -125,7 +144,12 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
     setSidebarWidth,
     setQuickLookAgent,
     setThemePreference,
-  };
+  }), [
+    isLoading, loadingMessage, toasts, isSidebarCollapsed, sidebarWidth,
+    quickLookAgent, themePreference, resolvedTheme, showLoading, hideLoading,
+    showToast, hideToast, toggleSidebar, setSidebarCollapsed, setSidebarWidth,
+    setQuickLookAgent, setThemePreference,
+  ]);
 
   return <AppStateContext.Provider value={value}>{children}</AppStateContext.Provider>;
 }

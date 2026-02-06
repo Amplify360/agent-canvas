@@ -123,7 +123,7 @@ export function AgentModal({ isOpen, onClose, agent, defaultPhase }: AgentModalP
       setErrors({});
     }
     setNewJourneyStep('');
-  }, [agent, defaultPhase]);
+  }, [agent, defaultPhase, isOpen]);
 
   const validateField = (field: string, value: string) => {
     const testData = { ...formData, [field]: value };
