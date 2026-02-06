@@ -16,15 +16,13 @@ import { ConnectionRecoveryBanner } from '../ui/ConnectionRecoveryBanner';
 import { QuickLookPanel } from '../ui/QuickLookPanel';
 import { CommentsPanel } from '../ui/CommentsPanel';
 import { useAppState } from '@/contexts/AppStateContext';
-import { useAgents } from '@/contexts/AgentContext';
-import { useAsyncOperation } from '@/hooks/useAsyncOperation';
+import { useDeleteAgent } from '@/hooks/useDeleteAgent';
 import { Icon } from '@/components/ui/Icon';
 import { Tooltip } from '@/components/ui/Tooltip';
 
 export function AppLayout() {
   const { isSidebarCollapsed, toggleSidebar, sidebarWidth, quickLookAgent, setQuickLookAgent } = useAppState();
-  const { deleteAgent } = useAgents();
-  const executeOperation = useAsyncOperation();
+  const confirmAndDelete = useDeleteAgent();
   const [isAgentModalOpen, setIsAgentModalOpen] = useState(false);
   const [editingAgent, setEditingAgent] = useState<Agent | null>(null);
   const [defaultPhase, setDefaultPhase] = useState<string | undefined>();
@@ -61,21 +59,10 @@ export function AppLayout() {
   const handleDeleteFromQuickLook = async () => {
     if (!quickLookAgent) return;
 
-    if (!window.confirm(`Are you sure you want to delete "${quickLookAgent.name}"?`)) {
-      return;
-    }
-
     const agentToDelete = quickLookAgent;
     setQuickLookAgent(null);
 
-    await executeOperation(
-      () => deleteAgent(agentToDelete._id),
-      {
-        loadingMessage: 'Deleting agent...',
-        successMessage: 'Agent deleted successfully',
-        errorMessage: 'Failed to delete agent',
-      }
-    );
+    await confirmAndDelete(agentToDelete._id, agentToDelete.name);
   };
 
   // Comments panel handlers

@@ -60,7 +60,7 @@ export function validateAgentForm(data: {
 /**
  * Validate URL format
  */
-export function isValidUrl(url: string): boolean {
+function isValidUrl(url: string): boolean {
   try {
     new URL(url);
     return true;
@@ -69,19 +69,3 @@ export function isValidUrl(url: string): boolean {
   }
 }
 
-/**
- * Validate canvas title
- */
-export function validateCanvasTitle(title: string): ValidationError[] {
-  const errors: ValidationError[] = [];
-
-  if (!title || title.trim().length === 0) {
-    errors.push({ field: 'title', message: 'Canvas title is required' });
-  }
-
-  if (title.length > VALIDATION_CONSTANTS.CANVAS_TITLE_MAX_LENGTH) {
-    errors.push({ field: 'title', message: `Canvas title must be ${VALIDATION_CONSTANTS.CANVAS_TITLE_MAX_LENGTH} characters or less` });
-  }
-
-  return errors;
-}

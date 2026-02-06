@@ -1,14 +1,15 @@
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
-import { MutationCtx } from "./_generated/server";
+import { mutation, query } from "./_generated/server";
 import { requireAuth, requireOrgAccess } from "./lib/auth";
 import {
   getAgentSnapshot,
   getCanvasWithAccess,
   getAgentWithAccess,
+  recordHistory,
 } from "./lib/helpers";
 import {
+  validateAgentData,
   validateAgentName,
   validateDescription,
   validateMetrics,
@@ -16,42 +17,7 @@ import {
   validateOptionalUrl,
   validatePhase,
 } from "./lib/validation";
-import { agentFieldValidators, agentInputValidator, agentUpdateValidator, CHANGE_TYPE, ChangeType } from "./lib/validators";
-
-// Shared validation for agent data
-function validateAgentData(data: Record<string, unknown>): void {
-  if (typeof data.name === 'string') validateAgentName(data.name);
-  if (typeof data.phase === 'string') validatePhase(data.phase);
-  if (typeof data.objective === 'string') validateObjective(data.objective);
-  if (typeof data.description === 'string') validateDescription(data.description);
-  if (data.metrics && typeof data.metrics === 'object') {
-    validateMetrics(data.metrics as {
-      numberOfUsers?: number;
-      timesUsed?: number;
-      timeSaved?: number;
-      roi?: number;
-    });
-  }
-  if (typeof data.demoLink === 'string') validateOptionalUrl(data.demoLink, "demoLink");
-  if (typeof data.videoLink === 'string') validateOptionalUrl(data.videoLink, "videoLink");
-}
-
-// Helper to record agent history
-async function recordHistory(
-  ctx: MutationCtx,
-  agentId: Id<"agents">,
-  workosUserId: string,
-  changeType: ChangeType,
-  previousData?: any
-): Promise<void> {
-  await ctx.db.insert("agentHistory", {
-    agentId,
-    changedBy: workosUserId,
-    changedAt: Date.now(),
-    changeType,
-    previousData,
-  });
-}
+import { agentFieldValidators, agentInputValidator, agentUpdateValidator, CHANGE_TYPE } from "./lib/validators";
 
 /**
  * List all agents for a canvas (excludes soft-deleted)
@@ -260,7 +226,7 @@ export const renamePhase = mutation({
 
     // Apply phase rename with history tracking
     for (const agent of toRename) {
-      await recordHistory(ctx, agent._id, auth.workosUserId, "update", getAgentSnapshot(agent));
+      await recordHistory(ctx, agent._id, auth.workosUserId, CHANGE_TYPE.UPDATE, getAgentSnapshot(agent));
 
       await ctx.db.patch(agent._id, {
         phase: toPhase,

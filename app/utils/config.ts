@@ -136,14 +136,6 @@ export function getTagValue(tagType: string, valueId: string): TagValue | null {
 }
 
 /**
- * Get tag definition
- */
-export function getTagDefinition(tagType: string): TagType | null {
-  if (!isValidTagTypeId(tagType)) return null;
-  return TAG_TYPES[tagType];
-}
-
-/**
  * Get all available tool names
  */
 export function getAvailableTools(): string[] {

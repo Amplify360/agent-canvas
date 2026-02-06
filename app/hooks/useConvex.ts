@@ -4,7 +4,6 @@
  */
 
 import {
-  ConvexProvider as ConvexReactProvider,
   useQuery,
   useMutation,
   useAction,
@@ -12,4 +11,4 @@ import {
 } from 'convex/react';
 
 // Re-export Convex React hooks for convenience
-export { useQuery, useMutation, useAction, useConvexAuth, ConvexReactProvider };
+export { useQuery, useMutation, useAction, useConvexAuth };

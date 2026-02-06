@@ -28,6 +28,7 @@ export const generateUploadUrl = mutation({
 export const getUrl = query({
   args: { storageId: v.id("_storage") },
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     return await ctx.storage.getUrl(args.storageId);
   },
 });

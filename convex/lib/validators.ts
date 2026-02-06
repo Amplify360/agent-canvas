@@ -103,28 +103,9 @@ export const agentFieldValidators = {
 /**
  * Create agent input validator (for bulk create)
  * All fields required except explicitly optional ones
+ * Derived from agentFieldValidators to avoid duplication
  */
-export const agentInputValidator = v.object({
-  phase: v.string(),
-  agentOrder: v.number(),
-  name: v.string(),
-  objective: v.optional(v.string()),
-  description: v.optional(v.string()),
-  tools: v.array(v.string()),
-  journeySteps: v.array(v.string()),
-  demoLink: v.optional(v.string()),
-  videoLink: v.optional(v.string()),
-  metrics: v.optional(
-    v.object({
-      numberOfUsers: v.optional(v.number()),
-      timesUsed: v.optional(v.number()),
-      timeSaved: v.optional(v.number()),
-      roi: v.optional(v.number()),
-    })
-  ),
-  category: v.optional(v.string()),
-  status: statusValidator,
-});
+export const agentInputValidator = v.object(agentFieldValidators);
 
 /**
  * Create agent update validator (all fields optional)

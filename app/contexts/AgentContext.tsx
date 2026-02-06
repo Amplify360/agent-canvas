@@ -4,12 +4,14 @@
 
 'use client';
 
-import React, { createContext, useContext, useCallback, useEffect, useState } from 'react';
+import React, { createContext, useContext, useCallback, useMemo } from 'react';
 import { Agent, AgentFormData } from '@/types/agent';
-import { useQuery, useMutation, useConvexAuth } from '@/hooks/useConvex';
+import { useMutation, useConvexAuth } from '@/hooks/useConvex';
+import { useStableQuery } from '@/hooks/useStableQuery';
 import { useAuth } from './AuthContext';
 import { useCanvas } from './CanvasContext';
 import { api } from '../../convex/_generated/api';
+import { Id } from '../../convex/_generated/dataModel';
 
 interface AgentContextValue {
   agents: Agent[];
@@ -28,26 +30,12 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
   const canQuery = isConvexAuthenticated && !isConvexAuthLoading;
   const { currentCanvasId, currentCanvas, isLoading: isCanvasLoading } = useCanvas();
 
-  const [lastAgents, setLastAgents] = useState<Agent[]>([]);
-  const [hasLoadedAgents, setHasLoadedAgents] = useState(false);
-
-  // Subscribe to agents using official Convex hook
+  // Subscribe to agents using official Convex hook with stale-data caching
   // Only query if Convex has the token AND has a valid canvas (not just canvasId, as it may be stale after deletion)
-  const agentsQueryResult = useQuery(
+  const { data: agents = [], isLoading: isQueryLoading, hasLoaded: hasLoadedAgents } = useStableQuery(
     api.agents.list,
-    canQuery && currentCanvas ? { canvasId: currentCanvasId as any } : 'skip'
+    canQuery && currentCanvas ? { canvasId: currentCanvasId as Id<"canvases"> } : 'skip'
   );
-
-  useEffect(() => {
-    if (agentsQueryResult !== undefined) {
-      setLastAgents(agentsQueryResult);
-      setHasLoadedAgents(true);
-    }
-  }, [agentsQueryResult]);
-
-  // Track loading state: loading if auth not initialized, canvas loading, or agents query pending
-  const isQueryLoading = canQuery && !!currentCanvasId && agentsQueryResult === undefined;
-  const agents = agentsQueryResult ?? lastAgents;
 
   const createAgentMutation = useMutation(api.agents.create);
   const updateAgentMutation = useMutation(api.agents.update);
@@ -56,27 +44,29 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
   const createAgent = useCallback(async (data: AgentFormData) => {
     if (!currentCanvasId) throw new Error('No canvas selected');
     const agentId = await createAgentMutation({
-      canvasId: currentCanvasId as any,
+      canvasId: currentCanvasId as Id<"canvases">,
       ...data,
     });
     return agentId as string;
   }, [currentCanvasId, createAgentMutation]);
 
   const updateAgent = useCallback(async (agentId: string, data: Partial<AgentFormData>) => {
-    await updateAgentMutation({ agentId: agentId as any, ...data });
+    await updateAgentMutation({ agentId: agentId as Id<"agents">, ...data });
   }, [updateAgentMutation]);
 
   const deleteAgent = useCallback(async (agentId: string) => {
-    await deleteAgentMutation({ agentId: agentId as any });
+    await deleteAgentMutation({ agentId: agentId as Id<"agents"> });
   }, [deleteAgentMutation]);
 
-  const value: AgentContextValue = {
+  const isLoading = (!isInitialized || isCanvasLoading || isConvexAuthLoading || isQueryLoading) && !hasLoadedAgents;
+
+  const value = useMemo<AgentContextValue>(() => ({
     agents,
-    isLoading: (!isInitialized || isCanvasLoading || isConvexAuthLoading || isQueryLoading) && !hasLoadedAgents,
+    isLoading,
     createAgent,
     updateAgent,
     deleteAgent,
-  };
+  }), [agents, isLoading, createAgent, updateAgent, deleteAgent]);
 
   return <AgentContext.Provider value={value}>{children}</AgentContext.Provider>;
 }

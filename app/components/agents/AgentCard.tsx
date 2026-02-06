@@ -4,7 +4,7 @@
 
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { Agent } from '@/types/agent';
 import { getToolDisplay, getStatusColor } from '@/utils/config';
 import { formatCurrency } from '@/utils/formatting';
@@ -12,6 +12,7 @@ import { Icon } from '@/components/ui/Icon';
 import { Tooltip } from '@/components/ui/Tooltip';
 import { getAgentStatusConfig } from '@/types/validationConstants';
 import { useAgentFeedback } from '@/hooks/useAgentFeedback';
+import { useClickOutside } from '@/hooks/useClickOutside';
 
 interface AgentCardProps {
   agent: Agent;
@@ -29,29 +30,8 @@ export function AgentCard({ agent, index = 0, onEdit, onDelete, onQuickLook, onO
   const menuRef = useRef<HTMLDivElement>(null);
   const { voteCounts, userVote, handleVote, comments } = useAgentFeedback({ agentId: agent._id });
 
-  // Close menu on outside click or Escape key
-  useEffect(() => {
-    if (!menuOpen) return;
-
-    function handleClickOutside(event: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setMenuOpen(false);
-      }
-    }
-
-    function handleEscapeKey(event: KeyboardEvent) {
-      if (event.key === 'Escape') {
-        setMenuOpen(false);
-      }
-    }
-
-    document.addEventListener('mousedown', handleClickOutside);
-    document.addEventListener('keydown', handleEscapeKey);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-      document.removeEventListener('keydown', handleEscapeKey);
-    };
-  }, [menuOpen]);
+  const closeMenu = useCallback(() => setMenuOpen(false), []);
+  useClickOutside(menuRef, closeMenu, menuOpen);
 
   const handleCardClick = (e: React.MouseEvent) => {
     // Don't trigger quick look if clicking on actions menu or links

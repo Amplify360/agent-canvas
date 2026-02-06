@@ -148,3 +148,24 @@ export function validateOptionalUrl(
   }
 }
 
+/**
+ * Validate all agent data fields present in a record.
+ * Validates only the fields that are present, so works for both create and partial data.
+ */
+export function validateAgentData(data: Record<string, unknown>): void {
+  if (typeof data.name === 'string') validateAgentName(data.name);
+  if (typeof data.phase === 'string') validatePhase(data.phase);
+  if (typeof data.objective === 'string') validateObjective(data.objective);
+  if (typeof data.description === 'string') validateDescription(data.description);
+  if (data.metrics && typeof data.metrics === 'object') {
+    validateMetrics(data.metrics as {
+      numberOfUsers?: number;
+      timesUsed?: number;
+      timeSaved?: number;
+      roi?: number;
+    });
+  }
+  if (typeof data.demoLink === 'string') validateOptionalUrl(data.demoLink, "demoLink");
+  if (typeof data.videoLink === 'string') validateOptionalUrl(data.videoLink, "videoLink");
+}
+
