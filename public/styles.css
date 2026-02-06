@@ -1493,7 +1493,7 @@ body.is-resizing-sidebar .main-wrapper {
     align-items: center;
     gap: var(--space-3);
     flex-shrink: 0;
-    min-width: 200px;
+    width: 260px;
 }
 
 .agent-group__dock-header .group-icon {
@@ -1506,10 +1506,18 @@ body.is-resizing-sidebar .main-wrapper {
     height: 20px;
 }
 
+.agent-group__dock-header .group-title {
+    overflow: hidden;
+}
+
 .agent-group__dock-header .group-title h2 {
     font-size: var(--text-base);
     font-weight: 600;
     margin-bottom: 2px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
 }
 
 .agent-group__dock-header .group-subtitle {
