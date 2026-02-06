@@ -74,5 +74,49 @@ describe('Agent Form Validation', () => {
       });
       expect(errors.filter(e => e.field === 'demoLink')).toHaveLength(0);
     });
+
+    it('should reject invalid videoLink URL', () => {
+      const errors = validateAgentForm({
+        name: 'Agent',
+        phase: 'Discovery',
+        videoLink: 'not-a-url',
+      });
+      expect(errors).toContainEqual({ field: 'videoLink', message: 'Video link must be a valid URL' });
+    });
+
+    it('should accept valid videoLink URL', () => {
+      const errors = validateAgentForm({
+        name: 'Agent',
+        phase: 'Discovery',
+        videoLink: 'https://youtube.com/watch?v=123',
+      });
+      expect(errors.filter(e => e.field === 'videoLink')).toHaveLength(0);
+    });
+
+    it('should treat whitespace-only name as empty', () => {
+      const errors = validateAgentForm({ name: '   ', phase: 'Discovery' });
+      expect(errors).toContainEqual({ field: 'name', message: 'Agent name is required' });
+    });
+
+    it('should treat whitespace-only phase as empty', () => {
+      const errors = validateAgentForm({ name: 'Agent', phase: '   ' });
+      expect(errors).toContainEqual({ field: 'phase', message: 'Phase is required' });
+    });
+
+    it('should accept name at exactly max length', () => {
+      const errors = validateAgentForm({
+        name: 'a'.repeat(100),
+        phase: 'Discovery',
+      });
+      expect(errors.filter(e => e.field === 'name')).toHaveLength(0);
+    });
+
+    it('should accept phase at exactly max length', () => {
+      const errors = validateAgentForm({
+        name: 'Agent',
+        phase: 'a'.repeat(50),
+      });
+      expect(errors.filter(e => e.field === 'phase')).toHaveLength(0);
+    });
   });
 });

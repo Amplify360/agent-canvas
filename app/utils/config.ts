@@ -172,6 +172,9 @@ const TOOL_COLOR_CLASS_MAP: Record<string, string> = {
   '#F59E0B': 'amber',
   '#10B981': 'emerald',
   '#14B8A6': 'teal',
+  '#EF4444': 'red',
+  '#6366F1': 'indigo',
+  '#6264A7': 'teams-purple',
 };
 
 /**
