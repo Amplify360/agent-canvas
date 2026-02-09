@@ -4,10 +4,11 @@
 
 'use client';
 
-import React, { createContext, useContext, useEffect, useCallback, useState } from 'react';
+import React, { createContext, useContext, useEffect, useCallback, useState, useMemo } from 'react';
 import { Canvas } from '@/types/canvas';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
-import { useQuery, useMutation, useConvexAuth } from '@/hooks/useConvex';
+import { useQuery, useMutation, useCanQuery } from '@/hooks/useConvex';
+import { useStableQuery } from '@/hooks/useStableQuery';
 import { useAuth } from './AuthContext';
 import { api } from '../../convex/_generated/api';
 import { Id } from '../../convex/_generated/dataModel';
@@ -38,37 +39,21 @@ interface CanvasProviderProps {
 
 export function CanvasProvider({ children, initialCanvasId }: CanvasProviderProps) {
   const { currentOrgId, isInitialized, userOrgs, setCurrentOrgId } = useAuth();
-  // Gate Convex queries on BOTH isAuthenticated AND !isLoading.
-  // This prevents queries from running during auth token refresh (e.g., after idle >5 min),
-  // which would otherwise return empty data and cause UI flicker.
-  // Pattern: `canQuery && otherConditions ? args : 'skip'`
-  // Also include isConvexAuthLoading in any loading states exposed by this context.
-  const { isAuthenticated: isConvexAuthenticated, isLoading: isConvexAuthLoading } = useConvexAuth();
-  const canQuery = isConvexAuthenticated && !isConvexAuthLoading;
+  // Gate Convex queries on auth state to prevent empty results during token refresh
+  const { canQuery, isConvexAuthLoading } = useCanQuery();
   const [currentCanvasId, setCurrentCanvasIdState] = useLocalStorage<string | null>(STORAGE_KEYS.CURRENT_CANVAS, null);
   const [initialCanvasError, setInitialCanvasError] = useState<'not_found' | 'no_access' | null>(null);
   // Use state instead of ref so that setting it to true triggers a re-render
   // and causes the query to switch to 'skip' (fixes race condition)
   const [initialCanvasHandled, setInitialCanvasHandled] = useState(false);
 
-  const [lastCanvases, setLastCanvases] = useState<Canvas[]>([]);
-  const [hasLoadedCanvases, setHasLoadedCanvases] = useState(false);
-
-  // Subscribe to canvases using official Convex hook
+  // Subscribe to canvases using official Convex hook with stale-data caching
   // Only query if Convex has the token AND has orgId
-  const canvasesResult = useQuery(
+  const { data: canvases = [], hasLoaded: hasLoadedCanvases } = useStableQuery(
     api.canvases.list,
-    canQuery && currentOrgId ? { workosOrgId: currentOrgId } : 'skip'
+    canQuery && currentOrgId ? { workosOrgId: currentOrgId } : 'skip',
+    currentOrgId,
   );
-
-  useEffect(() => {
-    if (canvasesResult !== undefined) {
-      setLastCanvases(canvasesResult);
-      setHasLoadedCanvases(true);
-    }
-  }, [canvasesResult]);
-
-  const canvases = canvasesResult ?? lastCanvases;
 
   // Query the initial canvas by ID if provided (for shareable links)
   // Using state for initialCanvasHandled ensures query skips after handling
@@ -161,11 +146,11 @@ export function CanvasProvider({ children, initialCanvasId }: CanvasProviderProp
   }, [currentOrgId, createCanvasMutation]);
 
   const updateCanvas = useCallback(async (canvasId: string, data: Partial<Canvas>) => {
-    await updateCanvasMutation({ canvasId: canvasId as any, ...data });
+    await updateCanvasMutation({ canvasId: canvasId as Id<"canvases">, ...data });
   }, [updateCanvasMutation]);
 
   const deleteCanvas = useCallback(async (canvasId: string) => {
-    await deleteCanvasMutation({ canvasId: canvasId as any, confirmDelete: true });
+    await deleteCanvasMutation({ canvasId: canvasId as Id<"canvases">, confirmDelete: true });
   }, [deleteCanvasMutation]);
 
   const reorderPhases = useCallback(async (phases: string[]) => {
@@ -181,14 +166,15 @@ export function CanvasProvider({ children, initialCanvasId }: CanvasProviderProp
   // Derive phases/categories from current canvas with defaults
   const phases = currentCanvas?.phases ?? ['Backlog'];
   const categories = currentCanvas?.categories ?? ['Uncategorized'];
+  const isLoading = (!isInitialized || isConvexAuthLoading) && !hasLoadedCanvases;
 
-  const value: CanvasContextValue = {
+  const value = useMemo<CanvasContextValue>(() => ({
     canvases,
     currentCanvasId,
     currentCanvas,
     phases,
     categories,
-    isLoading: (!isInitialized || isConvexAuthLoading) && !hasLoadedCanvases,
+    isLoading,
     initialCanvasError,
     setCurrentCanvasId,
     createCanvas,
@@ -196,7 +182,11 @@ export function CanvasProvider({ children, initialCanvasId }: CanvasProviderProp
     deleteCanvas,
     reorderPhases,
     reorderCategories,
-  };
+  }), [
+    canvases, currentCanvasId, currentCanvas, phases, categories, isLoading,
+    initialCanvasError, setCurrentCanvasId, createCanvas, updateCanvas,
+    deleteCanvas, reorderPhases, reorderCategories,
+  ]);
 
   return <CanvasContext.Provider value={value}>{children}</CanvasContext.Provider>;
 }

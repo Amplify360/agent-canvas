@@ -9,8 +9,8 @@ import { Agent } from '@/types/agent';
 import { AgentGroupSection } from './AgentGroupSection';
 import { useGrouping } from '@/contexts/GroupingContext';
 import { useAgents } from '@/contexts/AgentContext';
-import { useConvexAuth } from '@/hooks/useConvex';
-import { useAsyncOperation } from '@/hooks/useAsyncOperation';
+import { useCanQuery } from '@/hooks/useConvex';
+import { useDeleteAgent } from '@/hooks/useDeleteAgent';
 import { Icon } from '@/components/ui/Icon';
 
 interface AgentGridProps {
@@ -22,26 +22,30 @@ interface AgentGridProps {
 
 export function AgentGrid({ onEditAgent, onAddAgent, onQuickLook, onOpenComments }: AgentGridProps) {
   const { computedGroups } = useGrouping();
-  const { deleteAgent, isLoading } = useAgents();
-  const { isAuthenticated: isConvexAuthenticated } = useConvexAuth();
-  const executeOperation = useAsyncOperation();
+  const { isLoading } = useAgents();
+  const { isConvexAuthenticated, isConvexAuthLoading } = useCanQuery();
+  const confirmAndDelete = useDeleteAgent();
 
   const handleDeleteAgent = async (agent: Agent) => {
-    if (!window.confirm(`Are you sure you want to delete "${agent.name}"?`)) {
-      return;
-    }
-
-    await executeOperation(
-      () => deleteAgent(agent._id),
-      {
-        loadingMessage: 'Deleting agent...',
-        successMessage: 'Agent deleted successfully',
-        errorMessage: 'Failed to delete agent',
-      }
-    );
+    await confirmAndDelete(agent._id, agent.name);
   };
 
-  // Show loading state while data is being fetched
+  // Auth has definitively failed (not loading, not authenticated) — show reconnecting
+  if (!isConvexAuthLoading && !isConvexAuthenticated) {
+    return (
+      <div className="empty-state">
+        <div className="empty-state__icon">
+          <Icon name="wifi-off" />
+        </div>
+        <h3 className="empty-state__title">Reconnecting...</h3>
+        <p className="empty-state__description">
+          Waiting for connection to be restored
+        </p>
+      </div>
+    );
+  }
+
+  // Block rendering while data or auth is still loading
   if (isLoading || !isConvexAuthenticated) {
     return (
       <div className="empty-state">

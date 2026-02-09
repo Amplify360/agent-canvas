@@ -6,12 +6,13 @@
 
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useAuth as useAuthKit } from '@workos-inc/authkit-nextjs/components';
 import { User, Organization } from '@/types/auth';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { STORAGE_KEYS } from '@/constants/storageKeys';
 import { ORG_ROLES } from '@/types/validationConstants';
+import { useTabResume } from '@/hooks/useTabResume';
 
 interface AuthContextValue {
   user: User | null;
@@ -39,21 +40,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isInitialized, setIsInitialized] = useState(false);
   const currentOrgIdRef = useRef(currentOrgId);
   const lastFocusRefreshAt = useRef(0);
+  const lastFailedRefreshAt = useRef(0);
+  const isRefreshingRef = useRef(false);
+  const prevUserIdRef = useRef<string | null>(null);
   const FOCUS_REFRESH_MIN_INTERVAL_MS = 2 * 60 * 1000;
+  const FOCUS_REFRESH_FAILURE_COOLDOWN_MS = 5 * 1000;
 
   // Keep ref in sync with state
   useEffect(() => {
     currentOrgIdRef.current = currentOrgId;
   }, [currentOrgId]);
 
-  // Transform AuthKit user to our User type
-  const user: User | null = authKitUser ? {
+  // Clear persisted selections when user changes (prevents cross-user leakage)
+  useEffect(() => {
+    const currentId = authKitUser?.id ?? null;
+    if (prevUserIdRef.current !== null && currentId !== prevUserIdRef.current) {
+      // User changed — clear org and canvas selections
+      window.localStorage.removeItem(STORAGE_KEYS.CURRENT_ORG);
+      window.localStorage.removeItem(STORAGE_KEYS.CURRENT_CANVAS);
+      setCurrentOrgIdState(null);
+    }
+    prevUserIdRef.current = currentId;
+  }, [authKitUser?.id, setCurrentOrgIdState]);
+
+  // Transform AuthKit user to our User type (memoized to avoid new object on every render)
+  const user = useMemo<User | null>(() => authKitUser ? {
     id: authKitUser.id,
     email: authKitUser.email || '',
     firstName: authKitUser.firstName || undefined,
     lastName: authKitUser.lastName || undefined,
     profilePictureUrl: authKitUser.profilePictureUrl || undefined,
-  } : null;
+  } : null, [authKitUser]);
 
   // Fetch org memberships from API when user changes
   const fetchOrgMemberships = useCallback(async () => {
@@ -112,6 +129,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Clear local state
       setUserOrgs([]);
       setCurrentOrgIdState(null);
+      // Clear canvas selection to prevent next user inheriting it
+      window.localStorage.removeItem(STORAGE_KEYS.CURRENT_CANVAS);
 
       // Use AuthKit's signOut which handles the full WorkOS session clear
       await authKit.signOut();
@@ -129,43 +148,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await fetchOrgMemberships();
   }, [authKit, fetchOrgMemberships]);
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
+  // Refresh auth session when user returns to the tab (focus or visibilitychange)
+  useTabResume(() => {
+    if (!authKitUser || isLoading) return;
+    if (isRefreshingRef.current) return;
+    const now = Date.now();
+    if (now - lastFocusRefreshAt.current < FOCUS_REFRESH_MIN_INTERVAL_MS) return;
+    if (now - lastFailedRefreshAt.current < FOCUS_REFRESH_FAILURE_COOLDOWN_MS) return;
 
-    const shouldRefresh = () => {
-      if (!authKitUser || isLoading) return false;
-      const now = Date.now();
-      if (now - lastFocusRefreshAt.current < FOCUS_REFRESH_MIN_INTERVAL_MS) {
-        return false;
-      }
-      lastFocusRefreshAt.current = now;
-      return true;
-    };
-
-    const handleFocus = () => {
-      if (shouldRefresh()) {
-        refreshAuth().catch((error) => {
-          console.error('Focus refreshAuth failed:', error);
-        });
-      }
-    };
-
-    const handleVisibility = () => {
-      if (document.visibilityState === 'visible' && shouldRefresh()) {
-        refreshAuth().catch((error) => {
-          console.error('Visibility refreshAuth failed:', error);
-        });
-      }
-    };
-
-    window.addEventListener('focus', handleFocus);
-    document.addEventListener('visibilitychange', handleVisibility);
-
-    return () => {
-      window.removeEventListener('focus', handleFocus);
-      document.removeEventListener('visibilitychange', handleVisibility);
-    };
-  }, [authKitUser, isLoading, refreshAuth]);
+    isRefreshingRef.current = true;
+    refreshAuth()
+      .then(() => {
+        lastFocusRefreshAt.current = Date.now();
+      })
+      .catch((error) => {
+        console.error('Tab resume refreshAuth failed:', error);
+        lastFailedRefreshAt.current = Date.now();
+      })
+      .finally(() => {
+        isRefreshingRef.current = false;
+      });
+  });
 
   // Manual sync button action - triggers sync from Convex
   const syncMemberships = useCallback(async () => {
@@ -182,17 +185,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [authKitUser, fetchOrgMemberships]);
 
-  const value: AuthContextValue = {
+  const isAuthenticated = !!user;
+
+  const value = useMemo<AuthContextValue>(() => ({
     user,
     userOrgs,
     currentOrgId,
     isInitialized,
-    isAuthenticated: !!user,
+    isAuthenticated,
     setCurrentOrgId,
     signOut,
     refreshAuth,
     syncMemberships,
-  };
+  }), [
+    user, userOrgs, currentOrgId, isInitialized, isAuthenticated,
+    setCurrentOrgId, signOut, refreshAuth, syncMemberships,
+  ]);
 
   return (
     <AuthContext.Provider value={value}>

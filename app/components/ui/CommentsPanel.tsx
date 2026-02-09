@@ -25,15 +25,17 @@ export function CommentsPanel({ agent, isOpen, onClose }: CommentsPanelProps) {
 
   // Close on Escape key
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    if (e.key === 'Escape' && isOpen) {
+    if (e.key === 'Escape') {
       onClose();
     }
-  }, [isOpen, onClose]);
+  }, [onClose]);
 
   useEffect(() => {
+    if (!isOpen) return;
+
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [handleKeyDown]);
+  }, [isOpen, handleKeyDown]);
 
   if (!agent) return null;
 

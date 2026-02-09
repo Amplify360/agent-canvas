@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { groupAgentsByTag, GroupAgentsOptions } from '@/utils/grouping';
+import { groupAgentsByTag, GroupAgentsOptions, filterAgents, getAgentTagValue, getAgentTagValueWithDefault } from '@/utils/grouping';
 import { Agent } from '@/types/agent';
 import { Id } from '../../convex/_generated/dataModel';
 
@@ -25,177 +25,259 @@ function mockAgent(overrides: Partial<Agent> = {}): Agent {
 }
 
 describe('groupAgentsByTag', () => {
-  describe('basic grouping', () => {
-    it('groups agents by phase', () => {
-      const agents: Agent[] = [
-        mockAgent({ name: 'Agent 1', phase: 'Phase A' }),
-        mockAgent({ name: 'Agent 2', phase: 'Phase B' }),
-        mockAgent({ name: 'Agent 3', phase: 'Phase A' }),
-      ];
+  it('groups agents by phase', () => {
+    const agents: Agent[] = [
+      mockAgent({ name: 'Agent 1', phase: 'Phase A' }),
+      mockAgent({ name: 'Agent 2', phase: 'Phase B' }),
+      mockAgent({ name: 'Agent 3', phase: 'Phase A' }),
+    ];
 
-      const groups = groupAgentsByTag(agents, 'phase');
+    const groups = groupAgentsByTag(agents, 'phase');
 
-      expect(groups).toHaveLength(2);
-      expect(groups.find(g => g.id === 'Phase A')?.agents).toHaveLength(2);
-      expect(groups.find(g => g.id === 'Phase B')?.agents).toHaveLength(1);
-    });
-
-    it('groups agents by category', () => {
-      const agents: Agent[] = [
-        mockAgent({ name: 'Agent 1', category: 'Sales' }),
-        mockAgent({ name: 'Agent 2', category: 'Support' }),
-        mockAgent({ name: 'Agent 3', category: 'Sales' }),
-      ];
-
-      const groups = groupAgentsByTag(agents, 'category');
-
-      expect(groups).toHaveLength(2);
-      expect(groups.find(g => g.id === 'Sales')?.agents).toHaveLength(2);
-      expect(groups.find(g => g.id === 'Support')?.agents).toHaveLength(1);
-    });
-
-    it('excludes soft-deleted agents', () => {
-      const agents: Agent[] = [
-        mockAgent({ name: 'Active', phase: 'Phase A' }),
-        mockAgent({ name: 'Deleted', phase: 'Phase A', deletedAt: Date.now() }),
-      ];
-
-      const groups = groupAgentsByTag(agents, 'phase');
-
-      expect(groups).toHaveLength(1);
-      expect(groups[0].agents).toHaveLength(1);
-      expect(groups[0].agents[0].name).toBe('Active');
-    });
+    expect(groups).toHaveLength(2);
+    expect(groups.find(g => g.id === 'Phase A')?.agents).toHaveLength(2);
+    expect(groups.find(g => g.id === 'Phase B')?.agents).toHaveLength(1);
   });
 
-  describe('phase ordering with phaseOrder option', () => {
-    it('sorts groups by canvas phaseOrder array', () => {
-      const agents: Agent[] = [
-        mockAgent({ name: 'Agent C', phase: 'Phase C', agentOrder: 0 }),
-        mockAgent({ name: 'Agent A', phase: 'Phase A', agentOrder: 0 }),
-        mockAgent({ name: 'Agent B', phase: 'Phase B', agentOrder: 0 }),
-      ];
+  it('excludes soft-deleted agents', () => {
+    const agents: Agent[] = [
+      mockAgent({ name: 'Active', phase: 'Phase A' }),
+      mockAgent({ name: 'Deleted', phase: 'Phase A', deletedAt: Date.now() }),
+    ];
 
-      const options: GroupAgentsOptions = {
-        tagType: 'phase',
-        phaseOrder: ['Phase A', 'Phase B', 'Phase C'],
-      };
+    const groups = groupAgentsByTag(agents, 'phase');
 
-      const groups = groupAgentsByTag(agents, options);
-
-      expect(groups.map(g => g.id)).toEqual(['Phase A', 'Phase B', 'Phase C']);
-    });
-
-    it('places unknown phases at the end', () => {
-      const agents: Agent[] = [
-        mockAgent({ name: 'Agent Unknown', phase: 'Unknown Phase', agentOrder: 0 }),
-        mockAgent({ name: 'Agent A', phase: 'Phase A', agentOrder: 0 }),
-        mockAgent({ name: 'Agent B', phase: 'Phase B', agentOrder: 0 }),
-      ];
-
-      const options: GroupAgentsOptions = {
-        tagType: 'phase',
-        phaseOrder: ['Phase A', 'Phase B'],
-      };
-
-      const groups = groupAgentsByTag(agents, options);
-
-      expect(groups.map(g => g.id)).toEqual(['Phase A', 'Phase B', 'Unknown Phase']);
-    });
-
-    it('handles multiple unknown phases', () => {
-      const agents: Agent[] = [
-        mockAgent({ phase: 'Unknown 2' }),
-        mockAgent({ phase: 'Phase A' }),
-        mockAgent({ phase: 'Unknown 1' }),
-      ];
-
-      const options: GroupAgentsOptions = {
-        tagType: 'phase',
-        phaseOrder: ['Phase A'],
-      };
-
-      const groups = groupAgentsByTag(agents, options);
-
-      // Known phase first, unknown phases at end (order among unknowns is not guaranteed)
-      expect(groups[0].id).toBe('Phase A');
-      expect(groups.slice(1).map(g => g.id).sort()).toEqual(['Unknown 1', 'Unknown 2']);
-    });
+    expect(groups).toHaveLength(1);
+    expect(groups[0].agents).toHaveLength(1);
+    expect(groups[0].agents[0].name).toBe('Active');
   });
 
-  describe('category ordering with categoryOrder option', () => {
-    it('sorts groups by canvas categoryOrder array', () => {
-      const agents: Agent[] = [
-        mockAgent({ name: 'Agent C', category: 'Support', agentOrder: 0 }),
-        mockAgent({ name: 'Agent A', category: 'Sales', agentOrder: 0 }),
-        mockAgent({ name: 'Agent B', category: 'Marketing', agentOrder: 0 }),
-      ];
+  it('sorts groups by canvas phaseOrder array', () => {
+    const agents: Agent[] = [
+      mockAgent({ name: 'Agent C', phase: 'Phase C', agentOrder: 0 }),
+      mockAgent({ name: 'Agent A', phase: 'Phase A', agentOrder: 0 }),
+      mockAgent({ name: 'Agent B', phase: 'Phase B', agentOrder: 0 }),
+    ];
 
-      const options: GroupAgentsOptions = {
-        tagType: 'category',
-        categoryOrder: ['Sales', 'Marketing', 'Support'],
-      };
+    const options: GroupAgentsOptions = {
+      tagType: 'phase',
+      phaseOrder: ['Phase A', 'Phase B', 'Phase C'],
+    };
 
-      const groups = groupAgentsByTag(agents, options);
+    const groups = groupAgentsByTag(agents, options);
 
-      expect(groups.map(g => g.id)).toEqual(['Sales', 'Marketing', 'Support']);
-    });
-
-    it('places unknown categories at the end', () => {
-      const agents: Agent[] = [
-        mockAgent({ category: 'Unknown Dept' }),
-        mockAgent({ category: 'Sales' }),
-      ];
-
-      const options: GroupAgentsOptions = {
-        tagType: 'category',
-        categoryOrder: ['Sales'],
-      };
-
-      const groups = groupAgentsByTag(agents, options);
-
-      expect(groups.map(g => g.id)).toEqual(['Sales', 'Unknown Dept']);
-    });
+    expect(groups.map(g => g.id)).toEqual(['Phase A', 'Phase B', 'Phase C']);
   });
 
-  describe('agent ordering within groups', () => {
-    it('sorts agents by agentOrder within each group', () => {
-      const agents: Agent[] = [
-        mockAgent({ name: 'Third', phase: 'Phase A', agentOrder: 2 }),
-        mockAgent({ name: 'First', phase: 'Phase A', agentOrder: 0 }),
-        mockAgent({ name: 'Second', phase: 'Phase A', agentOrder: 1 }),
-      ];
+  it('places unknown phases at the end', () => {
+    const agents: Agent[] = [
+      mockAgent({ name: 'Agent Unknown', phase: 'Unknown Phase', agentOrder: 0 }),
+      mockAgent({ name: 'Agent A', phase: 'Phase A', agentOrder: 0 }),
+      mockAgent({ name: 'Agent B', phase: 'Phase B', agentOrder: 0 }),
+    ];
 
-      const groups = groupAgentsByTag(agents, 'phase');
+    const options: GroupAgentsOptions = {
+      tagType: 'phase',
+      phaseOrder: ['Phase A', 'Phase B'],
+    };
 
-      expect(groups[0].agents.map(a => a.name)).toEqual(['First', 'Second', 'Third']);
-    });
+    const groups = groupAgentsByTag(agents, options);
+
+    expect(groups.map(g => g.id)).toEqual(['Phase A', 'Phase B', 'Unknown Phase']);
   });
 
-  describe('backward compatibility', () => {
-    it('accepts string argument for tagType', () => {
-      const agents: Agent[] = [
-        mockAgent({ phase: 'Phase A' }),
-        mockAgent({ phase: 'Phase B' }),
-      ];
+  it('sorts agents by agentOrder within each group', () => {
+    const agents: Agent[] = [
+      mockAgent({ name: 'Third', phase: 'Phase A', agentOrder: 2 }),
+      mockAgent({ name: 'First', phase: 'Phase A', agentOrder: 0 }),
+      mockAgent({ name: 'Second', phase: 'Phase A', agentOrder: 1 }),
+    ];
 
-      // Should work with just a string (original API)
-      const groups = groupAgentsByTag(agents, 'phase');
+    const groups = groupAgentsByTag(agents, 'phase');
 
-      expect(groups).toHaveLength(2);
+    expect(groups[0].agents.map(a => a.name)).toEqual(['First', 'Second', 'Third']);
+  });
+
+  it('defaults to category grouping when no options provided', () => {
+    const agents: Agent[] = [
+      mockAgent({ phase: 'Phase A', category: 'Sales' }),
+      mockAgent({ phase: 'Phase B', category: 'Support' }),
+    ];
+
+    const groups = groupAgentsByTag(agents);
+
+    expect(groups).toHaveLength(2);
+    expect(groups.map(g => g.id).sort()).toEqual(['Sales', 'Support']);
+  });
+});
+
+describe('filterAgents', () => {
+  it('returns all agents when no filters provided', () => {
+    const agents: Agent[] = [
+      mockAgent({ name: 'Agent 1', phase: 'Phase A' }),
+      mockAgent({ name: 'Agent 2', phase: 'Phase B' }),
+      mockAgent({ name: 'Agent 3', phase: 'Phase A' }),
+    ];
+
+    // Empty object
+    expect(filterAgents(agents, {})).toHaveLength(3);
+
+    // Null/undefined coerced — the function checks for falsy
+    expect(filterAgents(agents, null as unknown as Record<string, string[]>)).toHaveLength(3);
+    expect(filterAgents(agents, undefined as unknown as Record<string, string[]>)).toHaveLength(3);
+  });
+
+  it('filters agents by phase', () => {
+    const agents: Agent[] = [
+      mockAgent({ name: 'Agent A1', phase: 'Phase A' }),
+      mockAgent({ name: 'Agent A2', phase: 'Phase A' }),
+      mockAgent({ name: 'Agent B1', phase: 'Phase B' }),
+    ];
+
+    const result = filterAgents(agents, { phase: ['Phase A'] });
+
+    expect(result).toHaveLength(2);
+    expect(result.every(a => a.phase === 'Phase A')).toBe(true);
+  });
+
+  it('filters agents by category', () => {
+    const agents: Agent[] = [
+      mockAgent({ name: 'Sales Agent', category: 'Sales' }),
+      mockAgent({ name: 'Support Agent', category: 'Support' }),
+      mockAgent({ name: 'Sales Agent 2', category: 'Sales' }),
+    ];
+
+    const result = filterAgents(agents, { category: ['Support'] });
+
+    expect(result).toHaveLength(1);
+    expect(result[0].name).toBe('Support Agent');
+  });
+
+  it('filters agents by status', () => {
+    const agents: Agent[] = [
+      mockAgent({ name: 'Live Agent', status: 'live' }),
+      mockAgent({ name: 'Idea Agent', status: 'idea' }),
+      mockAgent({ name: 'Live Agent 2', status: 'live' }),
+    ];
+
+    const result = filterAgents(agents, { status: ['live'] });
+
+    expect(result).toHaveLength(2);
+    expect(result.every(a => a.status === 'live')).toBe(true);
+  });
+
+  it('filters by multiple tag types', () => {
+    const agents: Agent[] = [
+      mockAgent({ name: 'Match', phase: 'Phase A', category: 'Sales' }),
+      mockAgent({ name: 'Phase Only', phase: 'Phase A', category: 'Support' }),
+      mockAgent({ name: 'Category Only', phase: 'Phase B', category: 'Sales' }),
+      mockAgent({ name: 'Neither', phase: 'Phase B', category: 'Support' }),
+    ];
+
+    const result = filterAgents(agents, {
+      phase: ['Phase A'],
+      category: ['Sales'],
     });
 
-    it('defaults to category grouping when no options provided', () => {
-      const agents: Agent[] = [
-        mockAgent({ phase: 'Phase A', category: 'Sales' }),
-        mockAgent({ phase: 'Phase B', category: 'Support' }),
-      ];
+    expect(result).toHaveLength(1);
+    expect(result[0].name).toBe('Match');
+  });
 
-      // Default behavior groups by category (DEFAULT_GROUPING_TAG = CATEGORY)
-      const groups = groupAgentsByTag(agents);
+  it('skips empty filter arrays', () => {
+    const agents: Agent[] = [
+      mockAgent({ name: 'Agent 1', phase: 'Phase A' }),
+      mockAgent({ name: 'Agent 2', phase: 'Phase B' }),
+    ];
 
-      expect(groups).toHaveLength(2);
-      expect(groups.map(g => g.id).sort()).toEqual(['Sales', 'Support']);
-    });
+    const result = filterAgents(agents, { phase: [] });
+
+    expect(result).toHaveLength(2);
+  });
+
+  it('handles unknown tag types gracefully', () => {
+    const agents: Agent[] = [
+      mockAgent({ name: 'Agent 1', phase: 'Phase A' }),
+      mockAgent({ name: 'Agent 2', phase: 'Phase B' }),
+    ];
+
+    const result = filterAgents(agents, { unknownTagType: ['some-value'] });
+
+    expect(result).toHaveLength(2);
+  });
+});
+
+describe('groupAgentsByTag categoryOrder', () => {
+  it('sorts groups by canvas categoryOrder array', () => {
+    const agents: Agent[] = [
+      mockAgent({ name: 'Agent C', category: 'Category C', agentOrder: 0 }),
+      mockAgent({ name: 'Agent A', category: 'Category A', agentOrder: 0 }),
+      mockAgent({ name: 'Agent B', category: 'Category B', agentOrder: 0 }),
+    ];
+
+    const options: GroupAgentsOptions = {
+      tagType: 'category',
+      categoryOrder: ['Category A', 'Category B', 'Category C'],
+    };
+
+    const groups = groupAgentsByTag(agents, options);
+
+    expect(groups.map(g => g.id)).toEqual(['Category A', 'Category B', 'Category C']);
+  });
+
+  it('places unknown categories at the end', () => {
+    const agents: Agent[] = [
+      mockAgent({ name: 'Agent Unknown', category: 'Unknown Category', agentOrder: 0 }),
+      mockAgent({ name: 'Agent A', category: 'Category A', agentOrder: 0 }),
+      mockAgent({ name: 'Agent B', category: 'Category B', agentOrder: 0 }),
+    ];
+
+    const options: GroupAgentsOptions = {
+      tagType: 'category',
+      categoryOrder: ['Category A', 'Category B'],
+    };
+
+    const groups = groupAgentsByTag(agents, options);
+
+    expect(groups.map(g => g.id)).toEqual(['Category A', 'Category B', 'Unknown Category']);
+  });
+});
+
+describe('getAgentTagValue', () => {
+  it('returns phase value', () => {
+    const agent = mockAgent({ phase: 'Discovery' });
+    expect(getAgentTagValue(agent, 'phase')).toBe('Discovery');
+  });
+
+  it('returns category value', () => {
+    const agent = mockAgent({ category: 'Sales' });
+    expect(getAgentTagValue(agent, 'category')).toBe('Sales');
+  });
+
+  it('returns status value', () => {
+    const agent = mockAgent({ status: 'live' });
+    expect(getAgentTagValue(agent, 'status')).toBe('live');
+  });
+
+  it('returns undefined for unknown tag type', () => {
+    const agent = mockAgent({ phase: 'Phase A' });
+    expect(getAgentTagValue(agent, 'nonexistent')).toBeUndefined();
+  });
+});
+
+describe('getAgentTagValueWithDefault', () => {
+  it('returns value when present', () => {
+    const agent = mockAgent({ phase: 'Discovery' });
+    expect(getAgentTagValueWithDefault(agent, 'phase')).toBe('Discovery');
+  });
+
+  it('returns default for missing value', () => {
+    const agent = mockAgent();
+    // Agent without category set — should return the default 'unassigned'
+    expect(getAgentTagValueWithDefault(agent, 'category')).toBe('unassigned');
+  });
+
+  it('returns custom default', () => {
+    const agent = mockAgent();
+    expect(getAgentTagValueWithDefault(agent, 'category', 'N/A')).toBe('N/A');
   });
 });

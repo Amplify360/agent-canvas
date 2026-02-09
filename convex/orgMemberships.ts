@@ -11,6 +11,8 @@ import { internal } from "./_generated/api";
 import {
   syncUserMembershipsFromData,
   logSync,
+  upsertMembership,
+  removeMembership,
 } from "./lib/membershipSync";
 import { requireSuperAdmin, checkSuperAdmin } from "./lib/auth";
 import { ORG_ROLES, SYNC_TYPE } from "./lib/validators";
@@ -185,8 +187,6 @@ export const upsertMembershipInternal = internalMutation({
     timestamp: v.number(),
   },
   handler: async (ctx, args) => {
-    const { upsertMembership } = await import("./lib/membershipSync");
-
     const action = await upsertMembership(
       ctx,
       args.workosUserId,
@@ -217,8 +217,6 @@ export const removeMembershipInternal = internalMutation({
     timestamp: v.number(),
   },
   handler: async (ctx, args) => {
-    const { removeMembership, logSync } = await import("./lib/membershipSync");
-
     const removed = await removeMembership(
       ctx,
       args.workosUserId,
@@ -324,36 +322,65 @@ export const syncAllMemberships = action({
       throw new Error("WorkOS API key not configured");
     }
 
-    // Fetch all organization memberships from WorkOS
-    // Note: This may need pagination for large deployments
+    // First, fetch all organizations from WorkOS
+    const allOrgs: Array<{ id: string }> = [];
+    let orgAfter: string | undefined;
+
+    do {
+      const orgUrl = new URL("https://api.workos.com/organizations");
+      orgUrl.searchParams.set("limit", "100");
+      if (orgAfter) orgUrl.searchParams.set("after", orgAfter);
+
+      const orgResponse = await fetch(orgUrl.toString(), {
+        headers: { Authorization: `Bearer ${apiKey}` },
+      });
+
+      if (!orgResponse.ok) {
+        const errorBody = await orgResponse.text();
+        throw new Error(
+          `Failed to fetch organizations: ${orgResponse.status} - ${errorBody}`
+        );
+      }
+
+      const orgData = await orgResponse.json();
+      allOrgs.push(...(orgData.data || []));
+      orgAfter = orgData.list_metadata?.after;
+    } while (orgAfter);
+
+    // Fetch memberships per organization (endpoint requires organization_id or user_id)
     let allMemberships: Array<{
       user_id: string;
       organization_id: string;
       role?: { slug: string };
     }> = [];
-    let after: string | undefined;
 
-    do {
-      const url = new URL(
-        "https://api.workos.com/user_management/organization_memberships"
-      );
-      url.searchParams.set("limit", "100");
-      if (after) url.searchParams.set("after", after);
+    for (const org of allOrgs) {
+      let after: string | undefined;
 
-      const response = await fetch(url.toString(), {
-        headers: { Authorization: `Bearer ${apiKey}` },
-      });
+      do {
+        const url = new URL(
+          "https://api.workos.com/user_management/organization_memberships"
+        );
+        url.searchParams.set("organization_id", org.id);
+        url.searchParams.set("limit", "100");
+        if (after) url.searchParams.set("after", after);
 
-      if (!response.ok) {
-        throw new Error(`Failed to fetch memberships: ${response.status}`);
-      }
+        const response = await fetch(url.toString(), {
+          headers: { Authorization: `Bearer ${apiKey}` },
+        });
 
-      const data = await response.json();
-      allMemberships = allMemberships.concat(data.data || []);
+        if (!response.ok) {
+          const errorBody = await response.text();
+          throw new Error(
+            `Failed to fetch memberships for org ${org.id}: ${response.status} - ${errorBody}`
+          );
+        }
 
-      // Check for pagination
-      after = data.list_metadata?.after;
-    } while (after);
+        const data = await response.json();
+        allMemberships = allMemberships.concat(data.data || []);
+        after = data.list_metadata?.after;
+      } while (after);
+    }
 
     // Group by user
     const membershipsByUser = new Map<

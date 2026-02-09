@@ -136,14 +136,6 @@ export function getTagValue(tagType: string, valueId: string): TagValue | null {
 }
 
 /**
- * Get tag definition
- */
-export function getTagDefinition(tagType: string): TagType | null {
-  if (!isValidTagTypeId(tagType)) return null;
-  return TAG_TYPES[tagType];
-}
-
-/**
  * Get all available tool names
  */
 export function getAvailableTools(): string[] {
@@ -180,6 +172,9 @@ const TOOL_COLOR_CLASS_MAP: Record<string, string> = {
   '#F59E0B': 'amber',
   '#10B981': 'emerald',
   '#14B8A6': 'teal',
+  '#EF4444': 'red',
+  '#6366F1': 'indigo',
+  '#6264A7': 'teams-purple',
 };
 
 /**

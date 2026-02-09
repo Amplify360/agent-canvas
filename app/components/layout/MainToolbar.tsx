@@ -4,13 +4,14 @@
 
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { useCanvas } from '@/contexts/CanvasContext';
 import { useGrouping } from '@/contexts/GroupingContext';
 import { useAgents } from '@/contexts/AgentContext';
 import { Icon } from '@/components/ui/Icon';
 import { Tooltip } from '@/components/ui/Tooltip';
 import { TAG_TYPES } from '@/utils/config';
+import { useClickOutside } from '@/hooks/useClickOutside';
 
 interface MainToolbarProps {
   onAddAgent: () => void;
@@ -24,29 +25,8 @@ export function MainToolbar({ onAddAgent }: MainToolbarProps) {
   const [showCopied, setShowCopied] = useState(false);
   const groupingDropdownRef = useRef<HTMLDivElement>(null);
 
-  // Close grouping dropdown on outside click or Escape key
-  useEffect(() => {
-    if (!isGroupingOpen) return;
-
-    function handleClickOutside(event: MouseEvent) {
-      if (groupingDropdownRef.current && !groupingDropdownRef.current.contains(event.target as Node)) {
-        setIsGroupingOpen(false);
-      }
-    }
-
-    function handleEscapeKey(event: KeyboardEvent) {
-      if (event.key === 'Escape') {
-        setIsGroupingOpen(false);
-      }
-    }
-
-    document.addEventListener('mousedown', handleClickOutside);
-    document.addEventListener('keydown', handleEscapeKey);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-      document.removeEventListener('keydown', handleEscapeKey);
-    };
-  }, [isGroupingOpen]);
+  const closeGrouping = useCallback(() => setIsGroupingOpen(false), []);
+  useClickOutside(groupingDropdownRef, closeGrouping, isGroupingOpen);
 
   const activeTag = TAG_TYPES[activeTagType as keyof typeof TAG_TYPES];
 
@@ -105,8 +85,9 @@ export function MainToolbar({ onAddAgent }: MainToolbarProps) {
           </button>
           <div className={`toolbar__dropdown ${isGroupingOpen ? 'open' : ''}`}>
             {Object.values(TAG_TYPES).map((tag) => (
-              <div
+              <button
                 key={tag.id}
+                type="button"
                 className={`toolbar__dropdown-item ${activeTagType === tag.id ? 'is-active' : ''}`}
                 onClick={() => {
                   setActiveTagType(tag.id);
@@ -115,7 +96,7 @@ export function MainToolbar({ onAddAgent }: MainToolbarProps) {
               >
                 <Icon name={tag.icon} />
                 <span>{tag.label}</span>
-              </div>
+              </button>
             ))}
           </div>
         </div>

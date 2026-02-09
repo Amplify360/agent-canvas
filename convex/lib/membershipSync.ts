@@ -8,7 +8,7 @@
  * - Manual sync (debugging/support)
  */
 
-import { MutationCtx, ActionCtx } from "../_generated/server";
+import { MutationCtx } from "../_generated/server";
 import { SyncType } from "./validators";
 
 /**
@@ -186,22 +186,3 @@ export async function syncUserMembershipsFromData(
   return result;
 }
 
-/**
- * Get all memberships for a user from Convex
- */
-export async function getUserMemberships(
-  ctx: MutationCtx | ActionCtx,
-  workosUserId: string
-): Promise<Array<{ orgId: string; role: string }>> {
-  // For ActionCtx, we need to use runQuery, but for MutationCtx we can query directly
-  // This function is primarily called from mutations, so we assume MutationCtx
-  const memberships = await (ctx as MutationCtx).db
-    .query("userOrgMemberships")
-    .withIndex("by_user", (q) => q.eq("workosUserId", workosUserId))
-    .collect();
-
-  return memberships.map((m) => ({
-    orgId: m.workosOrgId,
-    role: m.role,
-  }));
-}

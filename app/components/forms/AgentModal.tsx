@@ -11,7 +11,7 @@ import { useAgents } from '@/contexts/AgentContext';
 import { useAppState } from '@/contexts/AppStateContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAsyncOperation } from '@/hooks/useAsyncOperation';
-import { useQuery, useConvexAuth } from '@/hooks/useConvex';
+import { useQuery, useCanQuery } from '@/hooks/useConvex';
 import { validateAgentForm } from '@/utils/validation';
 import { getAvailableTools, getToolDisplay, DEFAULT_PHASE } from '@/utils/config';
 import { AGENT_STATUS, AGENT_STATUS_OPTIONS, AgentStatus } from '@/types/validationConstants';
@@ -55,8 +55,7 @@ export function AgentModal({ isOpen, onClose, agent, defaultPhase }: AgentModalP
   const { showToast } = useAppState();
   const { currentOrgId } = useAuth();
   // Use Convex's auth state to gate queries - this ensures token is actually set
-  const { isAuthenticated: isConvexAuthenticated, isLoading: isConvexAuthLoading } = useConvexAuth();
-  const canQuery = isConvexAuthenticated && !isConvexAuthLoading;
+  const { canQuery } = useCanQuery();
   const executeOperation = useAsyncOperation();
 
   // Get existing categories from org for autocomplete
@@ -123,7 +122,7 @@ export function AgentModal({ isOpen, onClose, agent, defaultPhase }: AgentModalP
       setErrors({});
     }
     setNewJourneyStep('');
-  }, [agent, defaultPhase]);
+  }, [agent, defaultPhase, isOpen]);
 
   const validateField = (field: string, value: string) => {
     const testData = { ...formData, [field]: value };
