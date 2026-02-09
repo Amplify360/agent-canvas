@@ -5667,11 +5667,8 @@ body.is-resizing-sidebar .main-wrapper {
     border: 1px solid var(--dock-border);
     border-radius: 16px;
     box-shadow: var(--dock-shadow);
-    /* Wrap instead of horizontal scrolling in overview mode */
-    overflow-x: hidden;
-    overflow-y: visible;
+    /* Wrapping keeps content in-bounds; no scroll container needed */
     max-width: 100%;
-    scrollbar-width: thin;
 }
 
 /* ============================================
