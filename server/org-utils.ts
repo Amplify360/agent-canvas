@@ -6,6 +6,7 @@
  */
 
 import { ORG_ROLES } from '@/types/validationConstants';
+import { fetchUserOrgs, WorkOSOrgMembership } from '@/server/workos';
 
 /**
  * Check if a user is a super admin based on their email
@@ -21,7 +22,7 @@ export function isSuperAdmin(email: string | undefined): boolean {
  * TTL: 60 seconds - balances freshness with performance
  */
 interface CachedMembership {
-  memberships: Array<{ organization_id: string; role?: { slug: string } }>;
+  memberships: WorkOSOrgMembership[];
   expiresAt: number;
 }
 
@@ -34,7 +35,7 @@ const CACHE_TTL_MS = 60 * 1000; // 60 seconds
 async function getCachedMemberships(
   userId: string,
   apiKey: string
-): Promise<Array<{ organization_id: string; role?: { slug: string } }>> {
+): Promise<WorkOSOrgMembership[]> {
   const cacheKey = userId;
   const cached = membershipCache.get(cacheKey);
 
@@ -42,17 +43,7 @@ async function getCachedMemberships(
     return cached.memberships;
   }
 
-  const response = await fetch(
-    `https://api.workos.com/user_management/organization_memberships?user_id=${userId}&limit=100`,
-    { headers: { Authorization: `Bearer ${apiKey}` } }
-  );
-
-  if (!response.ok) {
-    return [];
-  }
-
-  const data = await response.json();
-  const memberships = data.data || [];
+  const memberships = await fetchUserOrgs(userId, apiKey);
 
   // Cache the result
   membershipCache.set(cacheKey, {
