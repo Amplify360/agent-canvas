@@ -5659,6 +5659,8 @@ body.is-resizing-sidebar .main-wrapper {
     justify-content: flex-start;
     flex-wrap: wrap;
     align-content: flex-start;
+    width: 100%;
+    min-width: 0;
     gap: var(--dock-item-gap);
     padding: var(--space-2) var(--space-3);
     background: var(--dock-bg);
