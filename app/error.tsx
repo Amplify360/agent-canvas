@@ -1,13 +1,15 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
+
+const AUTO_RETRY_DELAY_MS = 2500;
+const MAX_AUTO_RETRIES = 2;
 
 /**
  * App-level error boundary.
  *
  * Catches transient errors (e.g. auth race conditions during signup/login)
- * and offers a retry button instead of showing the generic Next.js
- * "Application Error" page.
+ * and auto-retries for auth errors, or shows a retry button for other errors.
  */
 export default function Error({
   error,
@@ -16,11 +18,20 @@ export default function Error({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
-  useEffect(() => {
-    console.error('[ErrorBoundary]', error);
-  }, [error]);
+  const retryCount = useRef(0);
 
   const isAuthError = error.message?.includes('Authentication required');
+
+  useEffect(() => {
+    console.error('[ErrorBoundary]', error);
+
+    // Auto-retry transient auth errors — the token usually arrives within 2s
+    if (isAuthError && retryCount.current < MAX_AUTO_RETRIES) {
+      retryCount.current += 1;
+      const timer = setTimeout(reset, AUTO_RETRY_DELAY_MS);
+      return () => clearTimeout(timer);
+    }
+  }, [error, isAuthError, reset]);
 
   return (
     <div
