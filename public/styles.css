@@ -1482,7 +1482,7 @@ body.is-resizing-sidebar .main-wrapper {
 
 .agent-group__dock-row {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: var(--space-4);
     padding: var(--space-3) var(--space-4);
     min-height: 120px;
@@ -5657,6 +5657,10 @@ body.is-resizing-sidebar .main-wrapper {
     display: flex;
     align-items: center;
     justify-content: flex-start;
+    flex-wrap: wrap;
+    align-content: flex-start;
+    width: 100%;
+    min-width: 0;
     gap: var(--dock-item-gap);
     padding: var(--space-2) var(--space-3);
     background: var(--dock-bg);
@@ -5665,10 +5669,8 @@ body.is-resizing-sidebar .main-wrapper {
     border: 1px solid var(--dock-border);
     border-radius: 16px;
     box-shadow: var(--dock-shadow);
-    /* Handle overflow for many agents */
-    overflow-x: auto;
+    /* Wrapping keeps content in-bounds; no scroll container needed */
     max-width: 100%;
-    scrollbar-width: thin;
 }
 
 /* ============================================
@@ -5681,14 +5683,14 @@ body.is-resizing-sidebar .main-wrapper {
     flex-direction: column;
     align-items: center;
     justify-content: flex-start;
-    width: var(--dock-item-size);
+    width: min(100%, var(--dock-item-size));
     height: 90px;
     padding: 10px var(--space-2) var(--space-2);
     background: var(--bg-secondary);
     border: 1px solid var(--border-subtle);
     border-radius: var(--radius-lg);
     cursor: pointer;
-    flex-shrink: 0;
+    flex: 0 1 var(--dock-item-size);
     transition: all 0.15s ease;
 }
 
