@@ -20,6 +20,11 @@ export default authkitMiddleware({
   },
   // Redirect URI for OAuth callback (also set via WORKOS_REDIRECT_URI env var)
   redirectUri: process.env.WORKOS_REDIRECT_URI || 'http://localhost:3000/api/auth/callback',
+  // Pre-seed a short-lived workos-access-token cookie on every page load so the
+  // client-side TokenStore can read the JWT synchronously instead of making an
+  // async server action call. This eliminates the auth race condition where
+  // Convex queries fire before the token is available on first load / signup.
+  eagerAuth: true,
   // Debug mode for development (will log auth state)
   debug: process.env.NODE_ENV === 'development',
 });

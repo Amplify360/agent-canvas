@@ -16,7 +16,7 @@ const REFRESH_COOLDOWN_MS = 2000;
 
 function useAuthFromAuthKit() {
   const { user, loading: authLoading } = useAuthKit();
-  const { loading: tokenLoading, getAccessToken, refresh } = useAccessToken();
+  const { loading: tokenLoading, getAccessToken, refresh, accessToken } = useAccessToken();
 
   const getAccessTokenRef = useRef(getAccessToken);
   const refreshRef = useRef(refresh);
@@ -24,25 +24,33 @@ function useAuthFromAuthKit() {
   refreshRef.current = refresh;
 
   const lastRefreshTime = useRef(0);
+  const lastRefreshFailed = useRef(false);
 
   // Reset cooldown when tab becomes active so the next Convex retry
   // calls refresh() immediately instead of returning stale cached token.
   useTabResume(() => {
     lastRefreshTime.current = 0;
+    lastRefreshFailed.current = false;
   });
 
   const fetchAccessToken = useCallback(
     async ({ forceRefreshToken }: { forceRefreshToken: boolean }): Promise<string | null> => {
       if (forceRefreshToken) {
         const now = Date.now();
-        if (now - lastRefreshTime.current < REFRESH_COOLDOWN_MS && lastRefreshTime.current > 0) {
+        // Skip cooldown if the last refresh failed — allow immediate retry
+        const shouldCooldown = !lastRefreshFailed.current
+          && lastRefreshTime.current > 0
+          && now - lastRefreshTime.current < REFRESH_COOLDOWN_MS;
+        if (shouldCooldown) {
           return (await getAccessTokenRef.current()) ?? null;
         }
         lastRefreshTime.current = now;
+        lastRefreshFailed.current = false;
         try {
           return (await refreshRef.current()) ?? null;
         } catch (error) {
           console.error('[ConvexAuth] Token refresh failed:', error);
+          lastRefreshFailed.current = true;
           return null;
         }
       }
@@ -55,9 +63,14 @@ function useAuthFromAuthKit() {
     [],
   );
 
+  // Only report authenticated when we actually have a token available.
+  // Previously we used `!!user` which could be true before the token was
+  // fetched, causing Convex to fire queries with no JWT attached.
+  const hasToken = !!accessToken;
+
   return {
     isLoading: authLoading || tokenLoading,
-    isAuthenticated: !!user,
+    isAuthenticated: !!user && hasToken,
     fetchAccessToken,
   };
 }
