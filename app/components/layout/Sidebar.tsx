@@ -228,9 +228,20 @@ export function Sidebar() {
                     <button
                       key={org.id}
                       className="sidebar__dropdown-item"
-                      onClick={() => {
-                        setCurrentOrgId(org.id);
+                      onClick={async () => {
+                        if (org.id === currentOrgId) {
+                          setOrgDropdownOpen(false);
+                          return;
+                        }
                         setOrgDropdownOpen(false);
+                        // Sync memberships to Convex before switching org
+                        // to ensure the membership row exists before queries fire
+                        try {
+                          await syncMyMemberships();
+                        } catch {
+                          // Best-effort: continue switching even if sync fails
+                        }
+                        setCurrentOrgId(org.id);
                       }}
                     >
                       {org.name || org.id}
