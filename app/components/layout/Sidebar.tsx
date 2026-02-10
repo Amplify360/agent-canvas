@@ -8,7 +8,7 @@ import React, { useState, useRef, useCallback } from 'react';
 import { useAuth, useIsOrgAdmin, useCurrentOrg } from '@/contexts/AuthContext';
 import { useCanvas } from '@/contexts/CanvasContext';
 import { useAppState } from '@/contexts/AppStateContext';
-import { useAction } from 'convex/react';
+import { useAction, useQuery } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import { useResizable } from '@/hooks/useResizable';
 import { useClickOutside } from '@/hooks/useClickOutside';
@@ -53,6 +53,10 @@ export function Sidebar() {
   // Convex action for syncing memberships from WorkOS
   const syncMyMemberships = useAction(api.orgMemberships.syncMyMemberships);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [isSwitchingOrg, setIsSwitchingOrg] = useState(false);
+
+  // Convex memberships for the current user — used to skip sync when membership already exists
+  const convexMemberships = useQuery(api.orgMemberships.listMyMemberships) ?? [];
 
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [isMembersModalOpen, setIsMembersModalOpen] = useState(false);
@@ -218,7 +222,7 @@ export function Sidebar() {
                     onClick={() => setOrgDropdownOpen(!orgDropdownOpen)}
                     aria-expanded={orgDropdownOpen}
                   >
-                    <span className="sidebar__org-name">{currentOrg?.name || 'Loading...'}</span>
+                    <span className="sidebar__org-name">{isSwitchingOrg ? 'Switching...' : (currentOrg?.name || 'Loading...')}</span>
                     <span className="badge--beta">Beta</span>
                     <Icon name="chevron-down" className="sidebar__org-chevron" />
                   </button>
@@ -228,9 +232,26 @@ export function Sidebar() {
                     <button
                       key={org.id}
                       className="sidebar__dropdown-item"
-                      onClick={() => {
-                        setCurrentOrgId(org.id);
+                      disabled={isSwitchingOrg}
+                      onClick={async () => {
+                        if (org.id === currentOrgId) {
+                          setOrgDropdownOpen(false);
+                          return;
+                        }
                         setOrgDropdownOpen(false);
+                        // Only sync if membership doesn't already exist in Convex
+                        const hasMembership = convexMemberships.some(m => m.orgId === org.id);
+                        if (!hasMembership) {
+                          setIsSwitchingOrg(true);
+                          try {
+                            await syncMyMemberships();
+                          } catch {
+                            // Best-effort: continue switching even if sync fails
+                          } finally {
+                            setIsSwitchingOrg(false);
+                          }
+                        }
+                        setCurrentOrgId(org.id);
                       }}
                     >
                       {org.name || org.id}
