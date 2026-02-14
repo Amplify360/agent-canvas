@@ -333,6 +333,7 @@ export const syncMyMemberships = action({
     const data = await response.json();
     const rawMemberships = (data.data || []) as Array<{
       organization_id: string;
+      organization_name?: string;
       organization?: { id?: string; name?: string };
       role?: { slug: string };
     }>;
@@ -340,7 +341,7 @@ export const syncMyMemberships = action({
     const uniqueOrgIds = Array.from(new Set(rawMemberships.map((m) => m.organization_id)));
     const orgNamesById = new Map<string, string>();
     for (const membership of rawMemberships) {
-      const name = membership.organization?.name;
+      const name = membership.organization_name ?? membership.organization?.name;
       if (name) {
         orgNamesById.set(membership.organization_id, name);
       }

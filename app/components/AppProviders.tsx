@@ -15,9 +15,11 @@ import { AgentProvider } from '@/contexts/AgentContext';
 import { GroupingProvider } from '@/contexts/GroupingContext';
 import { AppStateProvider } from '@/contexts/AppStateContext';
 import { WorkOSWidgetsProvider } from '@/components/WorkOSWidgetsProvider';
+import { authDebug } from '@/utils/authDebug';
 
 // Signal session expiry to ConnectionRecoveryBanner instead of AuthKit's default page reload
 const onSessionExpired = () => {
+  authDebug('AppProviders', 'workos_session_expired');
   window.dispatchEvent(new CustomEvent('workos-session-expired'));
 };
 

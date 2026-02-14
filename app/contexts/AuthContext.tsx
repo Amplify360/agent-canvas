@@ -15,6 +15,7 @@ import { STORAGE_KEYS } from '@/constants/storageKeys';
 import { ORG_ROLES } from '@/types/validationConstants';
 import { useAction, useCanQuery } from '@/hooks/useConvex';
 import { useStableQuery } from '@/hooks/useStableQuery';
+import { authDebug } from '@/utils/authDebug';
 import { api } from '../../convex/_generated/api';
 
 interface AuthContextValue {
@@ -46,6 +47,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Clear persisted selections when user changes (prevents cross-user leakage)
   useEffect(() => {
     const currentId = authKitUser?.id ?? null;
+    authDebug('AuthContext', 'user_state_change', {
+      currentUserId: currentId,
+      previousUserId: prevUserIdRef.current,
+    });
+
     if (currentId !== prevUserIdRef.current) {
       setIsInitialized(false);
     }
@@ -92,9 +98,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (bootstrapSyncForUserRef.current === authKitUser.id) return;
 
     bootstrapSyncForUserRef.current = authKitUser.id;
+    authDebug('AuthContext', 'bootstrap_sync_start', { userId: authKitUser.id });
     syncMyMemberships({})
+      .then(() => {
+        authDebug('AuthContext', 'bootstrap_sync_success', { userId: authKitUser.id });
+      })
       .catch((error) => {
         console.error('Initial membership bootstrap sync failed:', error);
+        authDebug('AuthContext', 'bootstrap_sync_failed', { userId: authKitUser.id });
         // Allow retry on subsequent renders after transient failures.
         bootstrapSyncForUserRef.current = null;
       });
