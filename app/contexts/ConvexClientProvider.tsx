@@ -25,20 +25,14 @@ function useAuthFromAuthKit() {
   const accessTokenRef = useRef(accessToken);
   const lastKnownTokenRef = useRef<string | null>(accessToken ?? null);
 
-  useEffect(() => {
-    getAccessTokenRef.current = getAccessToken;
-  }, [getAccessToken]);
-
-  useEffect(() => {
-    refreshRef.current = refresh;
-  }, [refresh]);
-
-  useEffect(() => {
-    accessTokenRef.current = accessToken;
-    if (accessToken) {
-      lastKnownTokenRef.current = accessToken;
-    }
-  }, [accessToken]);
+  // Update refs during render so fetchAccessToken always sees the latest
+  // AuthKit handlers (including during fast refresh / reconnect churn).
+  getAccessTokenRef.current = getAccessToken;
+  refreshRef.current = refresh;
+  accessTokenRef.current = accessToken;
+  if (accessToken) {
+    lastKnownTokenRef.current = accessToken;
+  }
 
   useEffect(() => {
     authDebug('ConvexAuth', 'state', {
@@ -60,34 +54,49 @@ function useAuthFromAuthKit() {
       authDebug('ConvexAuth', 'fetchAccessToken:start', { userId, forceRefreshToken });
 
       if (forceRefreshToken) {
-        try {
-          const refreshed = await refreshRef.current();
-          if (refreshed) {
-            authDebug('ConvexAuth', 'fetchAccessToken:refresh_success', { userId });
-            return refreshed;
-          }
-          authDebug('ConvexAuth', 'fetchAccessToken:refresh_empty', { userId });
-        } catch (error) {
-          authDebug('ConvexAuth', 'fetchAccessToken:refresh_failed_attempt1', { userId });
-          console.error('[ConvexAuth] Token refresh failed (attempt 1):', error);
-          // One short retry handles transient network blips without dropping auth immediately.
+        const refreshFn = refreshRef.current;
+        if (typeof refreshFn !== 'function') {
+          authDebug('ConvexAuth', 'fetchAccessToken:refresh_unavailable', { userId });
+        } else {
           try {
-            await new Promise((resolve) => setTimeout(resolve, REFRESH_RETRY_DELAY_MS));
-            const retried = await refreshRef.current();
-            if (retried) {
-              authDebug('ConvexAuth', 'fetchAccessToken:refresh_success_attempt2', { userId });
-              return retried;
+            const refreshed = await refreshFn();
+            if (refreshed) {
+              authDebug('ConvexAuth', 'fetchAccessToken:refresh_success', { userId });
+              return refreshed;
             }
-            authDebug('ConvexAuth', 'fetchAccessToken:refresh_empty_attempt2', { userId });
-          } catch (retryError) {
-            authDebug('ConvexAuth', 'fetchAccessToken:refresh_failed_attempt2', { userId });
-            console.error('[ConvexAuth] Token refresh failed (attempt 2):', retryError);
+            authDebug('ConvexAuth', 'fetchAccessToken:refresh_empty', { userId });
+          } catch (error) {
+            authDebug('ConvexAuth', 'fetchAccessToken:refresh_failed_attempt1', { userId });
+            console.error('[ConvexAuth] Token refresh failed (attempt 1):', error);
+            // One short retry handles transient network blips without dropping auth immediately.
+            try {
+              await new Promise((resolve) => setTimeout(resolve, REFRESH_RETRY_DELAY_MS));
+              const retryRefreshFn = refreshRef.current;
+              if (typeof retryRefreshFn !== 'function') {
+                authDebug('ConvexAuth', 'fetchAccessToken:refresh_unavailable_attempt2', { userId });
+              } else {
+                const retried = await retryRefreshFn();
+                if (retried) {
+                  authDebug('ConvexAuth', 'fetchAccessToken:refresh_success_attempt2', { userId });
+                  return retried;
+                }
+                authDebug('ConvexAuth', 'fetchAccessToken:refresh_empty_attempt2', { userId });
+              }
+            } catch (retryError) {
+              authDebug('ConvexAuth', 'fetchAccessToken:refresh_failed_attempt2', { userId });
+              console.error('[ConvexAuth] Token refresh failed (attempt 2):', retryError);
+            }
           }
         }
       }
 
       try {
-        const tokenFromStore = await getAccessTokenRef.current();
+        const getAccessTokenFn = getAccessTokenRef.current;
+        const tokenFromStore =
+          typeof getAccessTokenFn === 'function' ? await getAccessTokenFn() : null;
+        if (typeof getAccessTokenFn !== 'function') {
+          authDebug('ConvexAuth', 'fetchAccessToken:getAccessToken_unavailable', { userId });
+        }
         const token = tokenFromStore ?? accessTokenRef.current ?? lastKnownTokenRef.current ?? null;
         authDebug('ConvexAuth', 'fetchAccessToken:getAccessToken_result', {
           userId,
