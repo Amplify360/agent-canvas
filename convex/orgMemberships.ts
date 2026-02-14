@@ -256,6 +256,51 @@ interface SyncResultType {
 }
 
 /**
+ * Fetch org names for a set of org IDs using paginated /organizations lookups.
+ * Performs early exit once all requested org IDs are resolved.
+ */
+async function fetchOrgNamesByIds(
+  apiKey: string,
+  orgIds: string[],
+): Promise<Map<string, string>> {
+  const targetIds = new Set(orgIds);
+  const names = new Map<string, string>();
+  let after: string | undefined;
+
+  while (targetIds.size > 0) {
+    const orgUrl = new URL("https://api.workos.com/organizations");
+    orgUrl.searchParams.set("limit", "100");
+    if (after) orgUrl.searchParams.set("after", after);
+
+    const orgResponse = await fetch(orgUrl.toString(), {
+      headers: { Authorization: `Bearer ${apiKey}` },
+    });
+
+    if (!orgResponse.ok) {
+      const errorBody = await orgResponse.text();
+      throw new Error(
+        `Failed to fetch organizations: ${orgResponse.status} - ${errorBody}`
+      );
+    }
+
+    const orgData = await orgResponse.json();
+    const pageOrgs = (orgData.data || []) as Array<{ id: string; name?: string }>;
+
+    for (const org of pageOrgs) {
+      if (targetIds.has(org.id) && org.name) {
+        names.set(org.id, org.name);
+        targetIds.delete(org.id);
+      }
+    }
+
+    after = orgData.list_metadata?.after;
+    if (!after) break;
+  }
+
+  return names;
+}
+
+/**
  * Sync current user's memberships from WorkOS
  * This is the manual sync button action
  */
@@ -288,27 +333,26 @@ export const syncMyMemberships = action({
     const data = await response.json();
     const rawMemberships = (data.data || []) as Array<{
       organization_id: string;
+      organization?: { id?: string; name?: string };
       role?: { slug: string };
     }>;
 
     const uniqueOrgIds = Array.from(new Set(rawMemberships.map((m) => m.organization_id)));
-    const orgNameEntries = await Promise.all(
-      uniqueOrgIds.map(async (orgId) => {
-        try {
-          const orgResponse = await fetch(`https://api.workos.com/organizations/${orgId}`, {
-            headers: { Authorization: `Bearer ${apiKey}` },
-          });
-          if (!orgResponse.ok) {
-            return [orgId, undefined] as const;
-          }
-          const orgData = await orgResponse.json();
-          return [orgId, orgData.name as string | undefined] as const;
-        } catch {
-          return [orgId, undefined] as const;
-        }
-      })
-    );
-    const orgNamesById = new Map<string, string | undefined>(orgNameEntries);
+    const orgNamesById = new Map<string, string>();
+    for (const membership of rawMemberships) {
+      const name = membership.organization?.name;
+      if (name) {
+        orgNamesById.set(membership.organization_id, name);
+      }
+    }
+
+    const missingOrgIds = uniqueOrgIds.filter((orgId) => !orgNamesById.has(orgId));
+    if (missingOrgIds.length > 0) {
+      const fetchedNames = await fetchOrgNamesByIds(apiKey, missingOrgIds);
+      for (const [orgId, orgName] of fetchedNames) {
+        orgNamesById.set(orgId, orgName);
+      }
+    }
 
     const memberships = rawMemberships.map((m) => ({
       orgId: m.organization_id,

@@ -133,29 +133,12 @@ http.route({
       switch (eventType) {
         case "organization_membership.created":
         case "organization_membership.updated": {
-          let orgName = data.organization?.name;
-          if (!orgName) {
-            const apiKey = process.env.WORKOS_API_KEY;
-            if (apiKey) {
-              try {
-                const orgResponse = await fetch(`https://api.workos.com/organizations/${data.organization_id}`, {
-                  headers: { Authorization: `Bearer ${apiKey}` },
-                });
-                if (orgResponse.ok) {
-                  const orgData = await orgResponse.json();
-                  orgName = orgData.name;
-                }
-              } catch {
-                // Best effort: continue without org name
-              }
-            }
-          }
-
           // Upsert the membership
           await ctx.runMutation(internal.orgMemberships.upsertMembershipInternal, {
             workosUserId: data.user_id,
             workosOrgId: data.organization_id,
-            orgName,
+            // Prefer payload name when available; background sync can backfill otherwise.
+            orgName: data.organization?.name,
             role: data.role?.slug || ORG_ROLES.MEMBER,
             timestamp: timestamp_ms,
           });

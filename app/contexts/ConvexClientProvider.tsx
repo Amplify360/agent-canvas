@@ -11,6 +11,8 @@ import { useState, useCallback, type ReactNode } from 'react';
 import { ConvexReactClient, ConvexProviderWithAuth } from 'convex/react';
 import { useAuth as useAuthKit, useAccessToken } from '@workos-inc/authkit-nextjs/components';
 
+const REFRESH_RETRY_DELAY_MS = 250;
+
 function useAuthFromAuthKit() {
   const { user, loading: authLoading } = useAuthKit();
   const { loading: tokenLoading, getAccessToken, refresh, accessToken } = useAccessToken();
@@ -21,18 +23,31 @@ function useAuthFromAuthKit() {
         return null;
       }
 
-      try {
-        if (forceRefreshToken) {
-          return (await refresh()) ?? null;
+      if (forceRefreshToken) {
+        try {
+          const refreshed = await refresh();
+          if (refreshed) return refreshed;
+        } catch (error) {
+          console.error('[ConvexAuth] Token refresh failed (attempt 1):', error);
+          // One short retry handles transient network blips without dropping auth immediately.
+          try {
+            await new Promise((resolve) => setTimeout(resolve, REFRESH_RETRY_DELAY_MS));
+            const retried = await refresh();
+            if (retried) return retried;
+          } catch (retryError) {
+            console.error('[ConvexAuth] Token refresh failed (attempt 2):', retryError);
+          }
         }
+      }
 
-        return (await getAccessToken()) ?? null;
+      try {
+        return (await getAccessToken()) ?? accessToken ?? null;
       } catch (error) {
         console.error('[ConvexAuth] Failed to get access token:', error);
-        return null;
+        return accessToken ?? null;
       }
     },
-    [getAccessToken, refresh, user],
+    [accessToken, getAccessToken, refresh, user],
   );
 
   // Avoid auth-state flapping during background token refresh when we already have a token.

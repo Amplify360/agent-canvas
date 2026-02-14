@@ -84,20 +84,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     [memberships],
   );
 
-  // Bootstrap sync if membership table is empty for an authenticated user.
-  // This covers first-login or missed-webhook scenarios without polling WorkOS on tab focus.
+  // Run one reconciliation sync per authenticated user session.
+  // This catches missed/partial webhook syncs without polling on tab focus.
   useEffect(() => {
     if (!authKitUser) return;
     if (!canQuery || isConvexAuthLoading || !hasLoadedMemberships) return;
-    if (memberships.length > 0) return;
     if (bootstrapSyncForUserRef.current === authKitUser.id) return;
 
     bootstrapSyncForUserRef.current = authKitUser.id;
     syncMyMemberships({})
       .catch((error) => {
         console.error('Initial membership bootstrap sync failed:', error);
+        // Allow retry on subsequent renders after transient failures.
+        bootstrapSyncForUserRef.current = null;
       });
-  }, [authKitUser, canQuery, hasLoadedMemberships, isConvexAuthLoading, memberships.length, syncMyMemberships]);
+  }, [authKitUser, canQuery, hasLoadedMemberships, isConvexAuthLoading, syncMyMemberships]);
 
   // Initialize when auth and org subscriptions are ready.
   useEffect(() => {
@@ -118,6 +119,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Keep selected org valid as memberships change.
   useEffect(() => {
     if (!authKitUser) return;
+    if (!hasLoadedMemberships) return;
 
     if (!currentOrgId && userOrgs.length > 0) {
       setCurrentOrgIdState(userOrgs[0].id);
@@ -127,7 +129,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (currentOrgId && !userOrgs.some((org) => org.id === currentOrgId)) {
       setCurrentOrgIdState(userOrgs.length > 0 ? userOrgs[0].id : null);
     }
-  }, [authKitUser, currentOrgId, setCurrentOrgIdState, userOrgs]);
+  }, [authKitUser, currentOrgId, hasLoadedMemberships, setCurrentOrgIdState, userOrgs]);
 
   const setCurrentOrgId = useCallback((orgId: string) => {
     setCurrentOrgIdState(orgId);
