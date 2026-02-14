@@ -255,6 +255,8 @@ interface SyncResultType {
   errors: string[];
 }
 
+const MAX_ORGANIZATION_PAGES = 100;
+
 /**
  * Fetch org names for a set of org IDs using paginated /organizations lookups.
  * Performs early exit once all requested org IDs are resolved.
@@ -266,8 +268,10 @@ async function fetchOrgNamesByIds(
   const targetIds = new Set(orgIds);
   const names = new Map<string, string>();
   let after: string | undefined;
+  let pagesChecked = 0;
 
-  while (targetIds.size > 0) {
+  while (targetIds.size > 0 && pagesChecked < MAX_ORGANIZATION_PAGES) {
+    pagesChecked += 1;
     const orgUrl = new URL("https://api.workos.com/organizations");
     orgUrl.searchParams.set("limit", "100");
     if (after) orgUrl.searchParams.set("after", after);
@@ -295,6 +299,12 @@ async function fetchOrgNamesByIds(
 
     after = orgData.list_metadata?.after;
     if (!after) break;
+  }
+
+  if (targetIds.size > 0) {
+    console.warn(
+      `Unable to resolve ${targetIds.size} org names after ${pagesChecked} page(s)`
+    );
   }
 
   return names;

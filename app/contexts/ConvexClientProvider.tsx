@@ -12,6 +12,7 @@ import { ConvexReactClient, ConvexProviderWithAuth } from 'convex/react';
 import { useAuth as useAuthKit, useAccessToken } from '@workos-inc/authkit-nextjs/components';
 import { authDebug } from '@/utils/authDebug';
 
+// Short enough to avoid user-visible delay, long enough to smooth transient blips.
 const REFRESH_RETRY_DELAY_MS = 250;
 
 function useAuthFromAuthKit() {
@@ -24,15 +25,27 @@ function useAuthFromAuthKit() {
   const refreshRef = useRef(refresh);
   const accessTokenRef = useRef(accessToken);
   const lastKnownTokenRef = useRef<string | null>(accessToken ?? null);
+  const lastKnownTokenUserIdRef = useRef<string | null>(userId);
+  const previousUserIdRef = useRef<string | null>(userId);
 
   // Update refs during render so fetchAccessToken always sees the latest
   // AuthKit handlers (including during fast refresh / reconnect churn).
   getAccessTokenRef.current = getAccessToken;
   refreshRef.current = refresh;
   accessTokenRef.current = accessToken;
-  if (accessToken) {
+  if (accessToken && userId) {
     lastKnownTokenRef.current = accessToken;
+    lastKnownTokenUserIdRef.current = userId;
   }
+
+  // Prevent stale token reuse across sign-out or account switches.
+  useEffect(() => {
+    if (previousUserIdRef.current !== userId) {
+      lastKnownTokenRef.current = null;
+      lastKnownTokenUserIdRef.current = userId;
+      previousUserIdRef.current = userId;
+    }
+  }, [userId]);
 
   useEffect(() => {
     authDebug('ConvexAuth', 'state', {
@@ -40,7 +53,8 @@ function useAuthFromAuthKit() {
       authLoading,
       tokenLoading,
       hasLiveToken: !!accessToken,
-      hasCachedToken: !!lastKnownTokenRef.current,
+      hasCachedToken:
+        lastKnownTokenUserIdRef.current === userId && !!lastKnownTokenRef.current,
     });
   }, [accessToken, authLoading, tokenLoading, userId]);
 
@@ -97,22 +111,26 @@ function useAuthFromAuthKit() {
         if (typeof getAccessTokenFn !== 'function') {
           authDebug('ConvexAuth', 'fetchAccessToken:getAccessToken_unavailable', { userId });
         }
-        const token = tokenFromStore ?? accessTokenRef.current ?? lastKnownTokenRef.current ?? null;
+        const cachedTokenForCurrentUser =
+          lastKnownTokenUserIdRef.current === userId ? lastKnownTokenRef.current : null;
+        const token = tokenFromStore ?? accessTokenRef.current ?? cachedTokenForCurrentUser ?? null;
         authDebug('ConvexAuth', 'fetchAccessToken:getAccessToken_result', {
           userId,
           hasTokenFromStore: !!tokenFromStore,
           hasLiveToken: !!accessTokenRef.current,
-          hasCachedToken: !!lastKnownTokenRef.current,
+          hasCachedToken: !!cachedTokenForCurrentUser,
           returnedToken: !!token,
         });
         return token;
       } catch (error) {
         console.error('[ConvexAuth] Failed to get access token:', error);
-        const token = accessTokenRef.current ?? lastKnownTokenRef.current ?? null;
+        const cachedTokenForCurrentUser =
+          lastKnownTokenUserIdRef.current === userId ? lastKnownTokenRef.current : null;
+        const token = accessTokenRef.current ?? cachedTokenForCurrentUser ?? null;
         authDebug('ConvexAuth', 'fetchAccessToken:getAccessToken_failed', {
           userId,
           hasLiveToken: !!accessTokenRef.current,
-          hasCachedToken: !!lastKnownTokenRef.current,
+          hasCachedToken: !!cachedTokenForCurrentUser,
           returnedToken: !!token,
         });
         return token;
@@ -122,7 +140,9 @@ function useAuthFromAuthKit() {
   );
 
   // Avoid auth-state flapping during background refresh if we already had a token.
-  const hasToken = !!accessToken || !!lastKnownTokenRef.current;
+  const hasCachedTokenForCurrentUser =
+    lastKnownTokenUserIdRef.current === userId && !!lastKnownTokenRef.current;
+  const hasToken = !!accessToken || hasCachedTokenForCurrentUser;
 
   return {
     isLoading: authLoading || (tokenLoading && !hasToken),
