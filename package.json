@@ -33,6 +33,7 @@
   },
   "scripts": {
     "dev": "next dev",
+    "dev:auth-debug": "NEXT_PUBLIC_AUTH_DEBUG=1 next dev",
     "build": "next build",
     "start": "next start",
     "test": "vitest",

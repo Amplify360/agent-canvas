@@ -76,6 +76,14 @@ export async function upsertMembership(
       await ctx.db.patch(existing._id, patch);
       return "updated";
     }
+
+    // Allow org name backfill even when a newer timestamp already exists.
+    // This handles rows created by webhook payloads that lacked organization name.
+    if (!existing.orgName && orgName) {
+      await ctx.db.patch(existing._id, { orgName });
+      return "updated";
+    }
+
     return "skipped"; // Data is stale, ignore
   }
 

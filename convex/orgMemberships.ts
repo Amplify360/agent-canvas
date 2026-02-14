@@ -255,6 +255,8 @@ interface SyncResultType {
   errors: string[];
 }
 
+const MAX_ORGANIZATION_PAGES = 100;
+
 /**
  * Fetch org names for a set of org IDs using paginated /organizations lookups.
  * Performs early exit once all requested org IDs are resolved.
@@ -266,8 +268,10 @@ async function fetchOrgNamesByIds(
   const targetIds = new Set(orgIds);
   const names = new Map<string, string>();
   let after: string | undefined;
+  let pagesChecked = 0;
 
-  while (targetIds.size > 0) {
+  while (targetIds.size > 0 && pagesChecked < MAX_ORGANIZATION_PAGES) {
+    pagesChecked += 1;
     const orgUrl = new URL("https://api.workos.com/organizations");
     orgUrl.searchParams.set("limit", "100");
     if (after) orgUrl.searchParams.set("after", after);
@@ -295,6 +299,12 @@ async function fetchOrgNamesByIds(
 
     after = orgData.list_metadata?.after;
     if (!after) break;
+  }
+
+  if (targetIds.size > 0) {
+    console.warn(
+      `Unable to resolve ${targetIds.size} org names after ${pagesChecked} page(s)`
+    );
   }
 
   return names;
@@ -333,6 +343,7 @@ export const syncMyMemberships = action({
     const data = await response.json();
     const rawMemberships = (data.data || []) as Array<{
       organization_id: string;
+      organization_name?: string;
       organization?: { id?: string; name?: string };
       role?: { slug: string };
     }>;
@@ -340,7 +351,7 @@ export const syncMyMemberships = action({
     const uniqueOrgIds = Array.from(new Set(rawMemberships.map((m) => m.organization_id)));
     const orgNamesById = new Map<string, string>();
     for (const membership of rawMemberships) {
-      const name = membership.organization?.name;
+      const name = membership.organization_name ?? membership.organization?.name;
       if (name) {
         orgNamesById.set(membership.organization_id, name);
       }
