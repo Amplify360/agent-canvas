@@ -53,6 +53,7 @@ export const listMyMemberships = query({
 
     return memberships.map((m) => ({
       orgId: m.workosOrgId,
+      orgName: m.orgName ?? m.workosOrgId,
       role: m.role,
     }));
   },
@@ -73,6 +74,7 @@ export const listUserMemberships = query({
 
     return memberships.map((m) => ({
       orgId: m.workosOrgId,
+      orgName: m.orgName ?? m.workosOrgId,
       role: m.role,
     }));
   },
@@ -147,6 +149,7 @@ export const syncFromFetchedData = internalMutation({
     workosUserId: v.string(),
     memberships: v.array(v.object({
       orgId: v.string(),
+      orgName: v.optional(v.string()),
       role: v.string(),
     })),
     syncType: v.union(v.literal(SYNC_TYPE.WEBHOOK), v.literal(SYNC_TYPE.CRON), v.literal(SYNC_TYPE.MANUAL)),
@@ -183,6 +186,7 @@ export const upsertMembershipInternal = internalMutation({
   args: {
     workosUserId: v.string(),
     workosOrgId: v.string(),
+    orgName: v.optional(v.string()),
     role: v.string(),
     timestamp: v.number(),
   },
@@ -191,6 +195,7 @@ export const upsertMembershipInternal = internalMutation({
       ctx,
       args.workosUserId,
       args.workosOrgId,
+      args.orgName,
       args.role,
       args.timestamp
     );
@@ -281,12 +286,35 @@ export const syncMyMemberships = action({
     }
 
     const data = await response.json();
-    const memberships = (data.data || []).map(
-      (m: { organization_id: string; role?: { slug: string } }) => ({
-        orgId: m.organization_id,
-        role: m.role?.slug || ORG_ROLES.MEMBER,
+    const rawMemberships = (data.data || []) as Array<{
+      organization_id: string;
+      role?: { slug: string };
+    }>;
+
+    const uniqueOrgIds = Array.from(new Set(rawMemberships.map((m) => m.organization_id)));
+    const orgNameEntries = await Promise.all(
+      uniqueOrgIds.map(async (orgId) => {
+        try {
+          const orgResponse = await fetch(`https://api.workos.com/organizations/${orgId}`, {
+            headers: { Authorization: `Bearer ${apiKey}` },
+          });
+          if (!orgResponse.ok) {
+            return [orgId, undefined] as const;
+          }
+          const orgData = await orgResponse.json();
+          return [orgId, orgData.name as string | undefined] as const;
+        } catch {
+          return [orgId, undefined] as const;
+        }
       })
     );
+    const orgNamesById = new Map<string, string | undefined>(orgNameEntries);
+
+    const memberships = rawMemberships.map((m) => ({
+      orgId: m.organization_id,
+      orgName: orgNamesById.get(m.organization_id),
+      role: m.role?.slug || ORG_ROLES.MEMBER,
+    }));
 
     // Sync to Convex
     const result: SyncResultType = await ctx.runMutation(internal.orgMemberships.syncFromFetchedData, {
@@ -323,7 +351,7 @@ export const syncAllMemberships = action({
     }
 
     // First, fetch all organizations from WorkOS
-    const allOrgs: Array<{ id: string }> = [];
+    const allOrgs: Array<{ id: string; name?: string }> = [];
     let orgAfter: string | undefined;
 
     do {
@@ -346,6 +374,8 @@ export const syncAllMemberships = action({
       allOrgs.push(...(orgData.data || []));
       orgAfter = orgData.list_metadata?.after;
     } while (orgAfter);
+
+    const orgNamesById = new Map(allOrgs.map((org) => [org.id, org.name] as const));
 
     // Fetch memberships per organization (endpoint requires organization_id or user_id)
     let allMemberships: Array<{
@@ -385,7 +415,7 @@ export const syncAllMemberships = action({
     // Group by user
     const membershipsByUser = new Map<
       string,
-      Array<{ orgId: string; role: string }>
+      Array<{ orgId: string; orgName?: string; role: string }>
     >();
     for (const m of allMemberships) {
       const userId = m.user_id;
@@ -394,6 +424,7 @@ export const syncAllMemberships = action({
       }
       membershipsByUser.get(userId)!.push({
         orgId: m.organization_id,
+        orgName: orgNamesById.get(m.organization_id),
         role: m.role?.slug || ORG_ROLES.MEMBER,
       });
     }

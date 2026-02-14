@@ -30,8 +30,8 @@ export function AppProviders({ children, initialCanvasId }: AppProvidersProps) {
   return (
     <AuthKitProvider onSessionExpired={onSessionExpired}>
       <WorkOSWidgetsProvider>
-        <AuthProvider>
-          <ConvexClientProvider>
+        <ConvexClientProvider>
+          <AuthProvider>
             <CanvasProvider initialCanvasId={initialCanvasId}>
               <AgentProvider>
                 <GroupingProvider>
@@ -41,8 +41,8 @@ export function AppProviders({ children, initialCanvasId }: AppProvidersProps) {
                 </GroupingProvider>
               </AgentProvider>
             </CanvasProvider>
-          </ConvexClientProvider>
-        </AuthProvider>
+          </AuthProvider>
+        </ConvexClientProvider>
       </WorkOSWidgetsProvider>
     </AuthKitProvider>
   );

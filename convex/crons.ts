@@ -45,7 +45,7 @@ export const reconcileMemberships = internalAction({
 
     try {
       // First, fetch all organizations from WorkOS
-      const allOrgs: Array<{ id: string }> = [];
+      const allOrgs: Array<{ id: string; name?: string }> = [];
       let orgAfter: string | undefined;
 
       do {
@@ -70,6 +70,7 @@ export const reconcileMemberships = internalAction({
       } while (orgAfter);
 
       console.log(`Found ${allOrgs.length} organizations to reconcile`);
+      const orgNamesById = new Map(allOrgs.map((org) => [org.id, org.name] as const));
 
       // Fetch memberships per organization (endpoint requires organization_id or user_id)
       let allMemberships: Array<{
@@ -109,7 +110,7 @@ export const reconcileMemberships = internalAction({
       // Group by user
       const membershipsByUser = new Map<
         string,
-        Array<{ orgId: string; role: string }>
+        Array<{ orgId: string; orgName?: string; role: string }>
       >();
       for (const m of allMemberships) {
         const userId = m.user_id;
@@ -118,6 +119,7 @@ export const reconcileMemberships = internalAction({
         }
         membershipsByUser.get(userId)!.push({
           orgId: m.organization_id,
+          orgName: orgNamesById.get(m.organization_id),
           role: m.role?.slug || ORG_ROLES.MEMBER,
         });
       }

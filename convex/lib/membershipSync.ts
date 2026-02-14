@@ -42,6 +42,7 @@ export async function upsertMembership(
   ctx: MutationCtx,
   workosUserId: string,
   workosOrgId: string,
+  orgName: string | undefined,
   role: string,
   timestamp: number
 ): Promise<"added" | "updated" | "skipped"> {
@@ -58,10 +59,21 @@ export async function upsertMembership(
     // Handle both updatedAt (new) and syncedAt (legacy) field names
     const existingTimestamp = existing.updatedAt ?? existing.syncedAt ?? 0;
     if (timestamp > existingTimestamp) {
-      await ctx.db.patch(existing._id, {
+      const patch: {
+        role: string;
+        updatedAt: number;
+        orgName?: string;
+      } = {
         role,
         updatedAt: timestamp,
-      });
+      };
+
+      // Preserve existing name if we don't have a new one.
+      if (orgName) {
+        patch.orgName = orgName;
+      }
+
+      await ctx.db.patch(existing._id, patch);
       return "updated";
     }
     return "skipped"; // Data is stale, ignore
@@ -71,6 +83,7 @@ export async function upsertMembership(
   await ctx.db.insert("userOrgMemberships", {
     workosUserId,
     workosOrgId,
+    orgName,
     role,
     updatedAt: timestamp,
   });
@@ -131,7 +144,7 @@ export async function logSync(
 export async function syncUserMembershipsFromData(
   ctx: MutationCtx,
   workosUserId: string,
-  memberships: Array<{ orgId: string; role: string }>,
+  memberships: Array<{ orgId: string; orgName?: string; role: string }>,
   timestamp: number
 ): Promise<SyncResult> {
   const result: SyncResult = {
@@ -156,6 +169,7 @@ export async function syncUserMembershipsFromData(
         ctx,
         workosUserId,
         membership.orgId,
+        membership.orgName,
         membership.role,
         timestamp
       );
@@ -185,4 +199,3 @@ export async function syncUserMembershipsFromData(
 
   return result;
 }
-

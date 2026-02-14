@@ -92,6 +92,7 @@ export default defineSchema({
   userOrgMemberships: defineTable({
     workosUserId: v.string(),
     workosOrgId: v.string(),
+    orgName: v.optional(v.string()), // Denormalized org name for UI rendering without WorkOS round-trips
     role: v.string(), // e.g., "admin", "member"
     updatedAt: v.optional(v.number()), // Timestamp for stale data protection
     syncedAt: v.optional(v.number()), // Legacy field name, kept for backward compatibility

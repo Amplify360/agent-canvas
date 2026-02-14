@@ -37,7 +37,7 @@ const MENU_HEIGHT = 152; // 4 items
 const VIEWPORT_PADDING = 8;
 
 export function Sidebar() {
-  const { user, userOrgs, currentOrgId, setCurrentOrgId, signOut, syncMemberships } = useAuth();
+  const { user, userOrgs, currentOrgId, setCurrentOrgId, signOut } = useAuth();
   const { canvases, currentCanvasId, setCurrentCanvasId, createCanvas, deleteCanvas } = useCanvas();
   const { isSidebarCollapsed, toggleSidebar, showToast, sidebarWidth, setSidebarWidth, themePreference, setThemePreference } = useAppState();
 
@@ -80,8 +80,6 @@ export function Sidebar() {
     try {
       // First sync from WorkOS to Convex
       const result = await syncMyMemberships({});
-      // Then refresh AuthContext state
-      await syncMemberships();
       showToast(
         `Memberships synced: ${result.added} added, ${result.updated} updated, ${result.removed} removed`,
         'success'
