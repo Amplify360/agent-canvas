@@ -8,8 +8,10 @@ This document gives a new developer enough context to implement the current test
 Scope is this repository (`agent-canvas`) as evaluated on **February 7, 2026**.
 
 ## Current Baseline
-- Test command: `pnpm test:run`
-- Current result: `8` files, `180` tests, all passing
+- Unit test command: `pnpm test:run`
+- Unit test result: `8` files, `177` tests, all passing (as of February 15, 2026)
+- E2E smoke command: `pnpm test:e2e`
+- E2E smoke result: `1` test, passing (as of February 15, 2026)
 - Existing tests are mostly utility-level unit tests.
 - Critical runtime paths (Convex mutations/queries and auth-recovery UI flows) are under-tested.
 
@@ -18,27 +20,25 @@ Scope is this repository (`agent-canvas`) as evaluated on **February 7, 2026**.
 2. Add a focused set of behavioral tests around data integrity, access control, and recovery flows.
 3. Keep total test count lean; prioritize branch/risk coverage over assertion count.
 
+## Status Update (February 15, 2026)
+- Added a Playwright E2E happy-path smoke test (`tests/e2e/happy-path.spec.ts`) running against the internal `/e2e` route (in-memory Convex/auth mocks).
+- CI now runs unit + E2E via `.github/workflows/tests.yml` (`pnpm test:run` + `pnpm test:e2e`).
+- Pruned some low-signal unit-test duplication (notably status-config duplication and some formatting redundancies).
+
 ---
 
 ## Part A: Remove / Collapse Low-Signal Tests
 
-### 1) Status config duplication and tautology
+### 1) Status config tautology
 - File: `tests/unit/status-config.test.ts`
-- Duplicate overlap with: `tests/unit/config-utils.test.ts` (`getAgentStatusConfig` section)
-- Low-value target:
-  - `all known statuses have required fields` loop (constant-shape tautology)
-- Action:
-  - Keep one concise `getAgentStatusConfig` behavior test file.
-  - Remove duplicate behavior assertions and constant-shape checks.
+- Status: duplicate overlap with `tests/unit/config-utils.test.ts` removed on February 15, 2026.
+- Low-value target: `all known statuses have required fields` loop (constant-shape tautology)
+- Action: consider replacing the constant-shape loop with a small set of behavior-focused assertions.
 
-### 2) Formatting duplicate boundaries
+### 2) Formatting redundancies
 - File: `tests/unit/formatting.test.ts`
-- Duplicates:
-  - boundary tests for `1000` and `1000000` already covered in broader range tests
-  - overlapping fallback tests for empty/undefined color input
-- Action:
-  - keep one boundary assertion per threshold
-  - keep one fallback test for empty/falsy behavior
+- Status: trimmed duplicate boundary cases and removed type-invalid inputs (e.g. `undefined as string`) on February 15, 2026.
+- Action: keep tests focused on user-visible output; avoid excessive boundary duplication.
 
 ### 3) Redundant role-specific access assertions
 - File: `tests/unit/convex-auth.test.ts`
@@ -92,8 +92,8 @@ These are the highest-value gaps for production confidence.
   - older timestamp does not delete newer membership record
   - sync removes memberships absent from source data only when timestamp is newer
 
-## 5) MembershipSync retry behavior in client startup
-- Target code: `app/components/MembershipSync.tsx`
+## 5) Membership sync + auth recovery in client startup
+- Target code: `app/contexts/AuthContext.tsx` (membership sync action + retry behavior)
 - Why high-impact:
   - startup auth-sync failures directly affect first-load usability
 - Add tests for behavior:
@@ -137,7 +137,7 @@ If React testing-library is not yet installed, add:
 2. Add Convex behavior tests for `canvases.get` and `canvases.remove`.
 3. Add `agents.bulkReplace` behavior tests.
 4. Add membership sync stale-timestamp tests.
-5. Add `MembershipSync` component behavior tests.
+5. Add AuthContext membership-sync/auth-recovery behavior tests.
 6. Run and stabilize with `pnpm test:run`.
 
 ---
@@ -161,5 +161,4 @@ If React testing-library is not yet installed, add:
   - `convex/canvases.ts`
   - `convex/agents.ts`
   - `convex/lib/membershipSync.ts`
-  - `app/components/MembershipSync.tsx`
-
+  - `app/contexts/AuthContext.tsx`

@@ -34,6 +34,11 @@ export default defineConfig({
       ...process.env,
       E2E_TEST_MODE: '1',
       PORT: String(port),
+      // The main app route instantiates Convex client during SSR/prerender.
+      // E2E only hits `/e2e`, but `next build` still evaluates `/` unless we
+      // provide a value. This keeps CI secret-free and stable.
+      NEXT_PUBLIC_CONVEX_URL:
+        process.env.NEXT_PUBLIC_CONVEX_URL || 'https://example.invalid',
     },
   },
 });
