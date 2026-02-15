@@ -6,13 +6,13 @@
 
 import React, { useState, useRef, useCallback } from 'react';
 import { Agent } from '@/types/agent';
-import { getToolDisplay, getStatusColor } from '@/utils/config';
+import { getToolDisplay } from '@/utils/config';
 import { formatCurrency } from '@/utils/formatting';
 import { Icon } from '@/components/ui/Icon';
 import { Tooltip } from '@/components/ui/Tooltip';
-import { getAgentStatusConfig } from '@/types/validationConstants';
-import { useAgentFeedback } from '@/hooks/useAgentFeedback';
+import { getAgentStatusConfig, type VoteType } from '@/types/validationConstants';
 import { useClickOutside } from '@/hooks/useClickOutside';
+import { useAgentVoteActions } from '@/hooks/useAgentVoteActions';
 
 interface AgentCardProps {
   agent: Agent;
@@ -21,14 +21,27 @@ interface AgentCardProps {
   onDelete: () => void;
   onQuickLook?: () => void;
   onOpenComments?: () => void;
+  voteCounts?: { up: number; down: number };
+  userVote?: VoteType | null;
+  commentCount?: number;
 }
 
-export function AgentCard({ agent, index = 0, onEdit, onDelete, onQuickLook, onOpenComments }: AgentCardProps) {
+export function AgentCard({
+  agent,
+  index = 0,
+  onEdit,
+  onDelete,
+  onQuickLook,
+  onOpenComments,
+  voteCounts,
+  userVote,
+  commentCount = 0,
+}: AgentCardProps) {
   const metrics = agent.metrics || {};
-  const statusColor = getStatusColor(agent.status);
+  const statusColor = getAgentStatusConfig(agent.status).color;
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
-  const { voteCounts, userVote, handleVote, comments } = useAgentFeedback({ agentId: agent._id });
+  const { toggleVote } = useAgentVoteActions(agent._id);
 
   const closeMenu = useCallback(() => setMenuOpen(false), []);
   useClickOutside(menuRef, closeMenu, menuOpen);
@@ -255,7 +268,7 @@ export function AgentCard({ agent, index = 0, onEdit, onDelete, onQuickLook, onO
           <button
             type="button"
             className={`agent-card__vote-btn agent-card__vote-btn--up ${userVote === 'up' ? 'agent-card__vote-btn--active' : ''}`}
-            onClick={(e) => { e.stopPropagation(); handleVote('up'); }}
+            onClick={(e) => { e.stopPropagation(); toggleVote('up', userVote); }}
             aria-label={userVote === 'up' ? 'Remove upvote' : 'Upvote'}
           >
             <Icon name="thumbs-up" />
@@ -264,7 +277,7 @@ export function AgentCard({ agent, index = 0, onEdit, onDelete, onQuickLook, onO
           <button
             type="button"
             className={`agent-card__vote-btn agent-card__vote-btn--down ${userVote === 'down' ? 'agent-card__vote-btn--active' : ''}`}
-            onClick={(e) => { e.stopPropagation(); handleVote('down'); }}
+            onClick={(e) => { e.stopPropagation(); toggleVote('down', userVote); }}
             aria-label={userVote === 'down' ? 'Remove downvote' : 'Downvote'}
           >
             <Icon name="thumbs-down" />
@@ -277,7 +290,7 @@ export function AgentCard({ agent, index = 0, onEdit, onDelete, onQuickLook, onO
             aria-label="View comments"
           >
             <Icon name="message-circle" />
-            {comments && comments.length > 0 && <span>{comments.length}</span>}
+            {commentCount > 0 && <span>{commentCount}</span>}
           </button>
         </div>
       </div>

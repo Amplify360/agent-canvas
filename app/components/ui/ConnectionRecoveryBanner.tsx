@@ -14,6 +14,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useConvexAuth } from '@/hooks/useConvex';
 import { useAuth } from '@/contexts/AuthContext';
 import { Icon } from '@/components/ui/Icon';
+import { authDebug } from '@/utils/authDebug';
 
 const FAILURE_THRESHOLD_MS = 5000;
 
@@ -29,9 +30,12 @@ export function ConnectionRecoveryBanner() {
   // Attempt silent reauth; returns true if it succeeds
   const trySilentReauth = useCallback(async (): Promise<boolean> => {
     try {
+      authDebug('ConnectionRecoveryBanner', 'silent_reauth_start');
       await refreshAuthRef.current();
+      authDebug('ConnectionRecoveryBanner', 'silent_reauth_success');
       return true;
     } catch {
+      authDebug('ConnectionRecoveryBanner', 'silent_reauth_failed');
       return false;
     }
   }, []);
@@ -41,10 +45,12 @@ export function ConnectionRecoveryBanner() {
     let cancelled = false;
 
     if (!isAuthenticated && !isLoading) {
+      authDebug('ConnectionRecoveryBanner', 'auth_unavailable_start_timer');
       if (!timerRef.current) {
         timerRef.current = setTimeout(async () => {
           const recovered = await trySilentReauth();
           if (!recovered && !cancelled) {
+            authDebug('ConnectionRecoveryBanner', 'show_banner_after_threshold');
             setShowBanner(true);
           }
         }, FAILURE_THRESHOLD_MS);
@@ -55,6 +61,7 @@ export function ConnectionRecoveryBanner() {
         clearTimeout(timerRef.current);
         timerRef.current = null;
       }
+      authDebug('ConnectionRecoveryBanner', 'auth_recovered_hide_banner');
       setShowBanner(false);
     }
 
@@ -70,8 +77,10 @@ export function ConnectionRecoveryBanner() {
   // Immediate trigger: AuthKit detected session expiry — try silent reauth first
   useEffect(() => {
     const handleSessionExpired = async () => {
+      authDebug('ConnectionRecoveryBanner', 'session_expired_event');
       const recovered = await trySilentReauth();
       if (!recovered) {
+        authDebug('ConnectionRecoveryBanner', 'show_banner_after_session_expired');
         setShowBanner(true);
       }
     };

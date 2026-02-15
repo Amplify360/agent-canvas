@@ -21,7 +21,7 @@ interface CanvasContextValue {
   phases: string[];  // Canvas-level phase ordering (with defaults)
   categories: string[];  // Canvas-level category ordering (with defaults)
   isLoading: boolean;
-  initialCanvasError: 'not_found' | 'no_access' | null;
+  initialCanvasError: 'unavailable' | null;
   setCurrentCanvasId: (canvasId: string | null) => void;
   createCanvas: (title: string, slug: string) => Promise<string>;
   updateCanvas: (canvasId: string, data: Partial<Canvas>) => Promise<void>;
@@ -38,11 +38,11 @@ interface CanvasProviderProps {
 }
 
 export function CanvasProvider({ children, initialCanvasId }: CanvasProviderProps) {
-  const { currentOrgId, isInitialized, userOrgs, setCurrentOrgId } = useAuth();
+  const { currentOrgId, isInitialized, setCurrentOrgId } = useAuth();
   // Gate Convex queries on auth state to prevent empty results during token refresh
   const { canQuery, isConvexAuthLoading } = useCanQuery();
   const [currentCanvasId, setCurrentCanvasIdState] = useLocalStorage<string | null>(STORAGE_KEYS.CURRENT_CANVAS, null);
-  const [initialCanvasError, setInitialCanvasError] = useState<'not_found' | 'no_access' | null>(null);
+  const [initialCanvasError, setInitialCanvasError] = useState<'unavailable' | null>(null);
   // Use state instead of ref so that setting it to true triggers a re-render
   // and causes the query to switch to 'skip' (fixes race condition)
   const [initialCanvasHandled, setInitialCanvasHandled] = useState(false);
@@ -85,22 +85,12 @@ export function CanvasProvider({ children, initialCanvasId }: CanvasProviderProp
     // Query returned null - canvas not found or no access
     if (initialCanvas === null) {
       setInitialCanvasHandled(true);
-      setInitialCanvasError('not_found');
+      setInitialCanvasError('unavailable');
       return;
     }
 
-    // Canvas found - check if user has access to its org
+    // Canvas found - switch org if needed and select canvas
     const canvasOrgId = initialCanvas.workosOrgId;
-    const hasOrgAccess = userOrgs.some(org => org.id === canvasOrgId);
-
-    if (!hasOrgAccess) {
-      // User doesn't have access to this org
-      setInitialCanvasHandled(true);
-      setInitialCanvasError('no_access');
-      return;
-    }
-
-    // User has access - switch org if needed and select canvas
     setInitialCanvasHandled(true);
     if (currentOrgId !== canvasOrgId) {
       setCurrentOrgId(canvasOrgId);
@@ -110,7 +100,7 @@ export function CanvasProvider({ children, initialCanvasId }: CanvasProviderProp
     if (typeof window !== 'undefined') {
       window.history.replaceState(null, '', `/c/${initialCanvas._id}`);
     }
-  }, [isConvexAuthLoading, initialCanvasId, initialCanvas, initialCanvasHandled, userOrgs, currentOrgId, setCurrentOrgId, setCurrentCanvasIdState]);
+  }, [isConvexAuthLoading, initialCanvasId, initialCanvas, initialCanvasHandled, currentOrgId, setCurrentOrgId, setCurrentCanvasIdState]);
 
   // Auto-select first canvas if none selected or current canvas was deleted
   // Skip this if we have an initialCanvasId that hasn't been handled yet

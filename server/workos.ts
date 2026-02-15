@@ -13,11 +13,6 @@ export interface WorkOSOrgMembership {
   };
 }
 
-export interface WorkOSOrg {
-  id: string;
-  name: string;
-}
-
 /**
  * Fetch user's organization memberships
  */
@@ -33,15 +28,4 @@ export async function fetchUserOrgs(userId: string, apiKey: string): Promise<Wor
   }
   const data = await response.json();
   return data.data || [];
-}
-
-/**
- * Fetch organization details by ID
- */
-export async function fetchOrgDetails(orgId: string, apiKey: string): Promise<WorkOSOrg | null> {
-  const response = await fetch(`https://api.workos.com/organizations/${orgId}`, {
-    headers: { Authorization: `Bearer ${apiKey}` },
-  });
-  if (!response.ok) return null;
-  return response.json();
 }

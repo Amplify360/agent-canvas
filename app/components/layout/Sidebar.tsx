@@ -8,7 +8,7 @@ import React, { useState, useRef, useCallback } from 'react';
 import { useAuth, useIsOrgAdmin, useCurrentOrg } from '@/contexts/AuthContext';
 import { useCanvas } from '@/contexts/CanvasContext';
 import { useAppState } from '@/contexts/AppStateContext';
-import { useAction, useQuery } from 'convex/react';
+import { useAction, useQuery } from '@/hooks/useConvex';
 import { api } from '../../../convex/_generated/api';
 import { useResizable } from '@/hooks/useResizable';
 import { useClickOutside } from '@/hooks/useClickOutside';
@@ -21,6 +21,7 @@ import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { MembersWidget } from '../org/MembersWidget';
 import { Tooltip } from '../ui/Tooltip';
 import { THEMES, SYSTEM_THEME_OPTION, THEME_VALUES } from '@/constants/themes';
+import { copyTextToClipboard } from '@/utils/clipboard';
 
 const SIDEBAR_MIN_WIDTH = 180;
 const SIDEBAR_MAX_WIDTH = 400;
@@ -37,7 +38,7 @@ const MENU_HEIGHT = 152; // 4 items
 const VIEWPORT_PADDING = 8;
 
 export function Sidebar() {
-  const { user, userOrgs, currentOrgId, setCurrentOrgId, signOut, syncMemberships } = useAuth();
+  const { user, userOrgs, currentOrgId, setCurrentOrgId, signOut } = useAuth();
   const { canvases, currentCanvasId, setCurrentCanvasId, createCanvas, deleteCanvas } = useCanvas();
   const { isSidebarCollapsed, toggleSidebar, showToast, sidebarWidth, setSidebarWidth, themePreference, setThemePreference } = useAppState();
 
@@ -80,8 +81,6 @@ export function Sidebar() {
     try {
       // First sync from WorkOS to Convex
       const result = await syncMyMemberships({});
-      // Then refresh AuthContext state
-      await syncMemberships();
       showToast(
         `Memberships synced: ${result.added} added, ${result.updated} updated, ${result.removed} removed`,
         'success'
@@ -151,19 +150,8 @@ export function Sidebar() {
       setDeleteConfirm({ id: canvas._id, title: canvas.title });
     } else if (action === 'share') {
       const url = `${window.location.origin}/c/${canvas._id}`;
-      try {
-        await navigator.clipboard.writeText(url);
-        showToast('Link copied to clipboard', 'success');
-      } catch {
-        // Fallback for browsers that don't support clipboard API
-        const input = document.createElement('input');
-        input.value = url;
-        document.body.appendChild(input);
-        input.select();
-        document.execCommand('copy');
-        document.body.removeChild(input);
-        showToast('Link copied to clipboard', 'success');
-      }
+      const ok = await copyTextToClipboard(url);
+      showToast(ok ? 'Link copied to clipboard' : 'Failed to copy link', ok ? 'success' : 'error');
     }
     setCanvasMenu(null);
   };

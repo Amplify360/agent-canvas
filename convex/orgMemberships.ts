@@ -16,6 +16,7 @@ import {
 } from "./lib/membershipSync";
 import { requireSuperAdmin, checkSuperAdmin } from "./lib/auth";
 import { ORG_ROLES, SYNC_TYPE } from "./lib/validators";
+import { fetchAllMembershipsGroupedByUser } from "./lib/workosApi";
 
 /**
  * Internal query to get memberships for a user (used by auth.ts for ActionCtx)
@@ -53,6 +54,7 @@ export const listMyMemberships = query({
 
     return memberships.map((m) => ({
       orgId: m.workosOrgId,
+      orgName: m.orgName ?? m.workosOrgId,
       role: m.role,
     }));
   },
@@ -73,6 +75,7 @@ export const listUserMemberships = query({
 
     return memberships.map((m) => ({
       orgId: m.workosOrgId,
+      orgName: m.orgName ?? m.workosOrgId,
       role: m.role,
     }));
   },
@@ -147,6 +150,7 @@ export const syncFromFetchedData = internalMutation({
     workosUserId: v.string(),
     memberships: v.array(v.object({
       orgId: v.string(),
+      orgName: v.optional(v.string()),
       role: v.string(),
     })),
     syncType: v.union(v.literal(SYNC_TYPE.WEBHOOK), v.literal(SYNC_TYPE.CRON), v.literal(SYNC_TYPE.MANUAL)),
@@ -183,6 +187,7 @@ export const upsertMembershipInternal = internalMutation({
   args: {
     workosUserId: v.string(),
     workosOrgId: v.string(),
+    orgName: v.optional(v.string()),
     role: v.string(),
     timestamp: v.number(),
   },
@@ -191,6 +196,7 @@ export const upsertMembershipInternal = internalMutation({
       ctx,
       args.workosUserId,
       args.workosOrgId,
+      args.orgName,
       args.role,
       args.timestamp
     );
@@ -250,6 +256,61 @@ interface SyncResultType {
   errors: string[];
 }
 
+const MAX_ORGANIZATION_PAGES = 100;
+
+/**
+ * Fetch org names for a set of org IDs using paginated /organizations lookups.
+ * Performs early exit once all requested org IDs are resolved.
+ */
+async function fetchOrgNamesByIds(
+  apiKey: string,
+  orgIds: string[],
+): Promise<Map<string, string>> {
+  const targetIds = new Set(orgIds);
+  const names = new Map<string, string>();
+  let after: string | undefined;
+  let pagesChecked = 0;
+
+  while (targetIds.size > 0 && pagesChecked < MAX_ORGANIZATION_PAGES) {
+    pagesChecked += 1;
+    const orgUrl = new URL("https://api.workos.com/organizations");
+    orgUrl.searchParams.set("limit", "100");
+    if (after) orgUrl.searchParams.set("after", after);
+
+    const orgResponse = await fetch(orgUrl.toString(), {
+      headers: { Authorization: `Bearer ${apiKey}` },
+    });
+
+    if (!orgResponse.ok) {
+      const errorBody = await orgResponse.text();
+      throw new Error(
+        `Failed to fetch organizations: ${orgResponse.status} - ${errorBody}`
+      );
+    }
+
+    const orgData = await orgResponse.json();
+    const pageOrgs = (orgData.data || []) as Array<{ id: string; name?: string }>;
+
+    for (const org of pageOrgs) {
+      if (targetIds.has(org.id) && org.name) {
+        names.set(org.id, org.name);
+        targetIds.delete(org.id);
+      }
+    }
+
+    after = orgData.list_metadata?.after;
+    if (!after) break;
+  }
+
+  if (targetIds.size > 0) {
+    console.warn(
+      `Unable to resolve ${targetIds.size} org names after ${pagesChecked} page(s)`
+    );
+  }
+
+  return names;
+}
+
 /**
  * Sync current user's memberships from WorkOS
  * This is the manual sync button action
@@ -281,12 +342,35 @@ export const syncMyMemberships = action({
     }
 
     const data = await response.json();
-    const memberships = (data.data || []).map(
-      (m: { organization_id: string; role?: { slug: string } }) => ({
-        orgId: m.organization_id,
-        role: m.role?.slug || ORG_ROLES.MEMBER,
-      })
-    );
+    const rawMemberships = (data.data || []) as Array<{
+      organization_id: string;
+      organization_name?: string;
+      organization?: { id?: string; name?: string };
+      role?: { slug: string };
+    }>;
+
+    const uniqueOrgIds = Array.from(new Set(rawMemberships.map((m) => m.organization_id)));
+    const orgNamesById = new Map<string, string>();
+    for (const membership of rawMemberships) {
+      const name = membership.organization_name ?? membership.organization?.name;
+      if (name) {
+        orgNamesById.set(membership.organization_id, name);
+      }
+    }
+
+    const missingOrgIds = uniqueOrgIds.filter((orgId) => !orgNamesById.has(orgId));
+    if (missingOrgIds.length > 0) {
+      const fetchedNames = await fetchOrgNamesByIds(apiKey, missingOrgIds);
+      for (const [orgId, orgName] of fetchedNames) {
+        orgNamesById.set(orgId, orgName);
+      }
+    }
+
+    const memberships = rawMemberships.map((m) => ({
+      orgId: m.organization_id,
+      orgName: orgNamesById.get(m.organization_id),
+      role: m.role?.slug || ORG_ROLES.MEMBER,
+    }));
 
     // Sync to Convex
     const result: SyncResultType = await ctx.runMutation(internal.orgMemberships.syncFromFetchedData, {
@@ -322,81 +406,10 @@ export const syncAllMemberships = action({
       throw new Error("WorkOS API key not configured");
     }
 
-    // First, fetch all organizations from WorkOS
-    const allOrgs: Array<{ id: string }> = [];
-    let orgAfter: string | undefined;
-
-    do {
-      const orgUrl = new URL("https://api.workos.com/organizations");
-      orgUrl.searchParams.set("limit", "100");
-      if (orgAfter) orgUrl.searchParams.set("after", orgAfter);
-
-      const orgResponse = await fetch(orgUrl.toString(), {
-        headers: { Authorization: `Bearer ${apiKey}` },
-      });
-
-      if (!orgResponse.ok) {
-        const errorBody = await orgResponse.text();
-        throw new Error(
-          `Failed to fetch organizations: ${orgResponse.status} - ${errorBody}`
-        );
-      }
-
-      const orgData = await orgResponse.json();
-      allOrgs.push(...(orgData.data || []));
-      orgAfter = orgData.list_metadata?.after;
-    } while (orgAfter);
-
-    // Fetch memberships per organization (endpoint requires organization_id or user_id)
-    let allMemberships: Array<{
-      user_id: string;
-      organization_id: string;
-      role?: { slug: string };
-    }> = [];
-
-    for (const org of allOrgs) {
-      let after: string | undefined;
-
-      do {
-        const url = new URL(
-          "https://api.workos.com/user_management/organization_memberships"
-        );
-        url.searchParams.set("organization_id", org.id);
-        url.searchParams.set("limit", "100");
-        if (after) url.searchParams.set("after", after);
-
-        const response = await fetch(url.toString(), {
-          headers: { Authorization: `Bearer ${apiKey}` },
-        });
-
-        if (!response.ok) {
-          const errorBody = await response.text();
-          throw new Error(
-            `Failed to fetch memberships for org ${org.id}: ${response.status} - ${errorBody}`
-          );
-        }
-
-        const data = await response.json();
-        allMemberships = allMemberships.concat(data.data || []);
-        after = data.list_metadata?.after;
-      } while (after);
-    }
-
-    // Group by user
-    const membershipsByUser = new Map<
-      string,
-      Array<{ orgId: string; role: string }>
-    >();
-    for (const m of allMemberships) {
-      const userId = m.user_id;
-      if (!membershipsByUser.has(userId)) {
-        membershipsByUser.set(userId, []);
-      }
-      membershipsByUser.get(userId)!.push({
-        orgId: m.organization_id,
-        role: m.role?.slug || ORG_ROLES.MEMBER,
-      });
-    }
+    const { membershipsByUser } = await fetchAllMembershipsGroupedByUser(
+      apiKey,
+      ORG_ROLES.MEMBER
+    );
 
     // Sync each user
     let totalAdded = 0;

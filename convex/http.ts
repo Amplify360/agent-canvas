@@ -108,6 +108,10 @@ http.route({
         id: string;
         user_id: string;
         organization_id: string;
+        organization?: {
+          id?: string;
+          name?: string;
+        };
         role?: { slug: string };
         status?: string;
       };
@@ -133,6 +137,8 @@ http.route({
           await ctx.runMutation(internal.orgMemberships.upsertMembershipInternal, {
             workosUserId: data.user_id,
             workosOrgId: data.organization_id,
+            // Prefer payload name when available; background sync can backfill otherwise.
+            orgName: data.organization?.name,
             role: data.role?.slug || ORG_ROLES.MEMBER,
             timestamp: timestamp_ms,
           });

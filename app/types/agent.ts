@@ -37,3 +37,9 @@ export type AgentFormData = Pick<
   'demoLink' | 'videoLink' | 'metrics' | 'category' | 'status' |
   'phase' | 'agentOrder'
 >;
+
+/**
+ * Allowed defaults when opening the "New Agent" modal from UI context.
+ * Keep this narrow so we don't accidentally prefill fields we don't intend to.
+ */
+export type AgentCreateDefaults = Partial<Pick<AgentFormData, 'phase' | 'category' | 'status'>>;

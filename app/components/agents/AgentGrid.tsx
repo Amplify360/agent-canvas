@@ -12,10 +12,14 @@ import { useAgents } from '@/contexts/AgentContext';
 import { useCanQuery } from '@/hooks/useConvex';
 import { useDeleteAgent } from '@/hooks/useDeleteAgent';
 import { Icon } from '@/components/ui/Icon';
+import type { AgentCreateDefaults } from '@/types/agent';
+import { useCanvas } from '@/contexts/CanvasContext';
+import { useCanvasFeedback } from '@/hooks/useCanvasFeedback';
+import type { Id } from '../../../convex/_generated/dataModel';
 
 interface AgentGridProps {
   onEditAgent: (agent: Agent) => void;
-  onAddAgent: (phase: string) => void;
+  onAddAgent: (defaults?: AgentCreateDefaults) => void;
   onQuickLook?: (agent: Agent) => void;
   onOpenComments?: (agent: Agent) => void;
 }
@@ -23,8 +27,12 @@ interface AgentGridProps {
 export function AgentGrid({ onEditAgent, onAddAgent, onQuickLook, onOpenComments }: AgentGridProps) {
   const { computedGroups } = useGrouping();
   const { isLoading } = useAgents();
+  const { currentCanvasId } = useCanvas();
   const { isConvexAuthenticated, isConvexAuthLoading } = useCanQuery();
   const confirmAndDelete = useDeleteAgent();
+  const { voteCountsByAgent, userVotesByAgent, commentCountsByAgent } = useCanvasFeedback(
+    (currentCanvasId as Id<'canvases'> | null)
+  );
 
   const handleDeleteAgent = async (agent: Agent) => {
     await confirmAndDelete(agent._id, agent.name);
@@ -69,7 +77,7 @@ export function AgentGrid({ onEditAgent, onAddAgent, onQuickLook, onOpenComments
         </p>
         <button
           className="empty-state__btn"
-          onClick={() => onAddAgent('default')}
+          onClick={() => onAddAgent()}
         >
           <Icon name="plus" />
           Add Agent
@@ -90,6 +98,9 @@ export function AgentGrid({ onEditAgent, onAddAgent, onQuickLook, onOpenComments
           onAddAgent={onAddAgent}
           onQuickLook={onQuickLook}
           onOpenComments={onOpenComments}
+          voteCountsByAgent={voteCountsByAgent}
+          userVotesByAgent={userVotesByAgent}
+          commentCountsByAgent={commentCountsByAgent}
         />
       ))}
     </div>

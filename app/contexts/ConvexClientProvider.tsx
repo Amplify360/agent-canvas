@@ -2,75 +2,151 @@
  * ConvexClientProvider - Initializes and provides Convex client with authentication
  *
  * Uses WorkOS AuthKit SDK for access tokens with ConvexProviderWithAuth pattern.
- * Relies on Convex's built-in token refresh via authRefreshTokenLeewaySeconds.
+ * Relies on AuthKit for token lifecycle and Convex for reconnection/retry behavior.
  */
 
 'use client';
 
-import { useState, useCallback, useRef, type ReactNode } from 'react';
+import { useState, useCallback, useEffect, useRef, type ReactNode } from 'react';
 import { ConvexReactClient, ConvexProviderWithAuth } from 'convex/react';
 import { useAuth as useAuthKit, useAccessToken } from '@workos-inc/authkit-nextjs/components';
-import { useTabResume } from '@/hooks/useTabResume';
+import { authDebug } from '@/utils/authDebug';
 
-const REFRESH_COOLDOWN_MS = 2000;
+// Short enough to avoid user-visible delay, long enough to smooth transient blips.
+const REFRESH_RETRY_DELAY_MS = 250;
 
 function useAuthFromAuthKit() {
   const { user, loading: authLoading } = useAuthKit();
   const { loading: tokenLoading, getAccessToken, refresh, accessToken } = useAccessToken();
+  const userId = user?.id ?? null;
 
+  // Keep unstable AuthKit function references out of callback dependencies.
   const getAccessTokenRef = useRef(getAccessToken);
   const refreshRef = useRef(refresh);
+  const accessTokenRef = useRef(accessToken);
+  const lastKnownTokenRef = useRef<string | null>(accessToken ?? null);
+  const lastKnownTokenUserIdRef = useRef<string | null>(userId);
+  const previousUserIdRef = useRef<string | null>(userId);
+
+  // Update refs during render so fetchAccessToken always sees the latest
+  // AuthKit handlers (including during fast refresh / reconnect churn).
   getAccessTokenRef.current = getAccessToken;
   refreshRef.current = refresh;
+  accessTokenRef.current = accessToken;
+  if (accessToken && userId) {
+    lastKnownTokenRef.current = accessToken;
+    lastKnownTokenUserIdRef.current = userId;
+  }
 
-  const lastRefreshTime = useRef(0);
-  const lastRefreshFailed = useRef(false);
+  // Prevent stale token reuse across sign-out or account switches.
+  useEffect(() => {
+    if (previousUserIdRef.current !== userId) {
+      lastKnownTokenRef.current = null;
+      lastKnownTokenUserIdRef.current = userId;
+      previousUserIdRef.current = userId;
+    }
+  }, [userId]);
 
-  // Reset cooldown when tab becomes active so the next Convex retry
-  // calls refresh() immediately instead of returning stale cached token.
-  useTabResume(() => {
-    lastRefreshTime.current = 0;
-    lastRefreshFailed.current = false;
-  });
+  useEffect(() => {
+    authDebug('ConvexAuth', 'state', {
+      userId,
+      authLoading,
+      tokenLoading,
+      hasLiveToken: !!accessToken,
+      hasCachedToken:
+        lastKnownTokenUserIdRef.current === userId && !!lastKnownTokenRef.current,
+    });
+  }, [accessToken, authLoading, tokenLoading, userId]);
 
   const fetchAccessToken = useCallback(
     async ({ forceRefreshToken }: { forceRefreshToken: boolean }): Promise<string | null> => {
-      if (forceRefreshToken) {
-        const now = Date.now();
-        // Skip cooldown if the last refresh failed — allow immediate retry
-        const shouldCooldown = !lastRefreshFailed.current
-          && lastRefreshTime.current > 0
-          && now - lastRefreshTime.current < REFRESH_COOLDOWN_MS;
-        if (shouldCooldown) {
-          return (await getAccessTokenRef.current()) ?? null;
-        }
-        lastRefreshTime.current = now;
-        lastRefreshFailed.current = false;
-        try {
-          return (await refreshRef.current()) ?? null;
-        } catch (error) {
-          console.error('[ConvexAuth] Token refresh failed:', error);
-          lastRefreshFailed.current = true;
-          return null;
-        }
-      }
-      try {
-        return (await getAccessTokenRef.current()) ?? null;
-      } catch {
+      if (!userId) {
+        authDebug('ConvexAuth', 'fetchAccessToken:skip_no_user');
         return null;
       }
+
+      authDebug('ConvexAuth', 'fetchAccessToken:start', { userId, forceRefreshToken });
+
+      if (forceRefreshToken) {
+        const refreshFn = refreshRef.current;
+        if (typeof refreshFn !== 'function') {
+          authDebug('ConvexAuth', 'fetchAccessToken:refresh_unavailable', { userId });
+        } else {
+          try {
+            const refreshed = await refreshFn();
+            if (refreshed) {
+              authDebug('ConvexAuth', 'fetchAccessToken:refresh_success', { userId });
+              return refreshed;
+            }
+            authDebug('ConvexAuth', 'fetchAccessToken:refresh_empty', { userId });
+          } catch (error) {
+            authDebug('ConvexAuth', 'fetchAccessToken:refresh_failed_attempt1', { userId });
+            console.error('[ConvexAuth] Token refresh failed (attempt 1):', error);
+            // One short retry handles transient network blips without dropping auth immediately.
+            try {
+              await new Promise((resolve) => setTimeout(resolve, REFRESH_RETRY_DELAY_MS));
+              const retryRefreshFn = refreshRef.current;
+              if (typeof retryRefreshFn !== 'function') {
+                authDebug('ConvexAuth', 'fetchAccessToken:refresh_unavailable_attempt2', { userId });
+              } else {
+                const retried = await retryRefreshFn();
+                if (retried) {
+                  authDebug('ConvexAuth', 'fetchAccessToken:refresh_success_attempt2', { userId });
+                  return retried;
+                }
+                authDebug('ConvexAuth', 'fetchAccessToken:refresh_empty_attempt2', { userId });
+              }
+            } catch (retryError) {
+              authDebug('ConvexAuth', 'fetchAccessToken:refresh_failed_attempt2', { userId });
+              console.error('[ConvexAuth] Token refresh failed (attempt 2):', retryError);
+            }
+          }
+        }
+      }
+
+      try {
+        const getAccessTokenFn = getAccessTokenRef.current;
+        const tokenFromStore =
+          typeof getAccessTokenFn === 'function' ? await getAccessTokenFn() : null;
+        if (typeof getAccessTokenFn !== 'function') {
+          authDebug('ConvexAuth', 'fetchAccessToken:getAccessToken_unavailable', { userId });
+        }
+        const cachedTokenForCurrentUser =
+          lastKnownTokenUserIdRef.current === userId ? lastKnownTokenRef.current : null;
+        const token = tokenFromStore ?? accessTokenRef.current ?? cachedTokenForCurrentUser ?? null;
+        authDebug('ConvexAuth', 'fetchAccessToken:getAccessToken_result', {
+          userId,
+          hasTokenFromStore: !!tokenFromStore,
+          hasLiveToken: !!accessTokenRef.current,
+          hasCachedToken: !!cachedTokenForCurrentUser,
+          returnedToken: !!token,
+        });
+        return token;
+      } catch (error) {
+        console.error('[ConvexAuth] Failed to get access token:', error);
+        const cachedTokenForCurrentUser =
+          lastKnownTokenUserIdRef.current === userId ? lastKnownTokenRef.current : null;
+        const token = accessTokenRef.current ?? cachedTokenForCurrentUser ?? null;
+        authDebug('ConvexAuth', 'fetchAccessToken:getAccessToken_failed', {
+          userId,
+          hasLiveToken: !!accessTokenRef.current,
+          hasCachedToken: !!cachedTokenForCurrentUser,
+          returnedToken: !!token,
+        });
+        return token;
+      }
     },
-    [],
+    [userId],
   );
 
-  // Only report authenticated when we actually have a token available.
-  // Previously we used `!!user` which could be true before the token was
-  // fetched, causing Convex to fire queries with no JWT attached.
-  const hasToken = !!accessToken;
+  // Avoid auth-state flapping during background refresh if we already had a token.
+  const hasCachedTokenForCurrentUser =
+    lastKnownTokenUserIdRef.current === userId && !!lastKnownTokenRef.current;
+  const hasToken = !!accessToken || hasCachedTokenForCurrentUser;
 
   return {
-    isLoading: authLoading || tokenLoading,
-    isAuthenticated: !!user && hasToken,
+    isLoading: authLoading || (tokenLoading && !hasToken),
+    isAuthenticated: !!userId && hasToken,
     fetchAccessToken,
   };
 }

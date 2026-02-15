@@ -15,9 +15,11 @@ import { AgentProvider } from '@/contexts/AgentContext';
 import { GroupingProvider } from '@/contexts/GroupingContext';
 import { AppStateProvider } from '@/contexts/AppStateContext';
 import { WorkOSWidgetsProvider } from '@/components/WorkOSWidgetsProvider';
+import { authDebug } from '@/utils/authDebug';
 
 // Signal session expiry to ConnectionRecoveryBanner instead of AuthKit's default page reload
 const onSessionExpired = () => {
+  authDebug('AppProviders', 'workos_session_expired');
   window.dispatchEvent(new CustomEvent('workos-session-expired'));
 };
 
@@ -30,8 +32,8 @@ export function AppProviders({ children, initialCanvasId }: AppProvidersProps) {
   return (
     <AuthKitProvider onSessionExpired={onSessionExpired}>
       <WorkOSWidgetsProvider>
-        <AuthProvider>
-          <ConvexClientProvider>
+        <ConvexClientProvider>
+          <AuthProvider>
             <CanvasProvider initialCanvasId={initialCanvasId}>
               <AgentProvider>
                 <GroupingProvider>
@@ -41,8 +43,8 @@ export function AppProviders({ children, initialCanvasId }: AppProvidersProps) {
                 </GroupingProvider>
               </AgentProvider>
             </CanvasProvider>
-          </ConvexClientProvider>
-        </AuthProvider>
+          </AuthProvider>
+        </ConvexClientProvider>
       </WorkOSWidgetsProvider>
     </AuthKitProvider>
   );

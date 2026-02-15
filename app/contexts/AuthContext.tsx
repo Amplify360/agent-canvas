@@ -1,7 +1,8 @@
 /**
  * AuthContext - Manages user authentication and organization state
  *
- * Uses WorkOS AuthKit SDK for session management and org memberships from Convex.
+ * Uses WorkOS AuthKit SDK for session management and Convex subscriptions
+ * for real-time org membership data.
  */
 
 'use client';
@@ -12,9 +13,12 @@ import { User, Organization } from '@/types/auth';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { STORAGE_KEYS } from '@/constants/storageKeys';
 import { ORG_ROLES } from '@/types/validationConstants';
-import { useTabResume } from '@/hooks/useTabResume';
+import { useAction, useCanQuery } from '@/hooks/useConvex';
+import { useStableQuery } from '@/hooks/useStableQuery';
+import { authDebug } from '@/utils/authDebug';
+import { api } from '../../convex/_generated/api';
 
-interface AuthContextValue {
+export interface AuthContextValue {
   user: User | null;
   userOrgs: Organization[];
   currentOrgId: string | null;
@@ -23,37 +27,34 @@ interface AuthContextValue {
   setCurrentOrgId: (orgId: string) => void;
   signOut: () => Promise<void>;
   refreshAuth: () => Promise<void>;
-  syncMemberships: () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextValue | undefined>(undefined);
+export const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Use WorkOS AuthKit SDK for user session
   const authKit = useAuthKit();
   const authKitUser = authKit.user;
   const isLoading = authKit.loading;
+  const { canQuery, isConvexAuthLoading } = useCanQuery();
 
-  // Local state for org data
-  const [userOrgs, setUserOrgs] = useState<Organization[]>([]);
   const [currentOrgId, setCurrentOrgIdState] = useLocalStorage<string | null>(STORAGE_KEYS.CURRENT_ORG, null);
   const [isInitialized, setIsInitialized] = useState(false);
-  const currentOrgIdRef = useRef(currentOrgId);
-  const lastFocusRefreshAt = useRef(0);
-  const lastFailedRefreshAt = useRef(0);
-  const isRefreshingRef = useRef(false);
   const prevUserIdRef = useRef<string | null>(null);
-  const FOCUS_REFRESH_MIN_INTERVAL_MS = 2 * 60 * 1000;
-  const FOCUS_REFRESH_FAILURE_COOLDOWN_MS = 5 * 1000;
-
-  // Keep ref in sync with state
-  useEffect(() => {
-    currentOrgIdRef.current = currentOrgId;
-  }, [currentOrgId]);
+  const bootstrapSyncForUserRef = useRef<string | null>(null);
+  const syncMyMemberships = useAction(api.orgMemberships.syncMyMemberships);
 
   // Clear persisted selections when user changes (prevents cross-user leakage)
   useEffect(() => {
     const currentId = authKitUser?.id ?? null;
+    authDebug('AuthContext', 'user_state_change', {
+      currentUserId: currentId,
+      previousUserId: prevUserIdRef.current,
+    });
+
+    if (currentId !== prevUserIdRef.current) {
+      setIsInitialized(false);
+    }
     if (prevUserIdRef.current !== null && currentId !== prevUserIdRef.current) {
       // User changed — clear org and canvas selections
       window.localStorage.removeItem(STORAGE_KEYS.CURRENT_ORG);
@@ -72,62 +73,81 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     profilePictureUrl: authKitUser.profilePictureUrl || undefined,
   } : null, [authKitUser]);
 
-  // Fetch org memberships from API when user changes
-  const fetchOrgMemberships = useCallback(async () => {
+  // Subscribe to org memberships from Convex (source of truth).
+  const { data: memberships = [], hasLoaded: hasLoadedMemberships } = useStableQuery(
+    api.orgMemberships.listMyMemberships,
+    canQuery ? {} : 'skip',
+    authKitUser?.id,
+  );
+
+  const userOrgs = useMemo<Organization[]>(
+    () =>
+      memberships.map((membership) => ({
+        id: membership.orgId,
+        name: membership.orgName || membership.orgId,
+        role: membership.role,
+      })),
+    [memberships],
+  );
+
+  // Run one reconciliation sync per authenticated user session.
+  // This catches missed/partial webhook syncs without polling on tab focus.
+  useEffect(() => {
+    if (!authKitUser) return;
+    if (!canQuery || isConvexAuthLoading || !hasLoadedMemberships) return;
+    if (bootstrapSyncForUserRef.current === authKitUser.id) return;
+
+    bootstrapSyncForUserRef.current = authKitUser.id;
+    authDebug('AuthContext', 'bootstrap_sync_start', { userId: authKitUser.id });
+    syncMyMemberships({})
+      .then(() => {
+        authDebug('AuthContext', 'bootstrap_sync_success', { userId: authKitUser.id });
+      })
+      .catch((error) => {
+        console.error('Initial membership bootstrap sync failed:', error);
+        authDebug('AuthContext', 'bootstrap_sync_failed', { userId: authKitUser.id });
+        // Allow retry on subsequent renders after transient failures.
+        bootstrapSyncForUserRef.current = null;
+      });
+  }, [authKitUser, canQuery, hasLoadedMemberships, isConvexAuthLoading, syncMyMemberships]);
+
+  // Initialize when auth and org subscriptions are ready.
+  useEffect(() => {
+    if (isLoading) return;
+
     if (!authKitUser) {
-      setUserOrgs([]);
+      setIsInitialized(true);
       return;
     }
 
-    try {
-      // Fetch org memberships and details via our API
-      const response = await fetch('/api/auth/orgs');
-      if (response.ok) {
-        const data = await response.json();
-        const orgs: Organization[] = data.orgs || [];
-        setUserOrgs(orgs);
+    if (isConvexAuthLoading) return;
 
-        // Set current org if not set or if current is no longer accessible
-        const savedOrgId = currentOrgIdRef.current;
-        if (!savedOrgId && orgs.length > 0) {
-          setCurrentOrgIdState(orgs[0].id);
-        } else if (savedOrgId && !orgs.some(org => org.id === savedOrgId)) {
-          if (orgs.length > 0) {
-            setCurrentOrgIdState(orgs[0].id);
-          } else {
-            setCurrentOrgIdState(null);
-          }
-        }
-      }
-    } catch (error) {
-      console.error('Failed to fetch org memberships:', error);
+    if (!canQuery || hasLoadedMemberships) {
+      setIsInitialized(true);
     }
-  }, [authKitUser, setCurrentOrgIdState]);
+  }, [authKitUser, canQuery, hasLoadedMemberships, isConvexAuthLoading, isLoading]);
 
-  // Initialize when user changes or loading finishes
+  // Keep selected org valid as memberships change.
   useEffect(() => {
-    if (!isLoading) {
-      if (authKitUser) {
-        fetchOrgMemberships().finally(() => {
-          setIsInitialized(true);
-        });
-      } else {
-        setUserOrgs([]);
-        setIsInitialized(true);
-      }
+    if (!authKitUser) return;
+    if (!hasLoadedMemberships) return;
+
+    if (!currentOrgId && userOrgs.length > 0) {
+      setCurrentOrgIdState(userOrgs[0].id);
+      return;
     }
-  }, [authKitUser, isLoading, fetchOrgMemberships]);
+
+    if (currentOrgId && !userOrgs.some((org) => org.id === currentOrgId)) {
+      setCurrentOrgIdState(userOrgs.length > 0 ? userOrgs[0].id : null);
+    }
+  }, [authKitUser, currentOrgId, hasLoadedMemberships, setCurrentOrgIdState, userOrgs]);
 
   const setCurrentOrgId = useCallback((orgId: string) => {
     setCurrentOrgIdState(orgId);
-    // Dispatch custom event for cross-component communication
-    window.dispatchEvent(new CustomEvent('orgChanged', { detail: { orgId } }));
   }, [setCurrentOrgIdState]);
 
   const signOut = useCallback(async () => {
     try {
-      // Clear local state
-      setUserOrgs([]);
       setCurrentOrgIdState(null);
       // Clear canvas selection to prevent next user inheriting it
       window.localStorage.removeItem(STORAGE_KEYS.CURRENT_CANVAS);
@@ -142,48 +162,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [authKit, setCurrentOrgIdState]);
 
   const refreshAuth = useCallback(async () => {
-    // Refresh the AuthKit session
-    await authKit.refreshAuth();
-    // Re-fetch org memberships
-    await fetchOrgMemberships();
-  }, [authKit, fetchOrgMemberships]);
-
-  // Refresh auth session when user returns to the tab (focus or visibilitychange)
-  useTabResume(() => {
-    if (!authKitUser || isLoading) return;
-    if (isRefreshingRef.current) return;
-    const now = Date.now();
-    if (now - lastFocusRefreshAt.current < FOCUS_REFRESH_MIN_INTERVAL_MS) return;
-    if (now - lastFailedRefreshAt.current < FOCUS_REFRESH_FAILURE_COOLDOWN_MS) return;
-
-    isRefreshingRef.current = true;
-    refreshAuth()
-      .then(() => {
-        lastFocusRefreshAt.current = Date.now();
-      })
-      .catch((error) => {
-        console.error('Tab resume refreshAuth failed:', error);
-        lastFailedRefreshAt.current = Date.now();
-      })
-      .finally(() => {
-        isRefreshingRef.current = false;
-      });
-  });
-
-  // Manual sync button action - triggers sync from Convex
-  const syncMemberships = useCallback(async () => {
-    if (!authKitUser) return;
-
-    try {
-      // Call the Convex action to sync memberships
-      // This will be called via the Convex client from the component
-      // Here we just refresh our local state
-      await fetchOrgMemberships();
-    } catch (error) {
-      console.error('Failed to sync memberships:', error);
-      throw error;
+    // AuthKit returns { error } on failure instead of throwing in some cases.
+    const result = await authKit.refreshAuth();
+    if (result && typeof result === 'object' && 'error' in result && result.error) {
+      throw new Error(result.error);
     }
-  }, [authKitUser, fetchOrgMemberships]);
+  }, [authKit]);
 
   const isAuthenticated = !!user;
 
@@ -196,10 +180,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setCurrentOrgId,
     signOut,
     refreshAuth,
-    syncMemberships,
   }), [
     user, userOrgs, currentOrgId, isInitialized, isAuthenticated,
-    setCurrentOrgId, signOut, refreshAuth, syncMemberships,
+    setCurrentOrgId, signOut, refreshAuth,
   ]);
 
   return (

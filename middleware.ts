@@ -6,17 +6,28 @@
  */
 
 import { authkitMiddleware } from '@workos-inc/authkit-nextjs';
+import { NextResponse, type NextFetchEvent, type NextRequest } from 'next/server';
 
-export default authkitMiddleware({
+const unauthenticatedPaths = [
+  '/login',
+  '/api/auth/(.*)', // Auth endpoints
+];
+
+// E2E-only route that renders the app with in-memory mocks.
+// Guarded by env var + `notFound()` in the page, but we also need middleware
+// to avoid forcing a WorkOS redirect during Playwright runs.
+if (process.env.E2E_TEST_MODE === '1') {
+  // Uses Next.js matcher glob logic (same rules as WorkOS unauthenticatedPaths).
+  unauthenticatedPaths.push('/e2e/:path*');
+}
+
+const workosMiddleware = authkitMiddleware({
   // Configure middleware options
   middlewareAuth: {
     // Enable middleware auth (uses cookies, no session endpoint needed)
     enabled: true,
     // Public paths that don't require authentication
-    unauthenticatedPaths: [
-      '/login',
-      '/api/auth/(.*)', // Auth endpoints
-    ],
+    unauthenticatedPaths,
   },
   // Redirect URI for OAuth callback (also set via WORKOS_REDIRECT_URI env var)
   redirectUri: process.env.WORKOS_REDIRECT_URI || 'http://localhost:3000/api/auth/callback',
@@ -28,6 +39,18 @@ export default authkitMiddleware({
   // Debug mode for development (will log auth state)
   debug: process.env.NODE_ENV === 'development',
 });
+
+export default function middleware(request: NextRequest, event: NextFetchEvent) {
+  // For Playwright E2E runs we render the app with mocks and do not want
+  // to require WorkOS config or redirect to AuthKit.
+  const { pathname } = request.nextUrl;
+  const isE2EPath = pathname === '/e2e' || pathname.startsWith('/e2e/');
+  if (process.env.E2E_TEST_MODE === '1' && isE2EPath) {
+    return NextResponse.next();
+  }
+
+  return workosMiddleware(request, event);
+}
 
 export const config = {
   // Match all paths except static files and Next.js internals

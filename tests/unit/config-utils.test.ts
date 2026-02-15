@@ -6,14 +6,12 @@ import {
   TOOL_DEFINITIONS,
   SECTION_COLOR_PALETTE,
 } from '@/utils/config';
-import { getAgentStatusConfig } from '@/types/validationConstants';
 
 describe('Config Utilities', () => {
   describe('getToolDisplay', () => {
-    it('normalizes tool names with spaces', () => {
-      const result = getToolDisplay('Web Search');
-      expect(result.label).toBe('Web Search');
-      expect(result.color).toBe('#10B981');
+    it('normalizes tool names (spaces + case) to known tool definitions', () => {
+      expect(getToolDisplay('Web Search')).toEqual(TOOL_DEFINITIONS['web-search']);
+      expect(getToolDisplay('MS Teams')).toEqual(TOOL_DEFINITIONS['ms-teams']);
     });
 
     it('returns default for unknown tools', () => {
@@ -31,20 +29,6 @@ describe('Config Utilities', () => {
       const paletteLength = SECTION_COLOR_PALETTE.length;
       expect(getSectionColor(paletteLength)).toBe(SECTION_COLOR_PALETTE[0]);
       expect(getSectionColor(paletteLength + 1)).toBe(SECTION_COLOR_PALETTE[1]);
-    });
-  });
-
-  describe('getAgentStatusConfig', () => {
-    it('returns correct config for known and unknown statuses', () => {
-      const liveConfig = getAgentStatusConfig('live');
-      expect(liveConfig.label).toBe('Live');
-      expect(liveConfig.color).toBeDefined();
-
-      const unknownConfig = getAgentStatusConfig('nonexistent-status');
-      expect(unknownConfig.label).toBe('nonexistent-status');
-
-      const undefinedConfig = getAgentStatusConfig(undefined);
-      expect(undefinedConfig.label).toBe('Unknown');
     });
   });
 

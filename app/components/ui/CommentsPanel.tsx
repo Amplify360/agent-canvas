@@ -5,12 +5,14 @@
 
 'use client';
 
-import React, { useEffect, useCallback } from 'react';
+import React from 'react';
 import { Agent } from '@/types/agent';
 import { Icon } from '@/components/ui/Icon';
 import { CommentList } from '@/components/agents/CommentList';
 import { CommentForm } from '@/components/agents/CommentForm';
 import { useAgentFeedback } from '@/hooks/useAgentFeedback';
+import { useEscapeKey } from '@/hooks/useEscapeKey';
+import { useBodyScrollLock } from '@/hooks/useBodyScrollLock';
 
 interface CommentsPanelProps {
   agent: Agent | null;
@@ -23,19 +25,8 @@ export function CommentsPanel({ agent, isOpen, onClose }: CommentsPanelProps) {
     agentId: agent?._id
   });
 
-  // Close on Escape key
-  const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    if (e.key === 'Escape') {
-      onClose();
-    }
-  }, [onClose]);
-
-  useEffect(() => {
-    if (!isOpen) return;
-
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, handleKeyDown]);
+  useEscapeKey(isOpen, onClose);
+  useBodyScrollLock(isOpen);
 
   if (!agent) return null;
 

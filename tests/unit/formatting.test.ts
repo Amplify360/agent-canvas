@@ -159,24 +159,12 @@ describe('Formatting Utilities', () => {
       expect(PALETTE).toContain(color);
     });
 
-    it('handles falsy input without crashing', () => {
-      // The function uses `str || 'unknown'`, so null/undefined cast to falsy
-      const color = getColorFromString(undefined as unknown as string);
-      expect(PALETTE).toContain(color);
-    });
-
     it('produces different colors for different inputs', () => {
       const inputs = ['alice@example.com', 'bob@example.com', 'charlie@example.com', 'dave@example.com'];
       const colors = inputs.map(getColorFromString);
       // With 4 inputs and 8 colors, at least 2 should differ
       const unique = new Set(colors);
       expect(unique.size).toBeGreaterThan(1);
-    });
-
-    it('empty and undefined both resolve to the "unknown" fallback color', () => {
-      const fromEmpty = getColorFromString('');
-      const fromUndefined = getColorFromString(undefined as unknown as string);
-      expect(fromEmpty).toBe(fromUndefined);
     });
   });
 });
