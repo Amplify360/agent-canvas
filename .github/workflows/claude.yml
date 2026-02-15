@@ -97,5 +97,5 @@ jobs:
             - Actionable findings (include file paths and approximate line numbers when possible)
             - Suggested fixes (minimal changes preferred)
           claude_args: >-
-            --max-turns 10
+            --max-turns 20
             --allowedTools Read,LS,Glob,Grep
