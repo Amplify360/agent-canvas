@@ -45,6 +45,14 @@ vercel --prod
 pnpm test        # watch mode
 pnpm test:run    # single run
 pnpm test:ui     # browser UI
+
+# E2E smoke (Playwright)
+pnpm exec playwright install chromium   # first time only
+pnpm test:e2e
+pnpm test:e2e:ui
+
+# Everything
+pnpm test:all
 ```
 
 ## Git Workflow
@@ -99,6 +107,9 @@ BASE_URL=http://localhost:3000
 │   ├── login/page.tsx      # Login page
 │   ├── layout.tsx          # Root layout
 │   ├── globals.css         # Global styles (imports styles.css)
+│   ├── e2e/                # Internal E2E-only route (in-memory Convex/auth mocks)
+│   │   ├── page.tsx
+│   │   └── root.tsx
 │   ├── components/         # React components
 │   │   ├── agents/         # Agent display components
 │   │   │   ├── AgentCard.tsx
@@ -116,7 +127,6 @@ BASE_URL=http://localhost:3000
 │   │   │   └── Toast.tsx
 │   │   ├── org/                # Organization components
 │   │   │   └── MembersWidget.tsx   # WorkOS members management widget
-│   │   ├── MembershipSync.tsx  # Syncs org memberships on app load
 │   │   ├── WorkOSWidgetsProvider.tsx  # WorkOS widgets context provider
 │   │   └── AppProviders.tsx    # Provider hierarchy wrapper
 │   ├── contexts/           # React Context providers
@@ -166,8 +176,9 @@ BASE_URL=http://localhost:3000
 │       ├── auth.ts         # Auth helpers (reads from DB, not JWT claims)
 │       └── membershipSync.ts # Shared sync logic for webhooks/cron/manual
 ├── next.config.js          # Next.js configuration
+├── playwright.config.ts    # Playwright E2E config (build + start + test)
 ├── tsconfig.json           # TypeScript configuration
-└── tests/                   # Vitest tests (unit/, integration/)
+└── tests/                   # Tests (Vitest unit tests + Playwright E2E)
 ```
 
 ## Convex Schema
