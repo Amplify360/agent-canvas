@@ -22,7 +22,7 @@ interface ModalProps {
 export function Modal({ isOpen, onClose, title, children, size = 'medium', closeOnOverlayClick = true }: ModalProps) {
 
   // Escape should close the top-most overlay only.
-  useEscapeKey(isOpen, onClose, { stopImmediatePropagation: true });
+  useEscapeKey(isOpen, onClose);
   useBodyScrollLock(isOpen);
 
   if (!isOpen) return null;
