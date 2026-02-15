@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import fs from 'node:fs';
 import {
   prepareYamlImport,
   parseYaml,
@@ -8,6 +9,13 @@ import {
 } from '@/utils/yaml';
 import { Agent } from '@/types/agent';
 import { Id } from '../../convex/_generated/dataModel';
+
+function readDanucemFixture(): string {
+  return fs.readFileSync(
+    new URL('../fixtures/danucem-agents-complete.yaml', import.meta.url),
+    'utf-8'
+  );
+}
 
 describe('YAML import', () => {
   it('parses YAML and converts agents to Convex format', () => {
@@ -283,12 +291,7 @@ describe('YAML export', () => {
 
 describe('YAML full canvas import', () => {
   it('imports a real-world canvas YAML file with 42 agents', () => {
-    const fs = require('fs');
-    const path = require('path');
-    const yamlText = fs.readFileSync(
-      path.join(__dirname, '../fixtures/danucem-agents-complete.yaml'),
-      'utf-8'
-    );
+    const yamlText = readDanucemFixture();
 
     const result = parseYaml(yamlText);
 
@@ -368,12 +371,7 @@ describe('YAML full canvas import', () => {
   });
 
   it('round-trips a full canvas through export and re-import', () => {
-    const fs = require('fs');
-    const path = require('path');
-    const yamlText = fs.readFileSync(
-      path.join(__dirname, '../fixtures/danucem-agents-complete.yaml'),
-      'utf-8'
-    );
+    const yamlText = readDanucemFixture();
 
     const imported = parseYaml(yamlText);
 
