@@ -10,7 +10,7 @@
 'use client';
 
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { useMutation, useConvex } from 'convex/react';
+import { useMutation, useConvex } from '@/hooks/useConvex';
 import { api } from '../../../convex/_generated/api';
 import type { Id } from '../../../convex/_generated/dataModel';
 import { Modal } from '../ui/Modal';

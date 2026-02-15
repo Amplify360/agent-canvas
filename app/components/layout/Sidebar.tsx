@@ -8,7 +8,7 @@ import React, { useState, useRef, useCallback } from 'react';
 import { useAuth, useIsOrgAdmin, useCurrentOrg } from '@/contexts/AuthContext';
 import { useCanvas } from '@/contexts/CanvasContext';
 import { useAppState } from '@/contexts/AppStateContext';
-import { useAction, useQuery } from 'convex/react';
+import { useAction, useQuery } from '@/hooks/useConvex';
 import { api } from '../../../convex/_generated/api';
 import { useResizable } from '@/hooks/useResizable';
 import { useClickOutside } from '@/hooks/useClickOutside';

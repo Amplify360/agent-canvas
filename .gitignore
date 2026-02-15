@@ -158,6 +158,7 @@ yarn-error.log*
 /coverage
 /.nyc_output
 /test-results/
+/playwright-report/
 
 # Production builds
 /build
