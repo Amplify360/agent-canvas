@@ -5,21 +5,26 @@
 'use client';
 
 import React, { useRef, useEffect, useState } from 'react';
-import { Agent, AgentGroup } from '@/types/agent';
+import { Agent, AgentCreateDefaults, AgentGroup } from '@/types/agent';
 import { AgentCard } from './AgentCard';
 import { DockView } from './DockView';
 import { useGrouping } from '@/contexts/GroupingContext';
 import { Icon } from '@/components/ui/Icon';
 import { Tooltip } from '@/components/ui/Tooltip';
+import { TAG_TYPE_ID } from '@/utils/config';
+import { AGENT_STATUS, type AgentStatus, type VoteType } from '@/types/validationConstants';
 
 interface AgentGroupSectionProps {
   group: AgentGroup;
   groupIndex?: number;
   onEditAgent: (agent: Agent) => void;
   onDeleteAgent: (agent: Agent) => void;
-  onAddAgent: (phase: string) => void;
+  onAddAgent: (defaults?: AgentCreateDefaults) => void;
   onQuickLook?: (agent: Agent) => void;
   onOpenComments?: (agent: Agent) => void;
+  voteCountsByAgent: Record<string, { up: number; down: number }>;
+  userVotesByAgent: Record<string, VoteType>;
+  commentCountsByAgent: Record<string, number>;
 }
 
 export function AgentGroupSection({
@@ -29,11 +34,37 @@ export function AgentGroupSection({
   onDeleteAgent,
   onAddAgent,
   onQuickLook,
-  onOpenComments
+  onOpenComments,
+  voteCountsByAgent,
+  userVotesByAgent,
+  commentCountsByAgent,
 }: AgentGroupSectionProps) {
-  const { viewMode } = useGrouping();
+  const { viewMode, activeTagType } = useGrouping();
   const sectionRef = useRef<HTMLElement>(null);
   const [isVisible, setIsVisible] = useState(false);
+
+  const addDefaultsForCurrentGrouping = () => {
+    if (activeTagType === TAG_TYPE_ID.PHASE) {
+      onAddAgent({ phase: group.id });
+      return;
+    }
+    if (activeTagType === TAG_TYPE_ID.CATEGORY) {
+      onAddAgent({ category: group.id });
+      return;
+    }
+    if (activeTagType === TAG_TYPE_ID.STATUS) {
+      const status = group.id as AgentStatus;
+      // Guard in case localStorage or data gets out of sync.
+      if (Object.values(AGENT_STATUS).includes(status)) {
+        onAddAgent({ status });
+      } else {
+        onAddAgent();
+      }
+      return;
+    }
+
+    onAddAgent();
+  };
 
   // Intersection Observer for entrance animation
   useEffect(() => {
@@ -92,7 +123,7 @@ export function AgentGroupSection({
             <Tooltip content={`Add agent to ${group.label}`} placement="top">
               <button
                 className="btn btn--sm btn--primary"
-                onClick={() => onAddAgent(group.id)}
+                onClick={addDefaultsForCurrentGrouping}
               >
                 <Icon name="plus" />
               </button>
@@ -133,7 +164,7 @@ export function AgentGroupSection({
           <Tooltip content={`Add agent to ${group.label}`} placement="top">
             <button
               className="btn btn--sm btn--primary"
-              onClick={() => onAddAgent(group.id)}
+              onClick={addDefaultsForCurrentGrouping}
             >
               <Icon name="plus" />
             </button>
@@ -153,6 +184,9 @@ export function AgentGroupSection({
               onDelete={() => onDeleteAgent(agent)}
               onQuickLook={() => onQuickLook?.(agent)}
               onOpenComments={() => onOpenComments?.(agent)}
+              voteCounts={voteCountsByAgent[agent._id]}
+              userVote={userVotesByAgent[agent._id] ?? null}
+              commentCount={commentCountsByAgent[agent._id] ?? 0}
             />
           ))}
         </div>

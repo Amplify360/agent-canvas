@@ -5,11 +5,14 @@
 
 'use client';
 
-import React, { useEffect, useCallback } from 'react';
+import React from 'react';
 import { Agent } from '@/types/agent';
-import { getToolDisplay, getStatusConfig, getToolColorClass } from '@/utils/config';
+import { getToolDisplay, getToolColorClass } from '@/utils/config';
 import { formatCurrency } from '@/utils/formatting';
 import { Icon } from '@/components/ui/Icon';
+import { getAgentStatusConfig } from '@/types/validationConstants';
+import { useEscapeKey } from '@/hooks/useEscapeKey';
+import { useBodyScrollLock } from '@/hooks/useBodyScrollLock';
 
 interface QuickLookPanelProps {
   agent: Agent | null;
@@ -29,35 +32,12 @@ export function QuickLookPanel({
   onDelete,
   closeOnOverlayClick = false
 }: QuickLookPanelProps) {
-  // Close on Escape key
-  const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    if (e.key === 'Escape') {
-      onClose();
-    }
-  }, [onClose]);
-
-  useEffect(() => {
-    if (!isOpen) return;
-
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, handleKeyDown]);
-
-  // Prevent body scroll when panel is open
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const originalOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-
-    return () => {
-      document.body.style.overflow = originalOverflow;
-    };
-  }, [isOpen]);
+  useEscapeKey(isOpen, onClose);
+  useBodyScrollLock(isOpen);
 
   if (!agent) return null;
 
-  const statusConfig = getStatusConfig(agent.status);
+  const statusConfig = getAgentStatusConfig(agent.status);
   const metrics = agent.metrics || {};
 
   return (

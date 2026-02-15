@@ -30,15 +30,9 @@ function CanvasErrorView() {
   return (
     <div className="canvas-error">
       <div className="canvas-error__content">
-        <h1>
-          {initialCanvasError === 'not_found'
-            ? 'Canvas Not Found'
-            : 'Access Denied'}
-        </h1>
+        <h1>Canvas Unavailable</h1>
         <p>
-          {initialCanvasError === 'not_found'
-            ? 'This canvas may have been deleted or the link is invalid.'
-            : 'You do not have access to this canvas.'}
+          This canvas may have been deleted, the link may be invalid, or you may not have access.
         </p>
         <button className="btn btn--primary" onClick={handleGoHome}>
           Go to Home

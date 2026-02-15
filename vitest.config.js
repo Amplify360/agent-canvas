@@ -4,6 +4,9 @@ import { defineConfig } from 'vitest/config';
 export default defineConfig({
   test: {
     globals: true,
+    // Keep Vitest scoped to our unit/integration tests.
+    // Playwright E2E tests live under `tests/e2e` and use `*.spec.ts`.
+    include: ['tests/**/*.test.{ts,tsx}'],
   },
   resolve: {
     alias: {
@@ -13,5 +16,3 @@ export default defineConfig({
     },
   },
 });
-
-

@@ -9,6 +9,8 @@ on:
     types: [opened, assigned]
   pull_request_review:
     types: [submitted]
+  pull_request:
+    types: [opened, synchronize]
 
 jobs:
   claude:
@@ -23,7 +25,7 @@ jobs:
       pull-requests: read
       issues: read
       id-token: write
-      actions: read # Required for Claude to read CI results on PRs
+      actions: read
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -35,16 +37,65 @@ jobs:
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-
-          # This is an optional setting that allows Claude to read CI results on PRs
           additional_permissions: |
             actions: read
 
-          # Optional: Give a custom prompt to Claude. If this is not specified, Claude will perform the instructions specified in the comment that tagged it.
-          # prompt: 'Update the pull request description to include a summary of changes.'
+  claude-review:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-          # Optional: Add claude_args to customize behavior and configuration
-          # See https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md
-          # or https://code.claude.com/docs/en/cli-reference for available options
-          # claude_args: '--allowed-tools Bash(gh pr:*)'
+      - name: Prepare PR context
+        shell: bash
+        run: |
+          set -euo pipefail
 
+          # On pull_request events, checkout is typically a merge commit with two parents:
+          # parent 1 = base branch, parent 2 = PR head. Use those to generate the PR diff.
+          git rev-parse --verify HEAD^1 >/dev/null
+          git rev-parse --verify HEAD^2 >/dev/null
+
+          git diff --name-status HEAD^1..HEAD^2 > pr.files
+          git diff --no-color --unified=3 HEAD^1..HEAD^2 > pr.diff.full
+
+          # Keep the prompt input bounded; Claude can still open files in the repo if needed.
+          max_bytes=200000
+          head -c "$max_bytes" pr.diff.full > pr.diff
+          if [ "$(wc -c < pr.diff.full)" -gt "$max_bytes" ]; then
+            echo "" >> pr.diff
+            echo "[truncated to ${max_bytes} bytes]" >> pr.diff
+          fi
+
+      - name: Run Claude Code Review
+        continue-on-error: true
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          # Avoid OIDC exchange failures when the workflow file changes in a PR.
+          github_token: ${{ github.token }}
+          prompt: |
+            Review PR #${{ github.event.pull_request.number }} in ${{ github.repository }}.
+
+            Context prepared for you:
+            - `./pr.files`: changed file list (name-status)
+            - `./pr.diff`: unified diff for the PR (may be truncated)
+
+            Instructions:
+            - Do NOT run `gh` and do NOT use any network tools. Prefer reading `./pr.files` and `./pr.diff`.
+            - If you need extra context beyond the diff, use Read/Glob/Grep on the checked-out repository.
+            - Focus on correctness, security (especially auth/token handling), and consistency with patterns in `CLAUDE.md`.
+
+            Output a concise review with:
+            - A short summary
+            - Actionable findings (include file paths and approximate line numbers when possible)
+            - Suggested fixes (minimal changes preferred)
+          claude_args: >-
+            --max-turns 20
+            --allowedTools Read,LS,Glob,Grep

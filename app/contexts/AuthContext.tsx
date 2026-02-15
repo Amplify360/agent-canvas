@@ -18,7 +18,7 @@ import { useStableQuery } from '@/hooks/useStableQuery';
 import { authDebug } from '@/utils/authDebug';
 import { api } from '../../convex/_generated/api';
 
-interface AuthContextValue {
+export interface AuthContextValue {
   user: User | null;
   userOrgs: Organization[];
   currentOrgId: string | null;
@@ -29,7 +29,7 @@ interface AuthContextValue {
   refreshAuth: () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextValue | undefined>(undefined);
+export const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Use WorkOS AuthKit SDK for user session
@@ -144,8 +144,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const setCurrentOrgId = useCallback((orgId: string) => {
     setCurrentOrgIdState(orgId);
-    // Dispatch custom event for cross-component communication
-    window.dispatchEvent(new CustomEvent('orgChanged', { detail: { orgId } }));
   }, [setCurrentOrgIdState]);
 
   const signOut = useCallback(async () => {

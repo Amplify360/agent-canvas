@@ -4,8 +4,10 @@
 
 'use client';
 
-import React, { useEffect } from 'react';
+import React from 'react';
 import { Icon } from '@/components/ui/Icon';
+import { useEscapeKey } from '@/hooks/useEscapeKey';
+import { useBodyScrollLock } from '@/hooks/useBodyScrollLock';
 
 interface ModalProps {
   isOpen: boolean;
@@ -19,33 +21,9 @@ interface ModalProps {
 
 export function Modal({ isOpen, onClose, title, children, size = 'medium', closeOnOverlayClick = true }: ModalProps) {
 
-  // Handle escape key — stopPropagation prevents panels behind the modal from also closing
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.stopImmediatePropagation();
-        onClose();
-      }
-    };
-
-    document.addEventListener('keydown', handleEscape);
-    return () => document.removeEventListener('keydown', handleEscape);
-  }, [isOpen, onClose]);
-
-  // Prevent body scroll when modal is open
-  useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
-    }
-
-    return () => {
-      document.body.style.overflow = '';
-    };
-  }, [isOpen]);
+  // Escape should close the top-most overlay only.
+  useEscapeKey(isOpen, onClose);
+  useBodyScrollLock(isOpen);
 
   if (!isOpen) return null;
 

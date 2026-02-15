@@ -2,7 +2,7 @@
  * Configuration utilities for tools and tags
  */
 
-import { AGENT_STATUS_CONFIG, AgentStatus, getAgentStatusConfig } from '@/types/validationConstants';
+import { AGENT_STATUS_CONFIG, AgentStatus } from '@/types/validationConstants';
 
 export interface ToolDefinition {
   label: string;
@@ -140,22 +140,6 @@ export function getTagValue(tagType: string, valueId: string): TagValue | null {
  */
 export function getAvailableTools(): string[] {
   return Object.keys(TOOL_DEFINITIONS);
-}
-
-/**
- * Get status color by status name
- * @deprecated Use getAgentStatusConfig from validationConstants instead
- */
-export function getStatusColor(status?: string): string {
-  return getAgentStatusConfig(status).color;
-}
-
-/**
- * Get full status configuration (color, bgColor, label)
- * @deprecated Use getAgentStatusConfig from validationConstants instead
- */
-export function getStatusConfig(status?: string): { color: string; bgColor: string; label: string } {
-  return getAgentStatusConfig(status);
 }
 
 /**

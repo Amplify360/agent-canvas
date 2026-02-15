@@ -6,10 +6,13 @@ import { Id } from '../../convex/_generated/dataModel';
 /**
  * Create a mock agent for testing
  */
+const NOW = 1_700_000_000_000;
+let agentIdCounter = 0;
 function mockAgent(overrides: Partial<Agent> = {}): Agent {
+  agentIdCounter += 1;
   return {
-    _id: `agent-${Math.random()}` as Id<"agents">,
-    _creationTime: Date.now(),
+    _id: `agent-${agentIdCounter}` as Id<"agents">,
+    _creationTime: NOW,
     canvasId: 'canvas-id' as Id<"canvases">,
     phase: 'Phase 1',
     agentOrder: 0,
@@ -18,8 +21,8 @@ function mockAgent(overrides: Partial<Agent> = {}): Agent {
     journeySteps: [],
     createdBy: 'user-1',
     updatedBy: 'user-1',
-    createdAt: Date.now(),
-    updatedAt: Date.now(),
+    createdAt: NOW,
+    updatedAt: NOW,
     ...overrides,
   };
 }

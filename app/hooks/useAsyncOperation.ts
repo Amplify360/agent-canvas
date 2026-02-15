@@ -22,9 +22,12 @@ export function useAsyncOperation() {
       operation: () => Promise<T>,
       options: AsyncOperationOptions = {}
     ): Promise<T | undefined> => {
+      let didShowLoading = false;
+
       try {
         if (options.loadingMessage) {
           showLoading(options.loadingMessage);
+          didShowLoading = true;
         }
 
         const result = await operation();
@@ -45,7 +48,9 @@ export function useAsyncOperation() {
         options.onError?.(error as Error);
         return undefined;
       } finally {
-        hideLoading();
+        if (didShowLoading) {
+          hideLoading();
+        }
       }
     },
     [showLoading, hideLoading, showToast]

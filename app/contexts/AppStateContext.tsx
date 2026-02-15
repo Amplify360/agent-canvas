@@ -44,8 +44,10 @@ function getSystemTheme(): ThemeValue {
 }
 
 export function AppStateProvider({ children }: { children: React.ReactNode }) {
-  const [isLoading, setIsLoading] = useState(false);
-  const [loadingMessage, setLoadingMessage] = useState('');
+  const [loadingState, setLoadingState] = useState<{ count: number; message: string }>({
+    count: 0,
+    message: '',
+  });
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useLocalStorage(STORAGE_KEYS.SIDEBAR_COLLAPSED, false);
   const [sidebarWidth, setSidebarWidth] = useLocalStorage(STORAGE_KEYS.SIDEBAR_WIDTH, 280);
@@ -75,14 +77,23 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
     return () => mediaQuery.removeEventListener('change', handleChange);
   }, [themePreference]);
 
+  const isLoading = loadingState.count > 0;
+  const loadingMessage = loadingState.message;
+
   const showLoading = useCallback((message: string) => {
-    setIsLoading(true);
-    setLoadingMessage(message);
+    setLoadingState((prev) => ({
+      count: prev.count + 1,
+      message,
+    }));
   }, []);
 
   const hideLoading = useCallback(() => {
-    setIsLoading(false);
-    setLoadingMessage('');
+    setLoadingState((prev) => {
+      const nextCount = Math.max(0, prev.count - 1);
+      return nextCount === 0
+        ? { count: 0, message: '' }
+        : { count: nextCount, message: prev.message };
+    });
   }, []);
 
   const toastTimeoutIds = useRef<Map<string, NodeJS.Timeout>>(new Map());
