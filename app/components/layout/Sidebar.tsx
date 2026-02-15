@@ -21,6 +21,7 @@ import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { MembersWidget } from '../org/MembersWidget';
 import { Tooltip } from '../ui/Tooltip';
 import { THEMES, SYSTEM_THEME_OPTION, THEME_VALUES } from '@/constants/themes';
+import { copyTextToClipboard } from '@/utils/clipboard';
 
 const SIDEBAR_MIN_WIDTH = 180;
 const SIDEBAR_MAX_WIDTH = 400;
@@ -149,19 +150,8 @@ export function Sidebar() {
       setDeleteConfirm({ id: canvas._id, title: canvas.title });
     } else if (action === 'share') {
       const url = `${window.location.origin}/c/${canvas._id}`;
-      try {
-        await navigator.clipboard.writeText(url);
-        showToast('Link copied to clipboard', 'success');
-      } catch {
-        // Fallback for browsers that don't support clipboard API
-        const input = document.createElement('input');
-        input.value = url;
-        document.body.appendChild(input);
-        input.select();
-        document.execCommand('copy');
-        document.body.removeChild(input);
-        showToast('Link copied to clipboard', 'success');
-      }
+      const ok = await copyTextToClipboard(url);
+      showToast(ok ? 'Link copied to clipboard' : 'Failed to copy link', ok ? 'success' : 'error');
     }
     setCanvasMenu(null);
   };

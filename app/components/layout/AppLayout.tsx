@@ -5,7 +5,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Agent } from '@/types/agent';
+import { Agent, type AgentCreateDefaults } from '@/types/agent';
 import { Sidebar } from './Sidebar';
 import { MainToolbar } from './MainToolbar';
 import { AgentModal } from '../forms/AgentModal';
@@ -25,19 +25,19 @@ export function AppLayout() {
   const confirmAndDelete = useDeleteAgent();
   const [isAgentModalOpen, setIsAgentModalOpen] = useState(false);
   const [editingAgent, setEditingAgent] = useState<Agent | null>(null);
-  const [defaultPhase, setDefaultPhase] = useState<string | undefined>();
+  const [createDefaults, setCreateDefaults] = useState<AgentCreateDefaults | undefined>();
   const [commentsAgent, setCommentsAgent] = useState<Agent | null>(null);
 
-  const handleOpenAgentModal = (agent?: Agent, phase?: string) => {
+  const handleOpenAgentModal = (agent?: Agent, defaults?: AgentCreateDefaults) => {
     setEditingAgent(agent || null);
-    setDefaultPhase(phase);
+    setCreateDefaults(agent ? undefined : defaults);
     setIsAgentModalOpen(true);
   };
 
   const handleCloseAgentModal = () => {
     setIsAgentModalOpen(false);
     setEditingAgent(null);
-    setDefaultPhase(undefined);
+    setCreateDefaults(undefined);
   };
 
   // Quick Look handlers
@@ -96,7 +96,7 @@ export function AppLayout() {
         <main className="main-content">
           <AgentGrid
             onEditAgent={(agent) => handleOpenAgentModal(agent)}
-            onAddAgent={(phase) => handleOpenAgentModal(undefined, phase)}
+            onAddAgent={(defaults) => handleOpenAgentModal(undefined, defaults)}
             onQuickLook={handleQuickLook}
             onOpenComments={handleOpenComments}
           />
@@ -107,7 +107,7 @@ export function AppLayout() {
         isOpen={isAgentModalOpen}
         onClose={handleCloseAgentModal}
         agent={editingAgent}
-        defaultPhase={defaultPhase}
+        defaults={createDefaults}
       />
 
       <QuickLookPanel

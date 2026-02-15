@@ -5,7 +5,7 @@
 'use client';
 
 import React, { useState, useEffect, useId } from 'react';
-import { Agent, AgentFormData, AgentMetrics } from '@/types/agent';
+import { Agent, AgentCreateDefaults, AgentFormData, AgentMetrics } from '@/types/agent';
 import { Modal } from '../ui/Modal';
 import { useAgents } from '@/contexts/AgentContext';
 import { useAppState } from '@/contexts/AppStateContext';
@@ -23,7 +23,8 @@ interface AgentModalProps {
   isOpen: boolean;
   onClose: () => void;
   agent?: Agent | null;
-  defaultPhase?: string;
+  /** Initial values for new agents (ignored when editing). */
+  defaults?: AgentCreateDefaults;
 }
 
 interface FormSectionProps {
@@ -50,7 +51,25 @@ function FormSection({ title, children, defaultCollapsed = false }: FormSectionP
   );
 }
 
-export function AgentModal({ isOpen, onClose, agent, defaultPhase }: AgentModalProps) {
+function getEmptyAgentFormData(defaults?: AgentCreateDefaults): AgentFormData {
+  return {
+    name: '',
+    objective: '',
+    description: '',
+    tools: [],
+    journeySteps: [],
+    demoLink: '',
+    videoLink: '',
+    metrics: {},
+    category: '',
+    status: AGENT_STATUS.IDEA,
+    phase: DEFAULT_PHASE,
+    agentOrder: 0,
+    ...defaults,
+  };
+}
+
+export function AgentModal({ isOpen, onClose, agent, defaults }: AgentModalProps) {
   const { createAgent, updateAgent } = useAgents();
   const { showToast } = useAppState();
   const { currentOrgId } = useAuth();
@@ -68,18 +87,7 @@ export function AgentModal({ isOpen, onClose, agent, defaultPhase }: AgentModalP
   const categoryDatalistId = useId();
 
   const [formData, setFormData] = useState<AgentFormData>({
-    name: '',
-    objective: '',
-    description: '',
-    tools: [],
-    journeySteps: [],
-    demoLink: '',
-    videoLink: '',
-    metrics: {},
-    category: '',
-    status: AGENT_STATUS.IDEA,
-    phase: defaultPhase || DEFAULT_PHASE,
-    agentOrder: 0,
+    ...getEmptyAgentFormData(defaults),
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -105,24 +113,11 @@ export function AgentModal({ isOpen, onClose, agent, defaultPhase }: AgentModalP
       setErrors({});
     } else {
       // Reset form for new agent
-      setFormData({
-        name: '',
-        objective: '',
-        description: '',
-        tools: [],
-        journeySteps: [],
-        demoLink: '',
-        videoLink: '',
-        metrics: {},
-        category: '',
-        status: AGENT_STATUS.IDEA,
-        phase: defaultPhase || DEFAULT_PHASE,
-        agentOrder: 0,
-      });
+      setFormData(getEmptyAgentFormData(defaults));
       setErrors({});
     }
     setNewJourneyStep('');
-  }, [agent, defaultPhase, isOpen]);
+  }, [agent, defaults, isOpen]);
 
   const validateField = (field: string, value: string) => {
     const testData = { ...formData, [field]: value };

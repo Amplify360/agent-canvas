@@ -76,7 +76,6 @@ export function GroupingProvider({ children }: { children: React.ReactNode }) {
 
   const setActiveTagType = useCallback((tagType: string) => {
     setPreferences((prev) => ({ ...prev, activeTagType: tagType }));
-    window.dispatchEvent(new CustomEvent('groupingChanged', { detail: { tagType } }));
   }, [setPreferences]);
 
   const setFilters = useCallback((filters: Record<string, string[]>) => {

@@ -9,7 +9,6 @@
     "@workos-inc/node": "^8.0.0",
     "@workos-inc/widgets": "^1.7.2",
     "convex": "^1.31.6",
-    "jose": "^6.1.3",
     "js-yaml": "^4.1.0",
     "lucide-react": "^0.562.0",
     "next": "^15.1.0",
@@ -39,6 +38,6 @@
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:run": "vitest run",
-    "check:unused": "unimported --init && unimported"
+    "check:unused": "unimported --show-unused-files --show-unused-deps"
   }
 }

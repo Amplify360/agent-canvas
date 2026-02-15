@@ -144,8 +144,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const setCurrentOrgId = useCallback((orgId: string) => {
     setCurrentOrgIdState(orgId);
-    // Dispatch custom event for cross-component communication
-    window.dispatchEvent(new CustomEvent('orgChanged', { detail: { orgId } }));
   }, [setCurrentOrgIdState]);
 
   const signOut = useCallback(async () => {

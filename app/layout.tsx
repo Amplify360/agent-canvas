@@ -13,18 +13,6 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <head>
-        <script
-          type="importmap"
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify({
-              imports: {
-                'convex/browser': 'https://esm.sh/convex@1.31.4/browser',
-              },
-            }),
-          }}
-        />
-      </head>
       <body className="app-layout">{children}</body>
     </html>
   );

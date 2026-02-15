@@ -12,6 +12,7 @@ import { Icon } from '@/components/ui/Icon';
 import { Tooltip } from '@/components/ui/Tooltip';
 import { TAG_TYPES } from '@/utils/config';
 import { useClickOutside } from '@/hooks/useClickOutside';
+import { copyTextToClipboard } from '@/utils/clipboard';
 
 interface MainToolbarProps {
   onAddAgent: () => void;
@@ -33,21 +34,10 @@ export function MainToolbar({ onAddAgent }: MainToolbarProps) {
   const handleShare = async () => {
     if (!currentCanvasId) return;
     const url = `${window.location.origin}/c/${currentCanvasId}`;
-    try {
-      await navigator.clipboard.writeText(url);
-      setShowCopied(true);
-      setTimeout(() => setShowCopied(false), 2000);
-    } catch {
-      // Fallback for browsers that don't support clipboard API
-      const input = document.createElement('input');
-      input.value = url;
-      document.body.appendChild(input);
-      input.select();
-      document.execCommand('copy');
-      document.body.removeChild(input);
-      setShowCopied(true);
-      setTimeout(() => setShowCopied(false), 2000);
-    }
+    const ok = await copyTextToClipboard(url);
+    if (!ok) return;
+    setShowCopied(true);
+    setTimeout(() => setShowCopied(false), 2000);
   };
 
   return (
