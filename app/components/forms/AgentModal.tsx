@@ -65,6 +65,7 @@ function getEmptyAgentFormData(defaults?: AgentCreateDefaults): AgentFormData {
     status: AGENT_STATUS.IDEA,
     phase: DEFAULT_PHASE,
     agentOrder: 0,
+    ownerId: undefined,
     ...defaults,
   };
 }
@@ -85,6 +86,12 @@ export function AgentModal({ isOpen, onClose, agent, defaults }: AgentModalProps
     canQuery && currentOrgId ? { workosOrgId: currentOrgId } : 'skip'
   ) || [];
   const categoryDatalistId = useId();
+
+  // Get available users for owner selection (lab demos)
+  const availableUsers = useQuery(
+    api.users.list,
+    canQuery && currentOrgId ? { workosOrgId: currentOrgId } : 'skip'
+  ) || [];
 
   const [formData, setFormData] = useState<AgentFormData>({
     ...getEmptyAgentFormData(defaults),
@@ -109,6 +116,8 @@ export function AgentModal({ isOpen, onClose, agent, defaults }: AgentModalProps
         status: agent.status || AGENT_STATUS.IDEA,
         phase: agent.phase,
         agentOrder: agent.agentOrder,
+        // @ts-expect-error - ownerId will be available once schema syncs
+        ownerId: agent.ownerId,
       });
       setErrors({});
     } else {
@@ -291,6 +300,31 @@ export function AgentModal({ isOpen, onClose, agent, defaults }: AgentModalProps
               ))}
             </select>
           </div>
+
+          {/* Owner selector (lab demos) */}
+          {availableUsers.length > 0 && (
+            <div className="form-group">
+              <label htmlFor="agent-owner" className="form-label">
+                Owner
+              </label>
+              <select
+                id="agent-owner"
+                className="form-select"
+                value={formData.ownerId || ''}
+                onChange={(e) => setFormData((prev) => ({
+                  ...prev,
+                  ownerId: e.target.value || undefined
+                } as any))}
+              >
+                <option value="">No owner</option>
+                {availableUsers.map((user: any) => (
+                  <option key={user._id} value={user._id}>
+                    {user.name} ({user.title})
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
         </FormSection>
 
         {/* Details Section */}

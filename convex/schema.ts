@@ -64,6 +64,7 @@ export default defineSchema({
         v.literal("shelved")
       )
     ),
+    ownerId: v.optional(v.id("users")), // Reference to sample user (lab demos)
     // payload removed - we're Convex-native, no need for round-trip fidelity
     deletedAt: v.optional(v.number()), // Soft delete timestamp
     createdBy: v.string(),
@@ -133,4 +134,16 @@ export default defineSchema({
   })
     .index("by_agent", ["agentId"])
     .index("by_agent_time", ["agentId", "createdAt"]),
+
+  // Sample users for lab demos - avatars for agent owners
+  users: defineTable({
+    workosOrgId: v.string(),
+    name: v.string(),
+    email: v.string(),
+    avatarUrl: v.string(),
+    title: v.optional(v.string()),
+    createdAt: v.number(),
+  })
+    .index("by_org", ["workosOrgId"])
+    .index("by_email", ["email"]),
 });

@@ -8,11 +8,15 @@ import React, { useState, useRef, useCallback } from 'react';
 import { useCanvas } from '@/contexts/CanvasContext';
 import { useGrouping } from '@/contexts/GroupingContext';
 import { useAgents } from '@/contexts/AgentContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { Icon } from '@/components/ui/Icon';
 import { Tooltip } from '@/components/ui/Tooltip';
 import { TAG_TYPES } from '@/utils/config';
 import { useClickOutside } from '@/hooks/useClickOutside';
 import { copyTextToClipboard } from '@/utils/clipboard';
+import { useQuery, useAction } from '@/hooks/useConvex';
+import { api } from '../../../convex/_generated/api';
+import { useAppState } from '@/contexts/AppStateContext';
 
 interface MainToolbarProps {
   onAddAgent: () => void;
@@ -21,13 +25,23 @@ interface MainToolbarProps {
 export function MainToolbar({ onAddAgent }: MainToolbarProps) {
   const { currentCanvas, currentCanvasId } = useCanvas();
   const { agents } = useAgents();
+  const { currentOrgId } = useAuth();
+  const { showToast } = useAppState();
   const { activeTagType, setActiveTagType, viewMode, setViewMode } = useGrouping();
   const [isGroupingOpen, setIsGroupingOpen] = useState(false);
   const [showCopied, setShowCopied] = useState(false);
+  const [isSeeding, setIsSeeding] = useState(false);
   const groupingDropdownRef = useRef<HTMLDivElement>(null);
 
   const closeGrouping = useCallback(() => setIsGroupingOpen(false), []);
   useClickOutside(groupingDropdownRef, closeGrouping, isGroupingOpen);
+
+  // Check if users exist (lab feature)
+  const existingUsers = useQuery(
+    api.users.list,
+    currentOrgId ? { workosOrgId: currentOrgId } : 'skip'
+  ) || [];
+  const seedUsers = useAction(api.users.seedSampleUsers);
 
   const activeTag = TAG_TYPES[activeTagType as keyof typeof TAG_TYPES];
 
@@ -38,6 +52,20 @@ export function MainToolbar({ onAddAgent }: MainToolbarProps) {
     if (!ok) return;
     setShowCopied(true);
     setTimeout(() => setShowCopied(false), 2000);
+  };
+
+  const handleSeedUsers = async () => {
+    if (!currentOrgId || isSeeding) return;
+    setIsSeeding(true);
+    try {
+      await seedUsers({ workosOrgId: currentOrgId, count: 20 });
+      showToast('Seeded 20 demo users successfully', 'success');
+    } catch (error) {
+      console.error('Failed to seed users:', error);
+      showToast('Failed to seed users', 'error');
+    } finally {
+      setIsSeeding(false);
+    }
   };
 
   return (
@@ -59,6 +87,20 @@ export function MainToolbar({ onAddAgent }: MainToolbarProps) {
           <Icon name="bot" />
           <span>{agents.length} Agents</span>
         </span>
+        {/* Lab feature: Seed demo users if none exist */}
+        {existingUsers.length === 0 && (
+          <Tooltip content="Add sample users with avatars for demo" placement="bottom">
+            <button
+              type="button"
+              className="btn btn--sm btn--secondary"
+              onClick={handleSeedUsers}
+              disabled={isSeeding}
+            >
+              <Icon name="users" />
+              <span>{isSeeding ? 'Seeding...' : 'Seed Demo Users'}</span>
+            </button>
+          </Tooltip>
+        )}
       </div>
 
       <div className="toolbar__right">

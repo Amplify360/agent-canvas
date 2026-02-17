@@ -24,6 +24,7 @@ import type * as lib_validators from "../lib/validators.js";
 import type * as lib_workosApi from "../lib/workosApi.js";
 import type * as orgMemberships from "../orgMemberships.js";
 import type * as orgSettings from "../orgSettings.js";
+import type * as users from "../users.js";
 
 import type {
   ApiFromModules,
@@ -48,6 +49,7 @@ declare const fullApi: ApiFromModules<{
   "lib/workosApi": typeof lib_workosApi;
   orgMemberships: typeof orgMemberships;
   orgSettings: typeof orgSettings;
+  users: typeof users;
 }>;
 
 /**

@@ -21,6 +21,7 @@ import { agentFieldValidators, agentInputValidator, agentUpdateValidator, CHANGE
 
 /**
  * List all agents for a canvas (excludes soft-deleted)
+ * Includes owner data when available
  */
 export const list = query({
   args: { canvasId: v.id("canvases") },
@@ -34,8 +35,19 @@ export const list = query({
       .filter((q) => q.eq(q.field("deletedAt"), undefined))
       .collect();
 
+    // Populate owner data in batch (avoid N+1 queries)
+    const agentsWithOwners = await Promise.all(
+      agents.map(async (agent) => {
+        if (!agent.ownerId) {
+          return { ...agent, owner: null };
+        }
+        const owner = await ctx.db.get(agent.ownerId);
+        return { ...agent, owner };
+      })
+    );
+
     // Sort by agentOrder (phase ordering is determined by canvas.phases)
-    return agents.sort((a, b) => a.agentOrder - b.agentOrder);
+    return agentsWithOwners.sort((a, b) => a.agentOrder - b.agentOrder);
   },
 });
 
@@ -69,6 +81,7 @@ export const create = mutation({
     metrics: agentFieldValidators.metrics,
     category: v.optional(v.string()),
     status: agentFieldValidators.status,
+    ownerId: agentFieldValidators.ownerId,
   },
   handler: async (ctx, args) => {
     const auth = await requireAuth(ctx);

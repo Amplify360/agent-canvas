@@ -10,6 +10,7 @@ import { getToolDisplay } from '@/utils/config';
 import { formatCurrency } from '@/utils/formatting';
 import { Icon } from '@/components/ui/Icon';
 import { Tooltip } from '@/components/ui/Tooltip';
+import { Avatar } from '@/components/ui/Avatar';
 import { getAgentStatusConfig, type VoteType } from '@/types/validationConstants';
 import { useClickOutside } from '@/hooks/useClickOutside';
 import { useAgentVoteActions } from '@/hooks/useAgentVoteActions';
@@ -78,6 +79,15 @@ export function AgentCard({
           <span className="agent-card__number">
             {(agent.agentOrder ?? 0) + 1}
           </span>
+          {/* @ts-expect-error - owner is added via query population */}
+          {agent.owner && (
+            <Avatar
+              src={agent.owner.avatarUrl}
+              alt={agent.owner.name}
+              size="sm"
+              title={`Owner: ${agent.owner.name}`}
+            />
+          )}
           {agent.status && (
             <span className={`agent-card__status-badge badge badge--${getAgentStatusConfig(agent.status).badgeVariant}`}>
               <span className={`status-dot status-dot--${agent.status}`} />

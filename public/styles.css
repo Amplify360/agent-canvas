@@ -2133,6 +2133,34 @@ body.is-resizing-sidebar .main-wrapper {
 }
 
 /* ============================================
+   AVATARS
+   ============================================ */
+
+.avatar {
+    display: inline-block;
+    border-radius: var(--radius-full);
+    object-fit: cover;
+    background: var(--bg-tertiary);
+    border: 2px solid var(--bg-secondary);
+    box-shadow: var(--shadow-sm);
+}
+
+.avatar--sm {
+    width: 24px;
+    height: 24px;
+}
+
+.avatar--md {
+    width: 32px;
+    height: 32px;
+}
+
+.avatar--lg {
+    width: 48px;
+    height: 48px;
+}
+
+/* ============================================
    MODALS
    ============================================ */
 

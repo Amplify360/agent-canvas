@@ -98,6 +98,7 @@ export const agentFieldValidators = {
   ),
   category: v.optional(v.string()),
   status: statusValidator,
+  ownerId: v.optional(v.id("users")), // Lab demos: reference to sample user
 } as const;
 
 /**
@@ -123,4 +124,5 @@ export const agentUpdateValidator = {
   metrics: agentFieldValidators.metrics,
   category: agentFieldValidators.category,
   status: agentFieldValidators.status,
+  ownerId: agentFieldValidators.ownerId,
 };
