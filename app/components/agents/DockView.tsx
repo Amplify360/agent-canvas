@@ -8,14 +8,15 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Agent } from '@/types/agent';
+import { AgentWithOwner } from '@/types/agent';
 import { getToolDisplay } from '@/utils/config';
 import { getAgentStatusConfig } from '@/types/validationConstants';
 import { Icon } from '@/components/ui/Icon';
+import { Avatar } from '@/components/ui/Avatar';
 
 interface DockViewProps {
-  agents: Agent[];
-  onAgentClick: (agent: Agent) => void;
+  agents: AgentWithOwner[];
+  onAgentClick: (agent: AgentWithOwner) => void;
 }
 
 export function DockView({ agents, onAgentClick }: DockViewProps) {
@@ -47,7 +48,7 @@ export function DockView({ agents, onAgentClick }: DockViewProps) {
     setSelectedAgentId(agents[newIndex]._id);
   };
 
-  const handleItemClick = (agent: Agent) => {
+  const handleItemClick = (agent: AgentWithOwner) => {
     setSelectedAgentId(selectedAgentId === agent._id ? null : agent._id);
   };
 
@@ -77,7 +78,15 @@ export function DockView({ agents, onAgentClick }: DockViewProps) {
                 style={{ backgroundColor: statusConfig.color }}
               />
               <div className="dock-item__icon">
-                <Icon name="bot" />
+                {agent.owner ? (
+                  <Avatar
+                    src={agent.owner.avatarUrl}
+                    alt={agent.owner.name}
+                    size="sm"
+                  />
+                ) : (
+                  <Icon name="bot" />
+                )}
               </div>
               <span className="dock-item__compact-name">
                 {agent.name}
