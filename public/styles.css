@@ -1986,6 +1986,12 @@ body.is-resizing-sidebar .main-wrapper {
 /* Footer avatar - owner avatar in bottom-left */
 .agent-card__footer-avatar {
     margin-right: auto;
+    display: inline-flex;
+}
+
+.agent-card__footer .avatar-popover-container {
+    display: inline-flex;
+    align-items: center;
 }
 
 /* Journey and Stats containers */
@@ -2143,26 +2149,31 @@ body.is-resizing-sidebar .main-wrapper {
 
 .avatar {
     display: inline-block;
-    border-radius: var(--radius-full);
+    border-radius: 50%;
     object-fit: cover;
     background: var(--bg-tertiary);
     border: 2px solid var(--bg-secondary);
     box-shadow: var(--shadow-sm);
+    aspect-ratio: 1 / 1;
+    flex-shrink: 0;
 }
 
 .avatar--sm {
     width: 24px;
     height: 24px;
+    min-width: 24px;
 }
 
 .avatar--md {
     width: 32px;
     height: 32px;
+    min-width: 32px;
 }
 
 .avatar--lg {
     width: 48px;
     height: 48px;
+    min-width: 48px;
 }
 
 /* Avatar fallback (shows initials when image fails to load) */
