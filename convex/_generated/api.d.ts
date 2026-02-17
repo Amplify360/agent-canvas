@@ -21,6 +21,7 @@ import type * as lib_helpers from "../lib/helpers.js";
 import type * as lib_membershipSync from "../lib/membershipSync.js";
 import type * as lib_validation from "../lib/validation.js";
 import type * as lib_validators from "../lib/validators.js";
+import type * as lib_workosApi from "../lib/workosApi.js";
 import type * as orgMemberships from "../orgMemberships.js";
 import type * as orgSettings from "../orgSettings.js";
 
@@ -44,6 +45,7 @@ declare const fullApi: ApiFromModules<{
   "lib/membershipSync": typeof lib_membershipSync;
   "lib/validation": typeof lib_validation;
   "lib/validators": typeof lib_validators;
+  "lib/workosApi": typeof lib_workosApi;
   orgMemberships: typeof orgMemberships;
   orgSettings: typeof orgSettings;
 }>;
