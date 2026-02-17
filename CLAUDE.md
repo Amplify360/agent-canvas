@@ -63,9 +63,9 @@ pnpm test:all
 |-------------|----------|
 | Minor fixes (typos, <3 files) | Commit to `dev` → PR to `main` |
 | Features (3+ files, new functionality, behavior changes) | Feature branch off `dev` → PR to `dev` → merge. Promote to `main` only when instructed. |
-| **Experiments/Spikes** | **Direct push to `lab` → auto-deploys to canvas-lab.amplify360.ai** |
+| **Experiments/Spikes** | **Direct push to `lab` → test at canvas-lab.amplify360.ai → throw away or re-implement in dev** |
 
-**Lab branch is throwaway** - no PR required, can reset freely, never merge to dev/main.
+**Lab is for prototyping only** - isolated data, no PR workflow, features either discarded or rebuilt in dev.
 **Wait for explicit instruction before merging PRs.**
 **Before merging: verify target branch and ancestry match the workflow above.**
 
@@ -78,7 +78,7 @@ pnpm test:all
 
 **Backend (Convex)** - requires manual `npx convex deploy`:
 - **Dev** (`expert-narwhal-281`): Used locally and by dev frontend
-- **Lab** (TBD): Isolated environment for experiments (preview deployment)
+- **Lab** (`little-avocet-928`): Spike/prototype experimental features (throwaway or re-implement in dev)
 - **Prod** (`quaint-bee-380`): Used by prod frontend
 
 ## Environment Variables

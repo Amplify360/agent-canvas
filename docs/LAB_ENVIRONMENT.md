@@ -7,7 +7,7 @@ The lab environment is a fully isolated instance of AgentCanvas for experimental
 ## URLs
 
 - **Frontend:** https://canvas-lab.amplify360.ai
-- **Convex:** TBD (preview deployment)
+- **Convex:** https://little-avocet-928.convex.cloud (preview deployment)
 - **Branch:** `lab`
 
 ## When to Use Lab

@@ -12,11 +12,11 @@
 
 ## Lab Project (Experimental)
 
-**Project Name:** `agentcanvas-app-lab` (to be created)
-**Project ID:** TBD
+**Project Name:** `agentcanvas-app-lab`
+**Project ID:** `prj_RNkqGmH3qN8vXGzp6t7sWYZ9` (check Vercel for current)
 **Organization ID:** `team_OyuSxI1QnCzGd7SOW2T9YveW`
 **Lab URL:** https://canvas-lab.amplify360.ai (deploys from `lab` branch)
-**Purpose:** Isolated environment for experimental features and spikes
+**Purpose:** Prototype/spike experimental features (throwaway or re-implement in dev)
 **Convex:** Preview deployment (free tier)
 **Data Isolation:** Separate Convex backend - no shared data with dev/prod
 **Workflow:** Direct push to `lab` branch, no PR required
