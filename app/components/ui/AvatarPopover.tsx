@@ -28,7 +28,7 @@ export function AvatarPopover({
 
   return (
     <div
-      className="avatar-popover-container"
+      className={`avatar-popover-container ${className}`}
       onMouseEnter={() => setShowPopover(true)}
       onMouseLeave={() => setShowPopover(false)}
     >
@@ -36,7 +36,6 @@ export function AvatarPopover({
         src={src}
         alt={alt}
         size={size}
-        className={className}
       />
 
       {showPopover && (
