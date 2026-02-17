@@ -2160,6 +2160,25 @@ body.is-resizing-sidebar .main-wrapper {
     height: 48px;
 }
 
+/* Avatar fallback (shows initials when image fails to load) */
+.avatar--fallback {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, var(--accent-primary), var(--accent-violet));
+    color: var(--text-inverse);
+    font-weight: 600;
+    font-size: 0.75rem;
+}
+
+.avatar--fallback.avatar--sm {
+    font-size: 0.625rem;
+}
+
+.avatar--fallback.avatar--lg {
+    font-size: 1rem;
+}
+
 /* ============================================
    MODALS
    ============================================ */

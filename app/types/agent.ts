@@ -13,6 +13,13 @@ import { Doc } from '../../convex/_generated/dataModel';
 export type Agent = Doc<"agents">;
 
 /**
+ * Agent with populated owner data (returned by agents.list query)
+ */
+export type AgentWithOwner = Agent & {
+  owner: Doc<"users"> | null;
+};
+
+/**
  * Agent metrics - extracted from Agent type
  */
 export type AgentMetrics = NonNullable<Agent['metrics']>;

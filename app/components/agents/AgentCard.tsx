@@ -5,7 +5,7 @@
 'use client';
 
 import React, { useState, useRef, useCallback } from 'react';
-import { Agent } from '@/types/agent';
+import { Agent, AgentWithOwner } from '@/types/agent';
 import { getToolDisplay } from '@/utils/config';
 import { formatCurrency } from '@/utils/formatting';
 import { Icon } from '@/components/ui/Icon';
@@ -16,7 +16,7 @@ import { useClickOutside } from '@/hooks/useClickOutside';
 import { useAgentVoteActions } from '@/hooks/useAgentVoteActions';
 
 interface AgentCardProps {
-  agent: Agent;
+  agent: AgentWithOwner;
   index?: number;
   onEdit: () => void;
   onDelete: () => void;
@@ -79,7 +79,6 @@ export function AgentCard({
           <span className="agent-card__number">
             {(agent.agentOrder ?? 0) + 1}
           </span>
-          {/* @ts-expect-error - owner is added via query population */}
           {agent.owner && (
             <Avatar
               src={agent.owner.avatarUrl}

@@ -18,6 +18,7 @@ import { AGENT_STATUS, AGENT_STATUS_OPTIONS, AgentStatus } from '@/types/validat
 import { Icon } from '@/components/ui/Icon';
 import { Tooltip } from '@/components/ui/Tooltip';
 import { api } from '../../../convex/_generated/api';
+import { Id } from '../../../convex/_generated/dataModel';
 
 interface AgentModalProps {
   isOpen: boolean;
@@ -116,8 +117,7 @@ export function AgentModal({ isOpen, onClose, agent, defaults }: AgentModalProps
         status: agent.status || AGENT_STATUS.IDEA,
         phase: agent.phase,
         agentOrder: agent.agentOrder,
-        // @ts-expect-error - ownerId will be available once schema syncs
-        ownerId: agent.ownerId,
+        ownerId: agent.ownerId ?? undefined,
       });
       setErrors({});
     } else {
@@ -310,11 +310,11 @@ export function AgentModal({ isOpen, onClose, agent, defaults }: AgentModalProps
               <select
                 id="agent-owner"
                 className="form-select"
-                value={formData.ownerId || ''}
-                onChange={(e) => setFormData((prev) => ({
-                  ...prev,
-                  ownerId: e.target.value || undefined
-                } as any))}
+                value={formData.ownerId ?? ''}
+                onChange={(e) => {
+                  const ownerId = e.target.value ? (e.target.value as Id<"users">) : undefined;
+                  setFormData((prev) => ({ ...prev, ownerId }));
+                }}
               >
                 <option value="">No owner</option>
                 {availableUsers.map((user: any) => (

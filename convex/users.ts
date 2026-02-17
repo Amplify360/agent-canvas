@@ -33,6 +33,12 @@ export const seedSampleUsers = action({
     }
 
     const data = await response.json();
+
+    // Validate API response structure
+    if (!data.results || !Array.isArray(data.results)) {
+      throw new Error('Invalid response from randomuser.me API');
+    }
+
     const users = data.results;
 
     // Store users in database
@@ -58,6 +64,7 @@ export const seedSampleUsers = action({
 
 /**
  * Create a new user (internal mutation called by seedSampleUsers)
+ * Auth is already verified by the parent action
  */
 export const createUser = internalMutation({
   args: {
@@ -68,8 +75,7 @@ export const createUser = internalMutation({
     title: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const auth = await requireAuth(ctx);
-    requireOrgAccess(auth, args.workosOrgId);
+    // Note: Auth check removed - internal mutations are only called by authenticated actions
 
     // Check if user already exists
     const existing = await ctx.db
@@ -167,7 +173,6 @@ function generateRandomTitle(): string {
     "DevOps Engineer",
     "QA Engineer",
     "Business Analyst",
-    "Technical Writer",
     "Technical Writer",
     "HR Manager",
     "Finance Manager",

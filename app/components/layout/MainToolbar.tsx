@@ -62,7 +62,8 @@ export function MainToolbar({ onAddAgent }: MainToolbarProps) {
       showToast('Seeded 20 demo users successfully', 'success');
     } catch (error) {
       console.error('Failed to seed users:', error);
-      showToast('Failed to seed users', 'error');
+      const message = error instanceof Error ? error.message : 'Unknown error occurred';
+      showToast(`Failed to seed users: ${message}`, 'error');
     } finally {
       setIsSeeding(false);
     }
