@@ -58,8 +58,11 @@ export function MainToolbar({ onAddAgent }: MainToolbarProps) {
     if (!currentOrgId || isSeeding) return;
     setIsSeeding(true);
     try {
-      await seedUsers({ workosOrgId: currentOrgId, count: 20 });
-      showToast('Seeded 20 demo users successfully', 'success');
+      const result = await seedUsers({ workosOrgId: currentOrgId, count: 20 });
+      showToast(
+        `Seeded ${result.count} users and assigned owners to ${result.agentsAssigned} agents`,
+        'success'
+      );
     } catch (error) {
       console.error('Failed to seed users:', error);
       const message = error instanceof Error ? error.message : 'Unknown error occurred';

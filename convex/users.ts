@@ -7,6 +7,7 @@ import { v } from "convex/values";
 import { mutation, query, action, internalMutation } from "./_generated/server";
 import { requireAuth, requireOrgAccess } from "./lib/auth";
 import { internal } from "./_generated/api";
+import { Id } from "./_generated/dataModel";
 
 /**
  * Seed sample users from randomuser.me API
@@ -17,7 +18,7 @@ export const seedSampleUsers = action({
     workosOrgId: v.string(),
     count: v.optional(v.number()), // Default 20 users
   },
-  handler: async (ctx, args): Promise<{ success: boolean; count: number; userIds: any[] }> => {
+  handler: async (ctx, args): Promise<{ success: boolean; count: number; userIds: Id<"users">[]; agentsAssigned: number }> => {
     const auth = await requireAuth(ctx);
     requireOrgAccess(auth, args.workosOrgId);
 
@@ -42,9 +43,9 @@ export const seedSampleUsers = action({
     const users = data.results;
 
     // Store users in database
-    const userIds: any[] = [];
+    const userIds: Id<"users">[] = [];
     for (const user of users) {
-      const userId: any = await ctx.runMutation(internal.users.createUser, {
+      const userId = await ctx.runMutation(internal.users.createUser, {
         workosOrgId: args.workosOrgId,
         name: `${user.name.first} ${user.name.last}`,
         email: user.login.username + '@example.com',
@@ -54,11 +55,70 @@ export const seedSampleUsers = action({
       userIds.push(userId);
     }
 
+    // Auto-assign owners to existing agents
+    const agentsAssigned = await ctx.runMutation(internal.users.autoAssignOwners, {
+      workosOrgId: args.workosOrgId,
+      userIds,
+    });
+
     return {
       success: true,
       count: userIds.length,
       userIds,
+      agentsAssigned,
     };
+  },
+});
+
+/**
+ * Auto-assign owners to existing agents (internal mutation)
+ * Randomly distributes users among agents in the org
+ */
+export const autoAssignOwners = internalMutation({
+  args: {
+    workosOrgId: v.string(),
+    userIds: v.array(v.id("users")),
+  },
+  handler: async (ctx, args) => {
+    if (args.userIds.length === 0) return 0;
+
+    // Get all canvases for this org
+    const canvases = await ctx.db
+      .query("canvases")
+      .withIndex("by_org", (q) => q.eq("workosOrgId", args.workosOrgId))
+      .filter((q) => q.eq(q.field("deletedAt"), undefined))
+      .collect();
+
+    if (canvases.length === 0) return 0;
+
+    const canvasIds = canvases.map(c => c._id);
+
+    // Get all agents for all canvases in parallel (avoid N+1 queries)
+    const allAgentsArrays = await Promise.all(
+      canvasIds.map(canvasId =>
+        ctx.db
+          .query("agents")
+          .withIndex("by_canvas", (q) => q.eq("canvasId", canvasId))
+          .filter((q) => q.eq(q.field("deletedAt"), undefined))
+          .collect()
+      )
+    );
+
+    // Flatten to single array
+    const allAgents = allAgentsArrays.flat();
+
+    if (allAgents.length === 0) return 0;
+
+    // Batch assign owners in parallel
+    await Promise.all(
+      allAgents.map(agent => {
+        const randomUserIndex = Math.floor(Math.random() * args.userIds.length);
+        const ownerId = args.userIds[randomUserIndex];
+        return ctx.db.patch(agent._id, { ownerId });
+      })
+    );
+
+    return allAgents.length;
   },
 });
 

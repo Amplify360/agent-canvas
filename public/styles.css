@@ -1983,6 +1983,11 @@ body.is-resizing-sidebar .main-wrapper {
     height: 16px;
 }
 
+/* Footer avatar - owner avatar in bottom-left */
+.agent-card__footer-avatar {
+    margin-right: auto;
+}
+
 /* Journey and Stats containers */
 .agent-card__journey,
 .agent-card__stats {
@@ -2177,6 +2182,82 @@ body.is-resizing-sidebar .main-wrapper {
 
 .avatar--fallback.avatar--lg {
     font-size: 1rem;
+}
+
+/* Avatar popover (hover to show larger avatar + name) */
+.avatar-popover-container {
+    position: relative;
+    display: inline-flex;
+}
+
+.avatar-popover {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-lg);
+    padding: var(--space-3);
+    box-shadow: var(--shadow-xl);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-2);
+    min-width: 120px;
+    animation: fadeInScale 0.15s ease-out;
+}
+
+.avatar-popover::before {
+    content: '';
+    position: absolute;
+    top: -6px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+    border-bottom: 6px solid var(--border-default);
+}
+
+.avatar-popover::after {
+    content: '';
+    position: absolute;
+    top: -5px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-bottom: 5px solid var(--bg-elevated);
+}
+
+.avatar-popover__name {
+    font-weight: 600;
+    font-size: var(--text-sm);
+    color: var(--text-primary);
+    text-align: center;
+    white-space: nowrap;
+}
+
+.avatar-popover__title {
+    font-size: var(--text-xs);
+    color: var(--text-muted);
+    text-align: center;
+}
+
+@keyframes fadeInScale {
+    from {
+        opacity: 0;
+        transform: translateX(-50%) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(-50%) scale(1);
+    }
 }
 
 /* ============================================

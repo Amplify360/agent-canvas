@@ -10,7 +10,7 @@ import { getToolDisplay } from '@/utils/config';
 import { formatCurrency } from '@/utils/formatting';
 import { Icon } from '@/components/ui/Icon';
 import { Tooltip } from '@/components/ui/Tooltip';
-import { Avatar } from '@/components/ui/Avatar';
+import { AvatarPopover } from '@/components/ui/AvatarPopover';
 import { getAgentStatusConfig, type VoteType } from '@/types/validationConstants';
 import { useClickOutside } from '@/hooks/useClickOutside';
 import { useAgentVoteActions } from '@/hooks/useAgentVoteActions';
@@ -80,11 +80,12 @@ export function AgentCard({
             {(agent.agentOrder ?? 0) + 1}
           </span>
           {agent.owner && (
-            <Avatar
+            <AvatarPopover
               src={agent.owner.avatarUrl}
               alt={agent.owner.name}
+              name={agent.owner.name}
+              title={agent.owner.title}
               size="sm"
-              title={`Owner: ${agent.owner.name}`}
             />
           )}
           {agent.status && (
@@ -182,6 +183,17 @@ export function AgentCard({
 
       {/* Footer with Links, Metrics, and Journey - icons only with tooltips */}
       <div className="agent-card__footer">
+        {/* Owner avatar - bottom left */}
+        {agent.owner && (
+          <AvatarPopover
+            src={agent.owner.avatarUrl}
+            alt={agent.owner.name}
+            name={agent.owner.name}
+            title={agent.owner.title}
+            size="sm"
+            className="agent-card__footer-avatar"
+          />
+        )}
         {agent.demoLink && (
           <Tooltip content="View Demo" placement="top">
             <a
