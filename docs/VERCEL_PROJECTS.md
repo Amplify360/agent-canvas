@@ -10,6 +10,19 @@
 **Status:** Active - Automatic deployments via GitHub integration
 **Git Repository:** https://github.com/acambitsis/agent-canvas.git
 
+## Lab Project (Experimental)
+
+**Project Name:** `agentcanvas-app-lab` (to be created)
+**Project ID:** TBD
+**Organization ID:** `team_OyuSxI1QnCzGd7SOW2T9YveW`
+**Lab URL:** https://canvas-lab.amplify360.ai (deploys from `lab` branch)
+**Purpose:** Isolated environment for experimental features and spikes
+**Convex:** Preview deployment (free tier)
+**Data Isolation:** Separate Convex backend - no shared data with dev/prod
+**Workflow:** Direct push to `lab` branch, no PR required
+**Webhooks:** Daily cron sync only (no real-time webhooks)
+**Cookie Password:** `256a303acf830e8d720211fa8954756f5d99d44c272e23a5ebbeafbbe0c07346`
+
 ## Deprecated Projects (To Be Removed)
 
 The following projects should be disconnected from GitHub and deleted in the Vercel dashboard:
