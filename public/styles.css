@@ -1994,6 +1994,17 @@ body.is-resizing-sidebar .main-wrapper {
     align-items: center;
 }
 
+/* Avatar visibility rules based on compact vs detailed view */
+/* Detailed view (has objective): Hide footer avatar, show header avatar */
+.agent-card:has(.agent-card__objective) .agent-card__footer-avatar {
+    display: none;
+}
+
+/* Compact view (no objective): Hide header avatar, show footer avatar */
+.agent-card:not(:has(.agent-card__objective)) .agent-card__header-left .avatar-popover-container {
+    display: none;
+}
+
 /* Journey and Stats containers */
 .agent-card__journey,
 .agent-card__stats {
