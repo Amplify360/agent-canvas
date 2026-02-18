@@ -203,3 +203,6 @@ yarn.lock
 clear-rate-limits.js
 .claude/tmp/
 .env.local.*
+
+# Data exports (local import/export artifacts)
+data/
