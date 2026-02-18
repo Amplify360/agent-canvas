@@ -26,6 +26,7 @@ export interface ResolvedWorkflowStep extends WorkflowStepDefinition {
 }
 
 export interface WorkflowRunState {
+  canvasId: string | null;
   workflow: WorkflowDefinition;
   prompt: string;
   steps: ResolvedWorkflowStep[];

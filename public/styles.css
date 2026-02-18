@@ -6336,6 +6336,7 @@ body.is-resizing-sidebar .main-wrapper {
     opacity: 0.24;
     filter: blur(1.8px) saturate(0.65);
     transform: none;
+    pointer-events: none;
 }
 
 .agent-card--workflow {

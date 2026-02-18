@@ -4,7 +4,7 @@
 
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Agent, type AgentCreateDefaults } from '@/types/agent';
 import type { WorkflowHighlightState, WorkflowRunState } from '@/types/workflow';
 import { Sidebar } from './Sidebar';
@@ -18,6 +18,7 @@ import { QuickLookPanel } from '../ui/QuickLookPanel';
 import { CommentsPanel } from '../ui/CommentsPanel';
 import { useAppState } from '@/contexts/AppStateContext';
 import { useAgents } from '@/contexts/AgentContext';
+import { useCanvas } from '@/contexts/CanvasContext';
 import { useDeleteAgent } from '@/hooks/useDeleteAgent';
 import { findWorkflowForPrompt, resolveWorkflowSteps } from '@/constants/workflows';
 import { WorkflowPromptOverlay } from '@/components/workflows/WorkflowPromptOverlay';
@@ -28,6 +29,7 @@ import { Tooltip } from '@/components/ui/Tooltip';
 export function AppLayout() {
   const { isSidebarCollapsed, toggleSidebar, sidebarWidth, quickLookAgent, setQuickLookAgent, showToast } = useAppState();
   const { agents } = useAgents();
+  const { currentCanvasId } = useCanvas();
   const confirmAndDelete = useDeleteAgent();
   const [isAgentModalOpen, setIsAgentModalOpen] = useState(false);
   const [editingAgent, setEditingAgent] = useState<Agent | null>(null);
@@ -105,6 +107,7 @@ export function AppLayout() {
     }
 
     setWorkflowRun({
+      canvasId: currentCanvasId ?? null,
       workflow,
       prompt,
       steps: resolvedSteps,
@@ -153,6 +156,33 @@ export function AppLayout() {
       }, {}),
     };
   }, [activeWorkflowStep?.agent._id, workflowRun]);
+
+  useEffect(() => {
+    setWorkflowRun((previous) => {
+      if (!previous) return previous;
+
+      const currentCanvas = currentCanvasId ?? null;
+      if (previous.canvasId !== currentCanvas) {
+        return null;
+      }
+
+      const liveAgentIds = new Set(agents.map((agent) => agent._id));
+      const nextSteps = previous.steps.filter((step) => liveAgentIds.has(step.agent._id));
+      if (nextSteps.length === previous.steps.length) {
+        return previous;
+      }
+
+      if (nextSteps.length === 0) {
+        return null;
+      }
+
+      return {
+        ...previous,
+        steps: nextSteps,
+        activeStepIndex: Math.min(previous.activeStepIndex, nextSteps.length - 1),
+      };
+    });
+  }, [agents, currentCanvasId]);
 
   return (
     <>
