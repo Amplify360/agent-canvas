@@ -247,38 +247,36 @@ export function CanvasRenameModal({
           </p>
         </div>
 
-        <div className="form-row">
-          <div className="form-group">
-            <label htmlFor="canvas-business-case-url" className="form-label">
-              Business Case Agent URL (Optional)
-            </label>
-            <input
-              id="canvas-business-case-url"
-              type="url"
-              className="form-input"
-              value={businessCaseAgentUrl}
-              onChange={(e) => setBusinessCaseAgentUrl(e.target.value)}
-              placeholder="https://example.com/business-case-agent"
-              disabled={isSubmitting}
-              maxLength={VALIDATION_CONSTANTS.URL_MAX_LENGTH}
-            />
-          </div>
+        <div className="form-group">
+          <label htmlFor="canvas-business-case-url" className="form-label">
+            Business Case Agent URL (Optional)
+          </label>
+          <input
+            id="canvas-business-case-url"
+            type="url"
+            className="form-input"
+            value={businessCaseAgentUrl}
+            onChange={(e) => setBusinessCaseAgentUrl(e.target.value)}
+            placeholder="https://example.com/business-case-agent"
+            disabled={isSubmitting}
+            maxLength={VALIDATION_CONSTANTS.URL_MAX_LENGTH}
+          />
+        </div>
 
-          <div className="form-group">
-            <label htmlFor="canvas-regulatory-assessment-url" className="form-label">
-              Regulatory Assessment Agent URL (Optional)
-            </label>
-            <input
-              id="canvas-regulatory-assessment-url"
-              type="url"
-              className="form-input"
-              value={regulatoryAssessmentAgentUrl}
-              onChange={(e) => setRegulatoryAssessmentAgentUrl(e.target.value)}
-              placeholder="https://example.com/regulatory-assessment-agent"
-              disabled={isSubmitting}
-              maxLength={VALIDATION_CONSTANTS.URL_MAX_LENGTH}
-            />
-          </div>
+        <div className="form-group">
+          <label htmlFor="canvas-regulatory-assessment-url" className="form-label">
+            Regulatory Assessment Agent URL (Optional)
+          </label>
+          <input
+            id="canvas-regulatory-assessment-url"
+            type="url"
+            className="form-input"
+            value={regulatoryAssessmentAgentUrl}
+            onChange={(e) => setRegulatoryAssessmentAgentUrl(e.target.value)}
+            placeholder="https://example.com/regulatory-assessment-agent"
+            disabled={isSubmitting}
+            maxLength={VALIDATION_CONSTANTS.URL_MAX_LENGTH}
+          />
         </div>
 
         {error && <p className="form-error">{error}</p>}
