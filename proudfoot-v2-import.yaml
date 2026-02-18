@@ -1,0 +1,1514 @@
+documentTitle: "Proudfoot AI Agent Portfolio - TPS Methodology Enhancement v2"
+agents:
+  - name: Executive Alignment Facilitator
+    phase: Backlog
+    agentOrder: 0
+    objective: Guide leadership teams through aspiration workshops to establish shared vision and strategic alignment for TPS engagements.
+    description: |
+      This agent supports Proudfoot consultants during Phase 1 (Aspiration) by facilitating executive alignment sessions,
+      capturing strategic objectives, and creating comprehensive alignment documentation. It uses structured interview
+      frameworks, generates alignment meeting agendas, and produces executive alignment plans that ensure all stakeholders
+      are unified on project goals, scope, and expected outcomes before detailed analysis begins.
+    tools:
+      - forms
+      - rag
+      - context
+    journeySteps:
+      - Upload stakeholder information and strategic context
+      - Generate alignment workshop agenda and materials
+      - Capture executive input via structured forms
+      - Review synthesized alignment documentation
+      - Export executive alignment plan
+    metrics:
+      numberOfUsers: 15
+      timesUsed: 120
+      timeSaved: 180
+      roi: 45000
+    category: Aspiration & Strategic Alignment
+    status: idea
+
+  - name: Stakeholder Mapping Agent
+    phase: Backlog
+    agentOrder: 1
+    objective: Analyze organizational structures to identify key buying influences and maintain comprehensive stakeholder engagement matrices.
+    description: |
+      This agent creates detailed stakeholder maps identifying Economic Buying Influences (EBI), Buying Influences (BI),
+      and Technical Buyers across the client organization. It analyzes organizational charts, interview notes, and
+      engagement data to build RACI matrices, communication plans, and influence networks. The agent helps consultants
+      navigate complex organizational dynamics and ensure appropriate stakeholder engagement throughout the project lifecycle.
+    tools:
+      - forms
+      - rag
+      - code
+    journeySteps:
+      - Upload organizational data and interview notes
+      - Define stakeholder categories and influence levels
+      - Review generated stakeholder map visualization
+      - Refine engagement strategy recommendations
+      - Export stakeholder matrix and communication plan
+    metrics:
+      numberOfUsers: 18
+      timesUsed: 95
+      timeSaved: 140
+      roi: 38000
+    category: Aspiration & Strategic Alignment
+    status: idea
+
+  - name: Business Case Builder
+    phase: Backlog
+    agentOrder: 2
+    objective: Develop comprehensive ROI projections and benefit estimations based on historical Proudfoot data and client context.
+    description: |
+      This agent accelerates business case development by analyzing historical Proudfoot project data, industry benchmarks,
+      and client-specific context to generate pro-forma P&L scenarios and ROI projections. It applies Proudfoot's proven
+      4:1 ROI methodology, creates payback charts showing maximum out-of-pocket and breakeven points, and produces
+      compelling financial narratives that demonstrate the value of TPS engagements to client decision-makers.
+    tools:
+      - code
+      - rag
+      - web-search
+    journeySteps:
+      - Input client industry and operational context
+      - Upload baseline financial data
+      - Review historical benchmark analysis
+      - Adjust assumptions and scenarios
+      - Generate business case presentation
+    metrics:
+      numberOfUsers: 12
+      timesUsed: 85
+      timeSaved: 220
+      roi: 65000
+    category: Aspiration & Strategic Alignment
+    status: idea
+
+  - name: Hypothesis Validation Agent
+    phase: Backlog
+    agentOrder: 3
+    objective: Analyze walkthrough notes and refine initial hypotheses to structure comprehensive study outlines for Value Analysis.
+    description: |
+      This agent processes walkthrough observations, client interviews, and preliminary data to validate and refine
+      initial problem hypotheses. It structures study outlines, identifies key value drivers to investigate, and creates
+      detailed work plans for the Value Analysis phase. The agent ensures that the analysis phase is focused on the
+      highest-impact opportunities and aligned with the client's strategic priorities and operational challenges.
+    tools:
+      - rag
+      - code
+      - context
+    journeySteps:
+      - Upload walkthrough notes and observations
+      - Review hypothesis validation analysis
+      - Refine problem statements collaboratively
+      - Generate structured study outline
+      - Export Value Analysis work plan
+    metrics:
+      numberOfUsers: 14
+      timesUsed: 78
+      timeSaved: 165
+      roi: 42000
+    category: Aspiration & Strategic Alignment
+    status: idea
+
+  - name: Aerial Mapping Assistant
+    phase: Backlog
+    agentOrder: 0
+    objective: Guide consultants through Proudfoot's Aerial Mapping process to capture process flows and generate brown paper visualizations.
+    description: |
+      This agent supports the execution of Proudfoot's proprietary Aerial Mapping methodology during Value Analysis.
+      It provides structured interview guides, captures responses about management practices, organizational structure,
+      culture, technology, and worker skills. The agent synthesizes findings into visual brown paper diagrams showing
+      current-state processes and Management Operating Systems (MOS), highlighting inefficiencies, duplications, and
+      missing elements that represent improvement opportunities.
+    tools:
+      - forms
+      - rag
+      - context
+    journeySteps:
+      - Select Aerial Mapping interview templates
+      - Conduct structured stakeholder interviews
+      - Upload interview notes and observations
+      - Review generated brown paper visualization
+      - Export opportunity log and findings summary
+    metrics:
+      numberOfUsers: 22
+      timesUsed: 145
+      timeSaved: 280
+      roi: 72000
+    category: Value Analysis & Diagnostics
+    status: idea
+
+  - name: Observational Study Analyzer
+    phase: Backlog
+    agentOrder: 1
+    objective: Process DILO (Day In The Life Of) observational data to identify lost time patterns and quantify operational waste.
+    description: |
+      This agent analyzes observational study data from DILOs, time studies, and activity observations to identify
+      patterns of lost time, waste, and inefficiency. It categorizes activities as value-adding, non-value-adding,
+      or waste, quantifies the magnitude of each category, and identifies root causes. The agent produces detailed
+      reports showing where frontline workers' time is being consumed and calculates the potential productivity
+      improvements available through better work design and management practices.
+    tools:
+      - code
+      - rag
+    journeySteps:
+      - Upload DILO observation data
+      - Review automated activity categorization
+      - Validate lost time calculations
+      - Analyze root cause patterns
+      - Generate observational study report
+    metrics:
+      numberOfUsers: 25
+      timesUsed: 180
+      timeSaved: 340
+      roi: 88000
+    category: Value Analysis & Diagnostics
+    status: idea
+
+  - name: Maturity Assessment Agent
+    phase: Backlog
+    agentOrder: 2
+    objective: Score client operational excellence against industry benchmarks and TPS best practices across key dimensions.
+    description: |
+      This agent conducts comprehensive maturity assessments comparing the client's current-state business processes,
+      organizational practices, Management Operating Systems, and behavioral dimensions against industry best practices
+      and Proudfoot's operational excellence framework. It generates scored assessments across relevant topics,
+      identifies capability gaps, and provides a clear baseline for measuring improvement throughout the engagement.
+    tools:
+      - forms
+      - rag
+      - code
+      - web-search
+    journeySteps:
+      - Select assessment dimensions and criteria
+      - Complete maturity assessment questionnaire
+      - Review benchmark comparison analysis
+      - Identify priority capability gaps
+      - Export maturity assessment report
+    metrics:
+      numberOfUsers: 16
+      timesUsed: 92
+      timeSaved: 195
+      roi: 51000
+    category: Value Analysis & Diagnostics
+    status: idea
+
+  - name: Root Cause Analysis Engine
+    phase: Backlog
+    agentOrder: 3
+    objective: Conduct systematic root cause analysis on operational issues using 5-Why methodology and TPS diagnostic frameworks.
+    description: |
+      This agent guides consultants through structured root cause analysis processes, applying techniques like 5-Why,
+      fishbone diagrams, and Proudfoot's behavioral variance analysis. It helps identify the true root causes of
+      operational problems rather than symptoms, distinguishing between process issues, system failures, capability
+      gaps, and behavioral factors. The agent documents findings in a structured format that directly informs solution
+      design in subsequent phases.
+    tools:
+      - forms
+      - rag
+      - context
+    journeySteps:
+      - Describe operational problem or variance
+      - Conduct guided 5-Why analysis
+      - Review root cause categorization
+      - Validate findings with supporting evidence
+      - Export RCA documentation
+    metrics:
+      numberOfUsers: 28
+      timesUsed: 210
+      timeSaved: 315
+      roi: 79000
+    category: Value Analysis & Diagnostics
+    status: idea
+
+  - name: Opportunity Log Manager
+    phase: Backlog
+    agentOrder: 4
+    objective: Track, prioritize, and quantify improvement opportunities with detailed benefit estimations throughout Value Analysis.
+    description: |
+      This agent maintains a comprehensive, prioritized log of all improvement opportunities identified during Value
+      Analysis. It captures opportunity descriptions, estimated benefits, implementation complexity, required resources,
+      and dependencies. The agent applies prioritization frameworks based on impact and feasibility, tracks opportunities
+      through validation and refinement, and ensures all high-value opportunities are incorporated into the solution
+      design and benefits realization plan.
+    tools:
+      - code
+      - rag
+      - context
+    journeySteps:
+      - Log new improvement opportunities
+      - Estimate financial and operational benefits
+      - Review prioritization analysis
+      - Refine opportunity descriptions
+      - Export prioritized opportunity log
+    metrics:
+      numberOfUsers: 20
+      timesUsed: 165
+      timeSaved: 245
+      roi: 63000
+    category: Value Analysis & Diagnostics
+    status: idea
+
+  - name: Value Driver Tree Builder
+    phase: Backlog
+    agentOrder: 5
+    objective: Create hierarchical KPI structures that link operational metrics to strategic financial outcomes.
+    description: |
+      This agent constructs value driver trees that cascade from top-level financial goals (revenue, cost, working capital)
+      down through operational levers (throughput, productivity, inventory) to specific KPIs and frontline activities.
+      It helps consultants and clients visualize how operational improvements translate to financial results, ensures
+      alignment between strategic objectives and daily execution, and provides the framework for performance tracking
+      throughout the engagement.
+    tools:
+      - code
+      - rag
+    journeySteps:
+      - Define strategic financial objectives
+      - Map operational levers and KPIs
+      - Review value driver tree visualization
+      - Validate linkages and calculations
+      - Export KPI framework documentation
+    metrics:
+      numberOfUsers: 17
+      timesUsed: 88
+      timeSaved: 175
+      roi: 48000
+    category: Value Analysis & Diagnostics
+    status: idea
+
+  - name: Behavioral Profile Analyzer
+    phase: Backlog
+    agentOrder: 6
+    objective: Assess supervisory and management behaviors against Proudfoot's 8 Active Management Behaviors framework.
+    description: |
+      This agent evaluates current management and supervisory behaviors against Proudfoot's 8 AMBs (Promoting Safety,
+      Giving Assignments, Giving Direction, Checking-In/Following-Up, Providing Feedback, Coaching and Supporting,
+      Solving Problems, Reporting). It analyzes observational data, interview responses, and behavioral studies to
+      identify gaps between current practices and desired behaviors, providing a clear baseline for the behavioral
+      transformation required to sustain operational improvements.
+    tools:
+      - forms
+      - rag
+      - code
+    journeySteps:
+      - Upload supervisory observation data
+      - Complete behavioral assessment forms
+      - Review 8 AMBs gap analysis
+      - Identify priority behavioral changes
+      - Generate behavioral profile report
+    metrics:
+      numberOfUsers: 19
+      timesUsed: 125
+      timeSaved: 210
+      roi: 56000
+    category: Value Analysis & Diagnostics
+    status: idea
+
+  - name: Data Ingestion & Validation Agent (POC)
+    phase: Backlog
+    agentOrder: 7
+    objective: Automate data ingestion from CMMS, ERP, and maintenance logs with intelligent quality checks and validation.
+    description: |
+      This agent automates the ingestion of operational data from multiple sources including CMMS, ERP systems, and
+      maintenance logs. It performs intelligent quality checks, validates data completeness and consistency, flags
+      anomalies, and provides transparent reasoning for data acceptance or rejection decisions. The agent significantly
+      reduces manual effort in data preparation, eliminates human error, and accelerates the path to analysis by
+      ensuring data readiness and building trust through transparent quality reporting.
+    tools:
+      - code
+      - rag
+      - context
+    journeySteps:
+      - Configure data source connections
+      - Initiate automated data ingestion
+      - Review data quality assessment report
+      - Address flagged anomalies and issues
+      - Approve validated dataset for analysis
+    metrics:
+      numberOfUsers: 30
+      timesUsed: 250
+      timeSaved: 480
+      roi: 125000
+    category: Value Analysis & Diagnostics
+    status: idea
+
+  - name: Advanced Data Analysis Agent (POC)
+    phase: Backlog
+    agentOrder: 8
+    objective: Execute analytical workflows on validated data to identify patterns and anomalies using TPS methodology via RAG.
+    description: |
+      This agent executes advanced analytical workflows on validated maintenance and operational data, identifying
+      patterns, trends, and anomalies. It performs failure pattern analysis, equipment utilization metrics, recurrence
+      analysis, and anomaly detection. Using RAG-powered analysis with Proudfoot's TPS methodology and knowledge base,
+      it provides context-aware insights that surface hidden opportunities from complex datasets while ensuring
+      consistency in analytical approach and empowering consultants with AI-driven, data-backed findings.
+    tools:
+      - code
+      - rag
+      - context
+    journeySteps:
+      - Select validated dataset for analysis
+      - Define analysis objectives and parameters
+      - Review automated analytical findings
+      - Explore patterns and anomalies interactively
+      - Export analysis results and insights
+    metrics:
+      numberOfUsers: 28
+      timesUsed: 220
+      timeSaved: 520
+      roi: 145000
+    category: Value Analysis & Diagnostics
+    status: idea
+
+  - name: Opportunities Identification Agent (POC)
+    phase: Backlog
+    agentOrder: 9
+    objective: Identify improvement opportunities, quantify financial impact, and prioritize recommendations using TPS benchmarks.
+    description: |
+      This agent identifies improvement opportunities across maintenance, operations, and costs based on analytical
+      findings. It quantifies financial impact through ROI calculations, applies proven TPS methodology and industry
+      benchmarks, and prioritizes recommendations based on impact and feasibility. Using RAG integration with Proudfoot
+      case studies and playbooks, it quantifies the prize (revenue increase, cost reduction, throughput improvement)
+      and aligns recommendations with proven methodologies to maximize value realization.
+    tools:
+      - code
+      - rag
+      - web-search
+    journeySteps:
+      - Upload analysis results and findings
+      - Review identified opportunities
+      - Validate financial impact calculations
+      - Adjust prioritization criteria
+      - Export prioritized recommendations report
+    metrics:
+      numberOfUsers: 25
+      timesUsed: 195
+      timeSaved: 450
+      roi: 135000
+    category: Value Analysis & Diagnostics
+    status: idea
+
+  - name: Pro-Forma P&L Modeler
+    phase: Backlog
+    agentOrder: 10
+    objective: Simulate financial impact of improvement initiatives with line-by-line benefit calculations endorsed by finance teams.
+    description: |
+      This agent creates detailed pro-forma P&L models that simulate the financial impact of proposed improvements.
+      It works with client finance teams to ensure accuracy and endorsement, calculates line-by-line impacts based on
+      percentage improvements identified in studies, and produces payback charts showing maximum out-of-pocket,
+      breakeven points, and year-end cash positions. The agent provides the financial foundation for decision-making
+      and benefits tracking throughout the engagement.
+    tools:
+      - code
+      - rag
+    journeySteps:
+      - Upload baseline P&L data
+      - Map improvement initiatives to P&L lines
+      - Review financial impact simulation
+      - Adjust assumptions with finance team
+      - Generate pro-forma P&L report
+    metrics:
+      numberOfUsers: 15
+      timesUsed: 110
+      timeSaved: 265
+      roi: 72000
+    category: Value Analysis & Diagnostics
+    status: idea
+
+  - name: Trend Analysis Engine
+    phase: Backlog
+    agentOrder: 11
+    objective: Analyze operational data to identify patterns, trends, and forecast performance trajectories.
+    description: |
+      This agent performs comprehensive trend analysis on operational and performance data, identifying patterns over
+      time, seasonal variations, and emerging issues. It uses statistical techniques to forecast future performance
+      trajectories, highlights positive and negative trends, and provides early warning signals for potential problems.
+      The agent helps consultants understand performance dynamics and make data-driven predictions about the impact
+      of proposed interventions.
+    tools:
+      - code
+      - rag
+    journeySteps:
+      - Upload historical performance data
+      - Select metrics and time periods for analysis
+      - Review trend analysis visualizations
+      - Explore forecast scenarios
+      - Export trend analysis report
+    metrics:
+      numberOfUsers: 22
+      timesUsed: 175
+      timeSaved: 310
+      roi: 81000
+    category: Value Analysis & Diagnostics
+    status: idea
+
+  - name: Baseline Performance Analyzer
+    phase: Backlog
+    agentOrder: 12
+    objective: Establish current-state performance metrics, validate data quality, and set improvement targets.
+    description: |
+      This agent establishes comprehensive baseline performance metrics across all relevant operational dimensions.
+      It validates data quality and consistency, calculates current-state KPIs, identifies performance gaps against
+      targets or benchmarks, and sets realistic improvement targets based on Proudfoot's experience and industry
+      standards. The baseline provides the foundation for measuring progress and validating benefits realization
+      throughout the engagement.
+    tools:
+      - code
+      - rag
+      - web-search
+    journeySteps:
+      - Upload operational performance data
+      - Define baseline KPIs and metrics
+      - Review baseline performance analysis
+      - Set improvement targets
+      - Export baseline performance report
+    metrics:
+      numberOfUsers: 24
+      timesUsed: 155
+      timeSaved: 285
+      roi: 75000
+    category: Value Analysis & Diagnostics
+    status: idea
+
+  - name: Benefits Evaluation Methodology Designer
+    phase: Backlog
+    agentOrder: 13
+    objective: Structure data collection processes and measurement frameworks in collaboration with client finance teams.
+    description: |
+      This agent designs comprehensive benefits evaluation methodologies in partnership with client finance teams.
+      It defines data collection processes, establishes measurement frameworks, specifies baseline data requirements,
+      creates reconciliation methodologies linking operational improvements to P&L impact, and ensures agreement on
+      evaluation approaches. The agent ensures that benefits can be accurately tracked, measured, and validated
+      throughout the engagement and beyond.
+    tools:
+      - forms
+      - rag
+      - context
+    journeySteps:
+      - Define benefits categories and metrics
+      - Design data collection methodology
+      - Review measurement framework with finance
+      - Establish reconciliation processes
+      - Document evaluation methodology
+    metrics:
+      numberOfUsers: 14
+      timesUsed: 95
+      timeSaved: 190
+      roi: 52000
+    category: Value Analysis & Diagnostics
+    status: idea
+
+  - name: Variance Dashboard Generator
+    phase: Backlog
+    agentOrder: 14
+    objective: Create real-time performance tracking visualizations highlighting deviations from plan and targets.
+    description: |
+      This agent generates interactive dashboards that track performance against plans and targets in real-time.
+      It highlights variances, categorizes them by severity and type, provides drill-down capabilities to understand
+      root causes, and enables rapid identification of issues requiring intervention. The dashboards support Short
+      Interval Control (SIC) practices and ensure that management attention is focused on the most critical performance
+      gaps requiring corrective action.
+    tools:
+      - code
+    journeySteps:
+      - Define KPIs and variance thresholds
+      - Connect to performance data sources
+      - Customize dashboard layout and visuals
+      - Review real-time variance tracking
+      - Share dashboard with stakeholders
+    metrics:
+      numberOfUsers: 26
+      timesUsed: 200
+      timeSaved: 370
+      roi: 95000
+    category: Value Analysis & Diagnostics
+    status: idea
+
+  - name: MOS Blueprint Designer
+    phase: Backlog
+    agentOrder: 0
+    objective: Guide creation of comprehensive Management Operating System with forecast-plan-execute-report-improve cycles.
+    description: |
+      This agent guides the design of Proudfoot's Management Operating System (MOS) tailored to the client's context.
+      It structures the five-step cycle (Forecast, Plan & Schedule, Execute & Control, Report & Evaluate, Continuous
+      Process Improvement) with appropriate meeting cadences, governance structures, information flows, and decision
+      rights. The agent ensures the MOS is practical, aligned with client capabilities, and designed to drive
+      sustainable operational excellence through disciplined execution and continuous improvement.
+    tools:
+      - forms
+      - rag
+      - context
+    journeySteps:
+      - Define MOS scope and objectives
+      - Design forecast and planning processes
+      - Structure execution and control mechanisms
+      - Define reporting and evaluation rituals
+      - Export MOS blueprint documentation
+    metrics:
+      numberOfUsers: 18
+      timesUsed: 105
+      timeSaved: 245
+      roi: 68000
+    category: MOS Design & New Ways of Working
+    status: idea
+
+  - name: Perfect Day Architect
+    phase: Backlog
+    agentOrder: 1
+    objective: Design optimal daily schedules integrating MOS elements and 8 AMBs for specific roles and teams.
+    description: |
+      This agent designs "Perfect Day" models for specific roles, outlining key activities to be completed within
+      specified periods during the day. It integrates MOS elements (shift start meetings, SIC checks, performance
+      reviews) with the 8 Active Management Behaviors to ensure the right work is conducted at the right time. The
+      Perfect Day becomes the operational blueprint for frontline execution, embedding new ways of working into
+      daily routines and driving consistent performance.
+    tools:
+      - forms
+      - rag
+      - context
+    journeySteps:
+      - Select role or team for Perfect Day design
+      - Map critical activities and time allocations
+      - Integrate MOS and 8 AMBs elements
+      - Review and refine Perfect Day schedule
+      - Export Perfect Day documentation
+    metrics:
+      numberOfUsers: 21
+      timesUsed: 135
+      timeSaved: 280
+      roi: 74000
+    category: MOS Design & New Ways of Working
+    status: idea
+
+  - name: KPI & Metrics Designer
+    phase: Backlog
+    agentOrder: 2
+    objective: Develop operational KPIs, tracking mechanisms, and DWOR templates aligned to strategic business goals.
+    description: |
+      This agent designs comprehensive KPI frameworks and tracking mechanisms aligned to the client's strategic
+      objectives. It creates Daily Weekly Operating Report (DWOR) templates, defines data sources and collection
+      methods, establishes reporting cadences, and ensures KPIs cascade from strategic goals down to frontline
+      activities. The agent ensures that performance measurement drives the right behaviors and enables data-driven
+      decision-making at all organizational levels.
+    tools:
+      - forms
+      - rag
+      - code
+    journeySteps:
+      - Define strategic objectives and value drivers
+      - Design operational KPI framework
+      - Create DWOR templates and tracking tools
+      - Validate data sources and collection methods
+      - Export KPI design documentation
+    metrics:
+      numberOfUsers: 19
+      timesUsed: 115
+      timeSaved: 235
+      roi: 64000
+    category: MOS Design & New Ways of Working
+    status: idea
+
+  - name: RACI Matrix Generator
+    phase: Backlog
+    agentOrder: 3
+    objective: Create comprehensive accountability frameworks defining roles and responsibilities across processes.
+    description: |
+      This agent generates RACI (Responsible, Accountable, Consulted, Informed) matrices that clearly define roles
+      and responsibilities for all key processes and activities. It ensures clarity on who makes decisions, who
+      executes work, who provides input, and who needs to be informed. The agent eliminates ambiguity, reduces
+      duplication of effort, and ensures accountability is clearly assigned, enabling effective execution and
+      reducing organizational friction.
+    tools:
+      - forms
+      - code
+    journeySteps:
+      - Define processes and activities
+      - Identify roles and stakeholders
+      - Assign RACI designations
+      - Review and validate with stakeholders
+      - Export RACI matrix documentation
+    metrics:
+      numberOfUsers: 17
+      timesUsed: 98
+      timeSaved: 185
+      roi: 51000
+    category: MOS Design & New Ways of Working
+    status: idea
+
+  - name: Planning & Scheduling Designer
+    phase: Backlog
+    agentOrder: 4
+    objective: Structure forecasting, planning, and scheduling methodologies from yearly horizons down to daily intervals.
+    description: |
+      This agent designs integrated planning and scheduling processes that cascade from long-range strategic forecasts
+      down through monthly, weekly, and daily schedules. It defines planning methodologies, scheduling algorithms,
+      resource allocation approaches, and lookahead planning processes. The agent ensures that strategic direction
+      translates into executable daily work plans, with the right people doing the right work at the right time to
+      deliver operational and financial targets.
+    tools:
+      - forms
+      - rag
+      - code
+    journeySteps:
+      - Define planning horizons and objectives
+      - Design forecasting methodology
+      - Structure scheduling processes
+      - Create planning templates and tools
+      - Export planning & scheduling framework
+    metrics:
+      numberOfUsers: 16
+      timesUsed: 92
+      timeSaved: 215
+      roi: 59000
+    category: MOS Design & New Ways of Working
+    status: idea
+
+  - name: Short Interval Control Configurator
+    phase: Backlog
+    agentOrder: 5
+    objective: Design SIC routines, quality checks, and variance management protocols for proactive operational control.
+    description: |
+      This agent designs Short Interval Control (SIC) systems that enable frequent reviews of plan attainment at
+      short intervals (hourly, shift-based, daily). It defines quality check protocols, variance identification
+      processes, escalation procedures, and corrective action frameworks. SIC ensures that deviations from plan are
+      identified and addressed proactively, minimizing the risk of schedule and budget overruns and enabling
+      disciplined execution at the point of work.
+    tools:
+      - forms
+      - rag
+      - context
+    journeySteps:
+      - Define SIC intervals and checkpoints
+      - Design variance identification protocols
+      - Create quality check procedures
+      - Structure escalation and response processes
+      - Export SIC framework documentation
+    metrics:
+      numberOfUsers: 20
+      timesUsed: 125
+      timeSaved: 255
+      roi: 69000
+    category: MOS Design & New Ways of Working
+    status: idea
+
+  - name: Skills Flexibility Matrix Builder
+    phase: Backlog
+    agentOrder: 6
+    objective: Map current workforce skills, identify capability gaps, and create targeted training roadmaps.
+    description: |
+      This agent creates Skills Flexibility Matrices that map the current skill levels of people responsible for
+      activities within work processes. It identifies skill gaps, assesses training needs, and develops training
+      roadmaps to build workforce capability and flexibility. The agent ensures that the workforce has the skills
+      required to execute new ways of working effectively and that cross-training opportunities are identified to
+      improve operational resilience and flexibility.
+    tools:
+      - forms
+      - code
+      - context
+    journeySteps:
+      - Define required skills and competencies
+      - Assess current workforce skill levels
+      - Identify skill gaps and training needs
+      - Develop training roadmap
+      - Export Skills Flexibility Matrix
+    metrics:
+      numberOfUsers: 15
+      timesUsed: 88
+      timeSaved: 175
+      roi: 48000
+    category: MOS Design & New Ways of Working
+    status: idea
+
+  - name: Installation Readiness Checker
+    phase: Backlog
+    agentOrder: 0
+    objective: Validate pre-installation requirements, contingency plans, and stakeholder preparedness before go-live.
+    description: |
+      This agent conducts comprehensive readiness assessments before installation of new ways of working. It validates
+      that all prerequisites are met (training completed, systems configured, materials prepared), assesses stakeholder
+      preparedness, reviews contingency plans, and identifies risks that could impact successful installation. The
+      agent ensures that installations proceed smoothly with minimal disruption and maximum likelihood of success.
+    tools:
+      - forms
+      - context
+    journeySteps:
+      - Complete installation readiness checklist
+      - Review prerequisite completion status
+      - Assess stakeholder preparedness
+      - Validate contingency plans
+      - Generate readiness assessment report
+    metrics:
+      numberOfUsers: 18
+      timesUsed: 110
+      timeSaved: 195
+      roi: 54000
+    category: Installation & Implementation
+    status: idea
+
+  - name: Dry Run Coordinator
+    phase: Backlog
+    agentOrder: 1
+    objective: Manage testing of new processes in isolated conditions, capture feedback, and refine designs before live implementation.
+    description: |
+      This agent coordinates dry run testing of new processes, systems, and tools in isolated, non-production
+      conditions. It manages test scenarios, captures participant feedback, identifies issues and refinement
+      opportunities, and ensures that designs are validated and optimized before live implementation. Dry runs
+      reduce implementation risk, build confidence among participants, and ensure that new ways of working are
+      practical and effective.
+    tools:
+      - forms
+      - context
+    journeySteps:
+      - Plan dry run scenarios and participants
+      - Execute dry run testing sessions
+      - Capture feedback and observations
+      - Identify refinements and adjustments
+      - Document dry run results and changes
+    metrics:
+      numberOfUsers: 22
+      timesUsed: 145
+      timeSaved: 265
+      roi: 71000
+    category: Installation & Implementation
+    status: idea
+
+  - name: Wet Run Analyzer
+    phase: Backlog
+    agentOrder: 2
+    objective: Evaluate real-world performance of new systems in operating conditions, identify issues, and recommend adjustments.
+    description: |
+      This agent analyzes wet run testing where new processes are tested in actual operating conditions with real
+      data and workflows. It evaluates performance against expectations, identifies issues that emerge in the live
+      environment, assesses user adoption and compliance, and recommends adjustments before full-scale rollout. Wet
+      runs provide the final validation that new ways of working will deliver expected results in real-world conditions.
+    tools:
+      - code
+      - forms
+      - context
+    journeySteps:
+      - Execute wet run in live environment
+      - Monitor performance and compliance
+      - Capture issues and user feedback
+      - Analyze results vs. expectations
+      - Generate wet run analysis and recommendations
+    metrics:
+      numberOfUsers: 20
+      timesUsed: 130
+      timeSaved: 240
+      roi: 66000
+    category: Installation & Implementation
+    status: idea
+
+  - name: 8 AMBs Coaching Assistant
+    phase: Backlog
+    agentOrder: 3
+    objective: Provide coaching frameworks, behavior checklists, and training materials for Active Management Behaviors adoption.
+    description: |
+      This agent supports the installation of Proudfoot's 8 Active Management Behaviors (Promoting Safety, Giving
+      Assignments, Giving Direction, Checking-In/Following-Up, Providing Feedback, Coaching and Supporting, Solving
+      Problems, Reporting). It provides coaching frameworks, behavior checklists, observation guides, and training
+      materials adapted to client language and context. The agent ensures that supervisors and managers adopt the
+      behaviors required to sustain operational improvements and drive high performance.
+    tools:
+      - rag
+      - context
+      - forms
+    journeySteps:
+      - Select 8 AMBs focus areas
+      - Access coaching frameworks and checklists
+      - Customize materials to client context
+      - Conduct coaching sessions
+      - Track behavior adoption progress
+    metrics:
+      numberOfUsers: 28
+      timesUsed: 185
+      timeSaved: 340
+      roi: 89000
+    category: Installation & Implementation
+    status: idea
+
+  - name: Quick Results Tracker
+    phase: Backlog
+    agentOrder: 4
+    objective: Monitor early wins implementation, quantify impact, and communicate successes to build momentum and credibility.
+    description: |
+      This agent tracks the implementation and impact of Quick Results initiatives designed to deliver measurable
+      improvements within the first 4-5 weeks of the engagement. It monitors progress, quantifies financial and
+      operational impact, identifies barriers to realization, and generates communications highlighting successes.
+      Quick Results build credibility, offset project costs, and demonstrate proof of concept, creating momentum
+      for broader transformation.
+    tools:
+      - code
+      - context
+    journeySteps:
+      - Define Quick Results initiatives
+      - Track implementation progress
+      - Measure and quantify impact
+      - Generate success communications
+      - Update stakeholders on results
+    metrics:
+      numberOfUsers: 24
+      timesUsed: 160
+      timeSaved: 295
+      roi: 78000
+    category: Installation & Implementation
+    status: idea
+
+  - name: Change Communication Agent
+    phase: Backlog
+    agentOrder: 5
+    objective: Generate newsletters, updates, and presentations tailored to different organizational levels and stakeholder groups.
+    description: |
+      This agent creates targeted change communications for different audiences throughout the installation phase.
+      It generates newsletters, email updates, presentation materials, and visual communications that explain what
+      is changing, why it matters, and what people need to do. The agent tailors messaging to different organizational
+      levels and stakeholder groups, ensuring that everyone understands their role in the transformation and remains
+      engaged and supportive.
+    tools:
+      - rag
+      - context
+    journeySteps:
+      - Define communication objectives and audiences
+      - Generate draft communications
+      - Customize messaging for stakeholder groups
+      - Review and refine content
+      - Distribute communications
+    metrics:
+      numberOfUsers: 16
+      timesUsed: 140
+      timeSaved: 220
+      roi: 61000
+    category: Installation & Implementation
+    status: idea
+
+  - name: Implementation Progress Monitor
+    phase: Backlog
+    agentOrder: 6
+    objective: Track Key Event Schedule completion, flag risks, and maintain project momentum throughout installation.
+    description: |
+      This agent monitors progress against the Key Event Schedule (KES) throughout the installation phase. It tracks
+      milestone completion, identifies delays and risks, flags resource constraints, and provides early warning of
+      issues that could impact project delivery. The agent ensures that the project team and client leadership have
+      real-time visibility into implementation progress and can take corrective action to maintain momentum and
+      meet commitments.
+    tools:
+      - code
+      - context
+    journeySteps:
+      - Upload Key Event Schedule
+      - Update progress and completion status
+      - Review risk and delay analysis
+      - Identify corrective actions
+      - Generate progress report
+    metrics:
+      numberOfUsers: 19
+      timesUsed: 155
+      timeSaved: 275
+      roi: 73000
+    category: Installation & Implementation
+    status: idea
+
+  - name: Sustainability Audit Agent
+    phase: Backlog
+    agentOrder: 0
+    objective: Conduct periodic assessments of MOS adherence, behavior adoption, and process compliance to ensure lasting change.
+    description: |
+      This agent conducts regular sustainability audits to assess whether new ways of working are being maintained
+      after installation. It evaluates MOS adherence, 8 AMBs adoption, process compliance, and performance sustainability.
+      The agent identifies areas where practices are slipping, recommends corrective actions, and provides visibility
+      into the long-term health of the transformation. Sustainability audits ensure that improvements are maintained
+      and continue to deliver value long after Proudfoot's engagement concludes.
+    tools:
+      - forms
+      - code
+      - context
+    journeySteps:
+      - Define audit scope and criteria
+      - Conduct sustainability assessment
+      - Review compliance and adoption metrics
+      - Identify areas requiring reinforcement
+      - Generate sustainability audit report
+    metrics:
+      numberOfUsers: 14
+      timesUsed: 95
+      timeSaved: 185
+      roi: 52000
+    category: Sustain & Continuous Improvement
+    status: idea
+
+  - name: Continuous Improvement Facilitator
+    phase: Backlog
+    agentOrder: 1
+    objective: Guide PDCA cycles, capture lessons learned, and embed continuous improvement culture into daily operations.
+    description: |
+      This agent facilitates continuous improvement processes using Plan-Do-Check-Act (PDCA) cycles and other
+      improvement methodologies. It guides teams through problem identification, root cause analysis, solution
+      development, testing, and standardization. The agent captures lessons learned, shares best practices across
+      the organization, and embeds a culture where continuous improvement becomes part of daily work rather than
+      a separate initiative.
+    tools:
+      - forms
+      - rag
+      - context
+    journeySteps:
+      - Identify improvement opportunity
+      - Plan improvement initiative
+      - Execute and test solution
+      - Review results and standardize
+      - Share lessons learned
+    metrics:
+      numberOfUsers: 26
+      timesUsed: 175
+      timeSaved: 315
+      roi: 82000
+    category: Sustain & Continuous Improvement
+    status: idea
+
+  - name: Standard Operating Procedure Generator
+    phase: Backlog
+    agentOrder: 2
+    objective: Create comprehensive, client-branded documentation for all new processes including job aids and reference materials.
+    description: |
+      This agent generates comprehensive Standard Operating Procedures (SOPs) for all new or changed processes
+      implemented during the engagement. It creates client-branded documentation, job aids, quick reference guides,
+      and training materials that serve as ongoing reference resources for current and future employees. SOPs ensure
+      that new ways of working are clearly documented, consistently executed, and easily transferred to new team
+      members.
+    tools:
+      - rag
+      - context
+    journeySteps:
+      - Select processes for documentation
+      - Generate draft SOP content
+      - Add job aids and visual guides
+      - Review and refine with process owners
+      - Publish final SOP documentation
+    metrics:
+      numberOfUsers: 18
+      timesUsed: 120
+      timeSaved: 245
+      roi: 67000
+    category: Sustain & Continuous Improvement
+    status: idea
+
+  - name: Performance Management Integrator
+    phase: Backlog
+    agentOrder: 3
+    objective: Align HR systems, talent development, and performance reviews with new behaviors and operational requirements.
+    description: |
+      This agent works with client HR teams to integrate new ways of working into performance management systems.
+      It updates performance criteria to reflect 8 AMBs and MOS requirements, aligns talent development programs
+      with new skill needs, and ensures that performance reviews measure and reinforce desired behaviors. Integration
+      with HR systems ensures that new ways of working are sustained through formal organizational processes and
+      that people are recognized and rewarded for the right behaviors.
+    tools:
+      - forms
+      - rag
+      - context
+    journeySteps:
+      - Review current performance management system
+      - Define new performance criteria and behaviors
+      - Update talent development programs
+      - Integrate with HR systems
+      - Document performance management changes
+    metrics:
+      numberOfUsers: 12
+      timesUsed: 75
+      timeSaved: 165
+      roi: 46000
+    category: Sustain & Continuous Improvement
+    status: idea
+
+  - name: Benefits Realization Tracker
+    phase: Backlog
+    agentOrder: 4
+    objective: Monitor actual vs. projected savings, reconcile with P&L, and report benefits realization to stakeholders.
+    description: |
+      This agent tracks actual benefits realization against projections throughout the engagement and beyond. It
+      collects performance data, calculates realized savings, reconciles operational improvements with P&L impact,
+      and generates benefits realization reports for stakeholders. The agent ensures transparency in benefits
+      tracking, validates that promised ROI is being delivered, and provides the evidence needed to demonstrate
+      project success and justify continued investment in operational excellence.
+    tools:
+      - code
+      - rag
+    journeySteps:
+      - Define benefits tracking methodology
+      - Collect actual performance data
+      - Calculate realized vs. projected benefits
+      - Reconcile with P&L impact
+      - Generate benefits realization report
+    metrics:
+      numberOfUsers: 16
+      timesUsed: 135
+      timeSaved: 255
+      roi: 71000
+    category: Sustain & Continuous Improvement
+    status: idea
+
+  - name: Sustainability Champion Trainer
+    phase: Backlog
+    agentOrder: 5
+    objective: Develop training materials and coaching plans for internal client champions who will sustain improvements.
+    description: |
+      This agent develops comprehensive training programs for client sustainability champions who will maintain and
+      continue to improve operations after Proudfoot's engagement concludes. It creates training materials, coaching
+      plans, sustainability checklists, and support resources. The agent ensures that client teams have the knowledge,
+      skills, and tools to sustain improvements independently, conduct their own audits, coach their teams, and
+      drive continuous improvement without ongoing external support.
+    tools:
+      - rag
+      - context
+      - forms
+    journeySteps:
+      - Identify sustainability champions
+      - Develop champion training curriculum
+      - Create coaching and support materials
+      - Conduct train-the-trainer sessions
+      - Provide ongoing support resources
+    metrics:
+      numberOfUsers: 14
+      timesUsed: 90
+      timeSaved: 195
+      roi: 54000
+    category: Sustain & Continuous Improvement
+    status: idea
+
+  - name: Client Deliverables Generator (POC)
+    phase: Backlog
+    agentOrder: 0
+    objective: Generate professional, client-ready presentations, dashboards, and reports with compelling narratives and visualizations.
+    description: |
+      This agent automates the creation of professional, client-ready deliverables including presentations, executive
+      dashboards, and comprehensive reports. It generates compelling narratives summarizing the entire engagement
+      from data ingestion through recommendations, creates data visualizations, quantifies current-state shortcomings,
+      and clearly articulates opportunity value (revenue, cost, throughput). The agent reduces reporting time from
+      days to hours, ensures consistency and professional quality, and frees consultants to focus on strategic
+      advisory rather than manual report building.
+    tools:
+      - code
+      - rag
+      - context
+    journeySteps:
+      - Select deliverable type and template
+      - Upload analysis results and findings
+      - Review auto-generated content and visuals
+      - Customize branding and messaging
+      - Export client-ready deliverable
+    metrics:
+      numberOfUsers: 32
+      timesUsed: 240
+      timeSaved: 560
+      roi: 155000
+    category: Knowledge Management & Deliverables
+    status: idea
+
+  - name: Project Knowledge Curator
+    phase: Backlog
+    agentOrder: 1
+    objective: Organize project artifacts, create case studies, and maintain comprehensive project documentation.
+    description: |
+      This agent organizes all project artifacts according to Proudfoot's knowledge management standards. It maintains
+      red file checklists, creates project completion reports, develops case studies illustrating challenges and
+      results, and ensures all project materials are properly stored and accessible. The agent ensures that project
+      knowledge is captured, organized, and available for future reference, business development, and continuous
+      improvement of TPS methodology.
+    tools:
+      - rag
+      - context
+    journeySteps:
+      - Upload project artifacts and documents
+      - Complete red file checklist
+      - Generate project completion report
+      - Create case study summary
+      - Archive organized project folder
+    metrics:
+      numberOfUsers: 15
+      timesUsed: 105
+      timeSaved: 215
+      roi: 59000
+    category: Knowledge Management & Deliverables
+    status: idea
+
+  - name: Best Practice Library Agent
+    phase: Backlog
+    agentOrder: 2
+    objective: Capture innovative solutions, templates, and toolkits for continuous enhancement of TPS methodology.
+    description: |
+      This agent maintains Proudfoot's best practice library by capturing innovative solutions, effective templates,
+      and proven toolkits from engagements. It identifies reusable assets, documents their application and results,
+      categorizes them for easy retrieval, and makes them available to consultants for future engagements. The agent
+      ensures that Proudfoot continuously learns from experience and that best practices are systematically captured
+      and shared across the organization.
+    tools:
+      - rag
+      - context
+    journeySteps:
+      - Submit innovative solution or template
+      - Document application context and results
+      - Review and categorize for library
+      - Make available to consultant community
+      - Track usage and effectiveness
+    metrics:
+      numberOfUsers: 18
+      timesUsed: 125
+      timeSaved: 235
+      roi: 65000
+    category: Knowledge Management & Deliverables
+    status: idea
+
+  - name: Lessons Learned Synthesizer
+    phase: Backlog
+    agentOrder: 3
+    objective: Analyze project outcomes to identify improvement opportunities for future TPS engagements.
+    description: |
+      This agent conducts systematic lessons learned reviews at project conclusion and key milestones. It analyzes
+      what worked well, what could be improved, what challenges were encountered, and how they were addressed. The
+      agent synthesizes insights across multiple projects to identify patterns and opportunities for improving TPS
+      methodology, tools, and delivery approaches. Lessons learned ensure that Proudfoot continuously improves its
+      service delivery and effectiveness.
+    tools:
+      - forms
+      - rag
+      - code
+    journeySteps:
+      - Conduct lessons learned interviews
+      - Analyze project outcomes and challenges
+      - Identify improvement opportunities
+      - Synthesize insights and recommendations
+      - Share lessons learned report
+    metrics:
+      numberOfUsers: 14
+      timesUsed: 85
+      timeSaved: 175
+      roi: 48000
+    category: Knowledge Management & Deliverables
+    status: idea
+
+  - name: Client Reference Generator
+    phase: Backlog
+    agentOrder: 4
+    objective: Structure testimonials, success stories, and reference materials for business development purposes.
+    description: |
+      This agent creates compelling reference materials from successful engagements including written testimonials,
+      video testimonial scripts, success story narratives, and reference call preparation materials. It works with
+      clients to capture their perspective on Proudfoot's impact, results achieved, and ways of working. The agent
+      ensures that satisfied clients become effective ambassadors for Proudfoot and that their success stories are
+      professionally documented for business development use.
+    tools:
+      - rag
+      - context
+      - forms
+    journeySteps:
+      - Identify reference opportunity
+      - Conduct client reference interview
+      - Draft testimonial or success story
+      - Review and refine with client
+      - Publish reference materials
+    metrics:
+      numberOfUsers: 12
+      timesUsed: 70
+      timeSaved: 145
+      roi: 42000
+    category: Knowledge Management & Deliverables
+    status: idea
+
+  - name: Training Material Customizer
+    phase: Backlog
+    agentOrder: 5
+    objective: Adapt Proudfoot training content to client language, culture, and industry-specific context.
+    description: |
+      This agent customizes Proudfoot's standard training materials (8 AMBs, MOS, Perfect Day, etc.) to align with
+      client language, terminology, culture, and industry context. It adapts examples, case studies, and scenarios
+      to be relevant and relatable to the client's workforce, ensuring that training is engaging and effective. The
+      agent accelerates training material preparation while ensuring consistency with Proudfoot methodology and
+      maximizing training impact.
+    tools:
+      - rag
+      - context
+    journeySteps:
+      - Select training modules to customize
+      - Input client context and terminology
+      - Review customized training materials
+      - Refine examples and scenarios
+      - Export client-ready training content
+    metrics:
+      numberOfUsers: 16
+      timesUsed: 110
+      timeSaved: 225
+      roi: 62000
+    category: Knowledge Management & Deliverables
+    status: idea
+
+  - name: More Work Opportunity Scout
+    phase: Backlog
+    agentOrder: 0
+    objective: Identify expansion opportunities within client organizations and generate targeted referral strategies.
+    description: |
+      This agent systematically identifies "More Work" opportunities within existing client organizations by analyzing
+      organizational structure, performance data, and engagement outcomes. It identifies other divisions, facilities,
+      or functions that could benefit from TPS, generates referral strategies, and prepares materials for client
+      introductions. The agent ensures that successful engagements lead to expanded relationships and that Proudfoot
+      maximizes value creation across the entire client organization.
+    tools:
+      - web-search
+      - rag
+      - context
+    journeySteps:
+      - Analyze client organization structure
+      - Identify expansion opportunities
+      - Generate referral strategy
+      - Prepare introduction materials
+      - Track referral progress
+    metrics:
+      numberOfUsers: 10
+      timesUsed: 65
+      timeSaved: 125
+      roi: 85000
+    category: Business Development & Client Growth
+    status: idea
+
+  - name: Proposal Intelligence Agent
+    phase: Backlog
+    agentOrder: 1
+    objective: Analyze past proposals and success patterns to create tailored, high-impact proposal content.
+    description: |
+      This agent analyzes Proudfoot's historical proposal data to identify success patterns, effective messaging,
+      and winning approaches for different industries, client types, and situations. It generates tailored proposal
+      content, suggests pricing strategies, identifies relevant case studies, and provides recommendations for
+      positioning. The agent accelerates proposal development while improving win rates by applying lessons from
+      past successes.
+    tools:
+      - rag
+      - web-search
+      - context
+    journeySteps:
+      - Input opportunity context and requirements
+      - Review proposal recommendations
+      - Generate tailored proposal sections
+      - Refine messaging and positioning
+      - Export proposal content
+    metrics:
+      numberOfUsers: 12
+      timesUsed: 80
+      timeSaved: 195
+      roi: 92000
+    category: Business Development & Client Growth
+    status: idea
+
+  - name: Client Temperature Monitor
+    phase: Backlog
+    agentOrder: 2
+    objective: Track engagement signals, satisfaction indicators, and flag relationship risks for proactive management.
+    description: |
+      This agent monitors client engagement health throughout the project lifecycle by tracking satisfaction signals,
+      engagement patterns, communication frequency, and sentiment. It flags potential relationship risks early,
+      identifies opportunities to strengthen the relationship, and provides recommendations for client account
+      management. The agent ensures that client relationships remain strong and that issues are addressed before
+      they escalate.
+    tools:
+      - forms
+      - context
+      - code
+    journeySteps:
+      - Configure client engagement tracking
+      - Monitor satisfaction signals
+      - Review relationship health dashboard
+      - Address flagged risks
+      - Generate client temperature report
+    metrics:
+      numberOfUsers: 14
+      timesUsed: 145
+      timeSaved: 185
+      roi: 68000
+    category: Business Development & Client Growth
+    status: idea
+
+  - name: Referral Campaign Manager
+    phase: Backlog
+    agentOrder: 3
+    objective: Structure referral requests, track introductions, and manage follow-up activities systematically.
+    description: |
+      This agent manages referral campaigns by structuring referral requests, tracking client introductions, managing
+      follow-up activities, and measuring referral conversion rates. It provides templates for referral requests,
+      schedules follow-up reminders, tracks referral pipeline, and ensures that referral opportunities are
+      systematically pursued. The agent maximizes the business development value of satisfied clients by converting
+      their advocacy into new opportunities.
+    tools:
+      - context
+      - forms
+    journeySteps:
+      - Identify referral targets
+      - Generate referral request
+      - Track introduction and follow-up
+      - Monitor referral pipeline
+      - Report on referral outcomes
+    metrics:
+      numberOfUsers: 11
+      timesUsed: 75
+      timeSaved: 155
+      roi: 78000
+    category: Business Development & Client Growth
+    status: idea
+
+  - name: ROI Story Builder
+    phase: Backlog
+    agentOrder: 4
+    objective: Create compelling narratives of project impact with financial metrics and client testimonials.
+    description: |
+      This agent creates compelling ROI stories that combine financial metrics, operational improvements, and client
+      testimonials into powerful narratives for business development. It structures before-and-after comparisons,
+      highlights key success factors, quantifies value delivered, and incorporates client voices. ROI stories are
+      used in proposals, presentations, marketing materials, and sales conversations to demonstrate Proudfoot's
+      track record and build confidence with prospective clients.
+    tools:
+      - rag
+      - code
+      - context
+    journeySteps:
+      - Select project for ROI story
+      - Gather financial and operational data
+      - Incorporate client testimonials
+      - Generate compelling narrative
+      - Export ROI story materials
+    metrics:
+      numberOfUsers: 13
+      timesUsed: 90
+      timeSaved: 175
+      roi: 86000
+    category: Business Development & Client Growth
+    status: idea
+
+  - name: Quality Entry Gate Facilitator
+    phase: Backlog
+    agentOrder: 0
+    objective: Conduct phase transition reviews, validate readiness, and capture action items for seamless progression.
+    description: |
+      This agent facilitates Quality Entry Gate meetings at phase transitions throughout TPS engagements. It validates
+      that all phase deliverables are complete, assesses readiness to proceed to the next phase, identifies outstanding
+      issues and risks, and captures action items. Quality gates ensure that each phase is properly completed before
+      moving forward, reducing the risk of issues cascading through the project and ensuring high-quality delivery.
+    tools:
+      - forms
+      - context
+    journeySteps:
+      - Prepare quality gate checklist
+      - Conduct readiness assessment
+      - Review deliverables and outcomes
+      - Capture action items and risks
+      - Generate quality gate report
+    metrics:
+      numberOfUsers: 16
+      timesUsed: 125
+      timeSaved: 205
+      roi: 57000
+    category: Project Governance & Delivery
+    status: idea
+
+  - name: Weekly Project Review Orchestrator
+    phase: Backlog
+    agentOrder: 1
+    objective: Structure WPR meetings, track actions, and maintain consistent project rhythm and accountability.
+    description: |
+      This agent orchestrates Weekly Project Review (WPR) meetings by generating agendas, tracking action items,
+      monitoring progress against Key Event Schedule, and maintaining meeting minutes. It ensures that WPRs follow
+      a consistent format, that all critical topics are addressed, and that accountability is maintained. The agent
+      helps project teams maintain rhythm, stay aligned, and address issues promptly through disciplined weekly
+      governance.
+    tools:
+      - context
+      - forms
+    journeySteps:
+      - Generate WPR agenda
+      - Track action items and progress
+      - Conduct WPR meeting
+      - Capture decisions and actions
+      - Distribute WPR minutes
+    metrics:
+      numberOfUsers: 20
+      timesUsed: 180
+      timeSaved: 285
+      roi: 75000
+    category: Project Governance & Delivery
+    status: idea
+
+  - name: Risk & Contingency Planner
+    phase: Backlog
+    agentOrder: 2
+    objective: Identify project risks, develop mitigation strategies, and maintain comprehensive contingency plans.
+    description: |
+      This agent conducts systematic risk identification and management throughout the engagement. It identifies
+      potential risks to project delivery, assesses their likelihood and impact, develops mitigation strategies,
+      and maintains contingency plans. The agent ensures that risks are proactively managed, that the project team
+      is prepared for potential issues, and that contingency plans are in place to minimize disruption and maintain
+      project momentum.
+    tools:
+      - forms
+      - context
+      - rag
+    journeySteps:
+      - Identify and assess project risks
+      - Develop mitigation strategies
+      - Create contingency plans
+      - Monitor risk status
+      - Update risk register
+    metrics:
+      numberOfUsers: 15
+      timesUsed: 115
+      timeSaved: 225
+      roi: 62000
+    category: Project Governance & Delivery
+    status: idea
+
+  - name: Resource Allocation Optimizer
+    phase: Backlog
+    agentOrder: 3
+    objective: Manage consultant assignments, track utilization, and forecast resource needs for optimal project delivery.
+    description: |
+      This agent optimizes resource allocation across Proudfoot engagements by managing consultant assignments,
+      tracking utilization rates, forecasting resource needs, and identifying allocation conflicts. It ensures that
+      the right consultants with the right skills are assigned to projects at the right time, that utilization is
+      optimized, and that resource constraints are identified early. The agent supports efficient resource management
+      and maximizes consultant productivity.
+    tools:
+      - code
+      - context
+    journeySteps:
+      - Define project resource requirements
+      - Review consultant availability and skills
+      - Optimize resource assignments
+      - Track utilization and forecast needs
+      - Generate resource allocation report
+    metrics:
+      numberOfUsers: 12
+      timesUsed: 95
+      timeSaved: 185
+      roi: 52000
+    category: Project Governance & Delivery
+    status: idea
+
+  - name: Steering Committee Briefing Agent
+    phase: Backlog
+    agentOrder: 4
+    objective: Prepare executive updates, decision papers, and governance meeting materials for steering committees.
+    description: |
+      This agent prepares materials for Steering Committee meetings including executive updates, decision papers,
+      progress reports, and governance materials. It synthesizes project status, highlights key decisions required,
+      presents risks and issues, and provides recommendations. The agent ensures that Steering Committee meetings
+      are productive, that executives have the information needed to make informed decisions, and that governance
+      is effective and efficient.
+    tools:
+      - rag
+      - code
+      - context
+    journeySteps:
+      - Gather project status and metrics
+      - Generate steering committee briefing
+      - Prepare decision papers
+      - Review and refine materials
+      - Distribute to steering committee
+    metrics:
+      numberOfUsers: 14
+      timesUsed: 105
+      timeSaved: 215
+      roi: 59000
+    category: Project Governance & Delivery
+    status: idea
