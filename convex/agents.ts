@@ -81,6 +81,8 @@ export const create = mutation({
     metrics: agentFieldValidators.metrics,
     category: v.optional(v.string()),
     status: agentFieldValidators.status,
+    regulatoryRisk: agentFieldValidators.regulatoryRisk,
+    value: agentFieldValidators.value,
     ownerId: agentFieldValidators.ownerId,
   },
   handler: async (ctx, args) => {

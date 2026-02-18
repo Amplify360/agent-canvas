@@ -3,8 +3,14 @@ import { mutation, query } from "./_generated/server";
 import { Doc } from "./_generated/dataModel";
 import { requireAuth, requireOrgAccess, hasOrgAccess } from "./lib/auth";
 import { getAgentSnapshot, getCanvasWithAccess, recordHistory } from "./lib/helpers";
-import { validateCanvasDescription, validateSlug, validateTitle } from "./lib/validation";
-import { CHANGE_TYPE } from "./lib/validators";
+import {
+  validateCanvasDescription,
+  validateCompactIndicators,
+  validateOptionalUrl,
+  validateSlug,
+  validateTitle,
+} from "./lib/validation";
+import { CHANGE_TYPE, COMPACT_INDICATOR } from "./lib/validators";
 
 /**
  * Generate a unique slug in the target org by appending -copy, -copy-2, etc.
@@ -103,10 +109,26 @@ export const create = mutation({
     title: v.string(),
     slug: v.string(),
     description: v.optional(v.string()),
+    businessCaseAgentUrl: v.optional(v.string()),
+    regulatoryAssessmentAgentUrl: v.optional(v.string()),
     phases: v.optional(v.array(v.string())),
     categories: v.optional(v.array(v.string())),
+    compactIndicators: v.optional(v.array(v.string())),
   },
-  handler: async (ctx, { workosOrgId, title, slug, description, phases, categories }) => {
+  handler: async (
+    ctx,
+    {
+      workosOrgId,
+      title,
+      slug,
+      description,
+      businessCaseAgentUrl,
+      regulatoryAssessmentAgentUrl,
+      phases,
+      categories,
+      compactIndicators,
+    }
+  ) => {
     const auth = await requireAuth(ctx);
     requireOrgAccess(auth, workosOrgId);
 
@@ -114,6 +136,9 @@ export const create = mutation({
     validateTitle(title);
     validateSlug(slug);
     validateCanvasDescription(description);
+    validateOptionalUrl(businessCaseAgentUrl, "businessCaseAgentUrl");
+    validateOptionalUrl(regulatoryAssessmentAgentUrl, "regulatoryAssessmentAgentUrl");
+    validateCompactIndicators(compactIndicators);
 
     // Check slug doesn't already exist in org (exclude soft-deleted)
     const existing = await ctx.db
@@ -130,14 +155,19 @@ export const create = mutation({
 
     const now = Date.now();
     const normalizedDescription = description?.trim() || undefined;
+    const normalizedBusinessCaseAgentUrl = businessCaseAgentUrl?.trim() || undefined;
+    const normalizedRegulatoryAssessmentAgentUrl = regulatoryAssessmentAgentUrl?.trim() || undefined;
 
     return await ctx.db.insert("canvases", {
       workosOrgId,
       title,
       slug,
       description: normalizedDescription,
+      businessCaseAgentUrl: normalizedBusinessCaseAgentUrl,
+      regulatoryAssessmentAgentUrl: normalizedRegulatoryAssessmentAgentUrl,
       phases: phases ?? ["Backlog"],
       categories: categories ?? ["Uncategorized"],
+      compactIndicators: compactIndicators ?? [COMPACT_INDICATOR.TOOLS],
       createdBy: auth.workosUserId,
       updatedBy: auth.workosUserId,
       createdAt: now,
@@ -155,10 +185,26 @@ export const update = mutation({
     title: v.optional(v.string()),
     slug: v.optional(v.string()),
     description: v.optional(v.string()),
+    businessCaseAgentUrl: v.optional(v.string()),
+    regulatoryAssessmentAgentUrl: v.optional(v.string()),
     phases: v.optional(v.array(v.string())),
     categories: v.optional(v.array(v.string())),
+    compactIndicators: v.optional(v.array(v.string())),
   },
-  handler: async (ctx, { canvasId, title, slug, description, phases, categories }) => {
+  handler: async (
+    ctx,
+    {
+      canvasId,
+      title,
+      slug,
+      description,
+      businessCaseAgentUrl,
+      regulatoryAssessmentAgentUrl,
+      phases,
+      categories,
+      compactIndicators,
+    }
+  ) => {
     const auth = await requireAuth(ctx);
 
     const canvas = await ctx.db.get(canvasId);
@@ -172,6 +218,11 @@ export const update = mutation({
     if (title !== undefined) validateTitle(title);
     if (slug !== undefined) validateSlug(slug);
     if (description !== undefined) validateCanvasDescription(description);
+    if (businessCaseAgentUrl !== undefined) validateOptionalUrl(businessCaseAgentUrl, "businessCaseAgentUrl");
+    if (regulatoryAssessmentAgentUrl !== undefined) {
+      validateOptionalUrl(regulatoryAssessmentAgentUrl, "regulatoryAssessmentAgentUrl");
+    }
+    if (compactIndicators !== undefined) validateCompactIndicators(compactIndicators);
 
     // If changing slug, check it doesn't conflict (exclude soft-deleted)
     if (slug && slug !== canvas.slug) {
@@ -195,8 +246,15 @@ export const update = mutation({
     if (title !== undefined) updates.title = title;
     if (slug !== undefined) updates.slug = slug;
     if (description !== undefined) updates.description = description.trim() || undefined;
+    if (businessCaseAgentUrl !== undefined) {
+      updates.businessCaseAgentUrl = businessCaseAgentUrl.trim() || undefined;
+    }
+    if (regulatoryAssessmentAgentUrl !== undefined) {
+      updates.regulatoryAssessmentAgentUrl = regulatoryAssessmentAgentUrl.trim() || undefined;
+    }
     if (phases !== undefined) updates.phases = phases;
     if (categories !== undefined) updates.categories = categories;
+    if (compactIndicators !== undefined) updates.compactIndicators = compactIndicators;
 
     await ctx.db.patch(canvasId, updates);
   },
@@ -363,6 +421,8 @@ export const copyToOrgs = mutation({
       metrics: agent.metrics,
       category: agent.category,
       status: agent.status,
+      regulatoryRisk: agent.regulatoryRisk,
+      value: agent.value,
       phase: agent.phase,
       agentOrder: agent.agentOrder,
     }));
@@ -386,8 +446,11 @@ export const copyToOrgs = mutation({
         title: newTitle,
         slug: uniqueSlug,
         description: sourceCanvas.description,
+        businessCaseAgentUrl: sourceCanvas.businessCaseAgentUrl,
+        regulatoryAssessmentAgentUrl: sourceCanvas.regulatoryAssessmentAgentUrl,
         phases: sourceCanvas.phases ?? ["Backlog"],
         categories: sourceCanvas.categories ?? ["Uncategorized"],
+        compactIndicators: sourceCanvas.compactIndicators ?? [COMPACT_INDICATOR.TOOLS],
         createdBy: auth.workosUserId,
         updatedBy: auth.workosUserId,
         createdAt: now,

@@ -5,7 +5,15 @@
 import * as yaml from 'js-yaml';
 import { Agent, AgentFormData } from '@/types/agent';
 import { DEFAULT_CATEGORY, DEFAULT_PHASE } from '@/utils/config';
-import { VALIDATION_CONSTANTS, AGENT_STATUS, AgentStatus } from '@/types/validationConstants';
+import {
+  VALIDATION_CONSTANTS,
+  AGENT_STATUS,
+  AGENT_REGULATORY_RISK,
+  AGENT_VALUE,
+  type AgentStatus,
+  type AgentRegulatoryRisk,
+  type AgentValue,
+} from '@/types/validationConstants';
 
 const YAML_SPEC_VERSION = 1;
 
@@ -13,6 +21,8 @@ const YAML_SPEC_VERSION = 1;
  * Valid status values for validation
  */
 const VALID_STATUSES = new Set<string>(Object.values(AGENT_STATUS));
+const VALID_REGULATORY_RISK = new Set<string>(Object.values(AGENT_REGULATORY_RISK));
+const VALID_VALUES = new Set<string>(Object.values(AGENT_VALUE));
 
 /**
  * Parse and validate status value from YAML
@@ -21,6 +31,24 @@ const VALID_STATUSES = new Set<string>(Object.values(AGENT_STATUS));
 function parseStatus(value: string | undefined): AgentStatus | undefined {
   if (!value) return undefined;
   return VALID_STATUSES.has(value) ? (value as AgentStatus) : undefined;
+}
+
+/**
+ * Parse and validate regulatory risk value from YAML
+ * Returns undefined for invalid/missing values
+ */
+function parseRegulatoryRisk(value: string | undefined): AgentRegulatoryRisk | undefined {
+  if (!value) return undefined;
+  return VALID_REGULATORY_RISK.has(value) ? (value as AgentRegulatoryRisk) : undefined;
+}
+
+/**
+ * Parse and validate value tier from YAML
+ * Returns undefined for invalid/missing values
+ */
+function parseValue(value: string | undefined): AgentValue | undefined {
+  if (!value) return undefined;
+  return VALID_VALUES.has(value) ? (value as AgentValue) : undefined;
 }
 
 /**
@@ -44,6 +72,8 @@ interface YamlAgent {
   };
   category?: string;
   status?: string;
+  regulatoryRisk?: string;
+  value?: string;
   ownerId?: string;
   tags?: {
     department?: string;
@@ -61,6 +91,8 @@ interface YamlDocument {
   documentTitle?: string;
   documentSlug?: string;
   documentDescription?: string;
+  businessCaseAgentUrl?: string;
+  regulatoryAssessmentAgentUrl?: string;
   phases?: string[];
   categories?: string[];
   agents?: YamlAgent[];
@@ -222,6 +254,24 @@ function validateDescription(description: string | undefined): void {
 }
 
 /**
+ * Validate optional URL
+ */
+function validateOptionalUrl(url: string | undefined, fieldName: string): void {
+  if (!url) return;
+  if (url.length > VALIDATION_CONSTANTS.URL_MAX_LENGTH) {
+    throw new Error(`${fieldName} must be ${VALIDATION_CONSTANTS.URL_MAX_LENGTH} characters or less`);
+  }
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+      throw new Error('invalid_protocol');
+    }
+  } catch {
+    throw new Error(`${fieldName} must be a valid URL`);
+  }
+}
+
+/**
  * Result of converting YAML document
  */
 interface YamlConversionResult {
@@ -353,6 +403,8 @@ function yamlToConvexAgents(yamlDoc: YamlDocument): YamlConversionResult {
     // Legacy compatibility: tags.status maps to status
     const legacyStatus = normalizeString(agent.tags?.status);
     const status = parseStatus(normalizeString(agent.status) || legacyStatus);
+    const regulatoryRisk = parseRegulatoryRisk(normalizeString(agent.regulatoryRisk));
+    const value = parseValue(normalizeString(agent.value));
 
     agents.push({
       phase,
@@ -367,6 +419,8 @@ function yamlToConvexAgents(yamlDoc: YamlDocument): YamlConversionResult {
       metrics: Object.keys(metrics).length > 0 ? metrics : undefined,
       category,
       status,
+      regulatoryRisk,
+      value,
       ownerId: normalizeString(agent.ownerId) as AgentFormData['ownerId'] | undefined,
     });
   }
@@ -385,6 +439,8 @@ export function parseYaml(yamlText: string): {
   title: string;
   sourceSlug?: string;
   description?: string;
+  businessCaseAgentUrl?: string;
+  regulatoryAssessmentAgentUrl?: string;
   agents: AgentFormData[];
   phases: string[];
   categories: string[];
@@ -407,15 +463,28 @@ export function parseYaml(yamlText: string): {
   const title = normalizeString(parsed.documentTitle) || 'Imported Canvas';
   const sourceSlug = normalizeString(parsed.documentSlug);
   const description = normalizeString(parsed.documentDescription);
+  const businessCaseAgentUrl = normalizeString(parsed.businessCaseAgentUrl);
+  const regulatoryAssessmentAgentUrl = normalizeString(parsed.regulatoryAssessmentAgentUrl);
   validateTitle(title);
   if (sourceSlug) {
     validateSlug(sourceSlug);
   }
   validateDescription(description);
+  validateOptionalUrl(businessCaseAgentUrl, 'Business case agent URL');
+  validateOptionalUrl(regulatoryAssessmentAgentUrl, 'Regulatory assessment agent URL');
 
   const { agents, phases, categories } = yamlToConvexAgents(parsed);
 
-  return { title, sourceSlug, description, agents, phases, categories };
+  return {
+    title,
+    sourceSlug,
+    description,
+    businessCaseAgentUrl,
+    regulatoryAssessmentAgentUrl,
+    agents,
+    phases,
+    categories,
+  };
 }
 
 /**
@@ -434,6 +503,8 @@ export interface ImportYamlResult {
   title: string;
   slug: string;
   description?: string;
+  businessCaseAgentUrl?: string;
+  regulatoryAssessmentAgentUrl?: string;
   agents: AgentFormData[];
   phases: string[];
   categories: string[];
@@ -448,14 +519,32 @@ export function prepareYamlImport({
   overrideTitle,
   existingSlugs,
 }: ImportYamlParams): ImportYamlResult {
-  const { title: parsedTitle, sourceSlug, description, agents, phases, categories } = parseYaml(yamlText);
+  const {
+    title: parsedTitle,
+    sourceSlug,
+    description,
+    businessCaseAgentUrl,
+    regulatoryAssessmentAgentUrl,
+    agents,
+    phases,
+    categories,
+  } = parseYaml(yamlText);
   const title = overrideTitle?.trim() || parsedTitle;
   validateTitle(title);
 
   const slugBase = overrideTitle?.trim() ? slugifyTitle(title) : (sourceSlug || slugifyTitle(title));
   const slug = generateUniqueSlugFromBase(slugBase, existingSlugs);
 
-  return { title, slug, description, agents, phases, categories };
+  return {
+    title,
+    slug,
+    description,
+    businessCaseAgentUrl,
+    regulatoryAssessmentAgentUrl,
+    agents,
+    phases,
+    categories,
+  };
 }
 
 /**
@@ -475,6 +564,8 @@ type ExportableAgent = Pick<
   | 'metrics'
   | 'category'
   | 'status'
+  | 'regulatoryRisk'
+  | 'value'
   | 'ownerId'
 >;
 
@@ -485,6 +576,8 @@ export interface ExportYamlInput {
   title: string;
   slug?: string;
   description?: string;
+  businessCaseAgentUrl?: string;
+  regulatoryAssessmentAgentUrl?: string;
   phases?: string[];
   categories?: string[];
   agents: ExportableAgent[];
@@ -548,6 +641,8 @@ function agentsToYamlDoc(input: ExportYamlInput): YamlDocument {
 
     if (agent.category) yamlAgent.category = agent.category;
     if (agent.status) yamlAgent.status = agent.status;
+    if (agent.regulatoryRisk) yamlAgent.regulatoryRisk = agent.regulatoryRisk;
+    if (agent.value) yamlAgent.value = agent.value;
     if (agent.ownerId) yamlAgent.ownerId = agent.ownerId;
 
     return yamlAgent;
@@ -566,6 +661,16 @@ function agentsToYamlDoc(input: ExportYamlInput): YamlDocument {
   const description = normalizeString(input.description);
   if (description) {
     doc.documentDescription = description;
+  }
+  const businessCaseAgentUrl = normalizeString(input.businessCaseAgentUrl);
+  if (businessCaseAgentUrl) {
+    validateOptionalUrl(businessCaseAgentUrl, 'Business case agent URL');
+    doc.businessCaseAgentUrl = businessCaseAgentUrl;
+  }
+  const regulatoryAssessmentAgentUrl = normalizeString(input.regulatoryAssessmentAgentUrl);
+  if (regulatoryAssessmentAgentUrl) {
+    validateOptionalUrl(regulatoryAssessmentAgentUrl, 'Regulatory assessment agent URL');
+    doc.regulatoryAssessmentAgentUrl = regulatoryAssessmentAgentUrl;
   }
   if (phaseOrder.length > 0) {
     doc.phases = phaseOrder;

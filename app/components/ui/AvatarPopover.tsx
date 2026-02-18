@@ -12,7 +12,7 @@ interface AvatarPopoverProps {
   alt: string;
   name: string;
   title?: string;
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'xs' | 'sm' | 'md' | 'lg';
   className?: string;
 }
 

@@ -1,19 +1,27 @@
 /**
- * AgentCard component - Premium design with micro-interactions
+ * AgentCard component - compact 3-row card with configurable indicators
  */
 
 'use client';
 
-import React, { useState, useRef, useCallback } from 'react';
-import { Agent, AgentWithOwner } from '@/types/agent';
+import React, { useState, useRef, useCallback, useMemo } from 'react';
+import { AgentWithOwner } from '@/types/agent';
 import { getToolDisplay } from '@/utils/config';
-import { formatCurrency } from '@/utils/formatting';
 import { Icon } from '@/components/ui/Icon';
 import { Tooltip } from '@/components/ui/Tooltip';
 import { AvatarPopover } from '@/components/ui/AvatarPopover';
-import { getAgentStatusConfig, type VoteType } from '@/types/validationConstants';
+import {
+  COMPACT_CARD_INDICATOR,
+  getAgentStatusConfig,
+  getRegulatoryRiskConfig,
+  getAgentValueConfig,
+  type VoteType,
+  type CompactCardIndicator,
+} from '@/types/validationConstants';
+import { normalizeCompactCardIndicators } from '@/utils/compactIndicators';
 import { useClickOutside } from '@/hooks/useClickOutside';
 import { useAgentVoteActions } from '@/hooks/useAgentVoteActions';
+import { useCanvas } from '@/contexts/CanvasContext';
 
 interface AgentCardProps {
   agent: AgentWithOwner;
@@ -30,6 +38,33 @@ interface AgentCardProps {
   isWorkflowMuted?: boolean;
 }
 
+function buildPromptContext(agent: AgentWithOwner, canvasDescription?: string): string {
+  const normalizedCanvasDescription = canvasDescription?.trim() || 'Not provided';
+  const normalizedAgentDescription = agent.description?.trim() || 'Not provided';
+  const formattedJourney = agent.journeySteps.length > 0
+    ? agent.journeySteps.map((step, index) => `${index + 1}. ${step}`).join('\n')
+    : 'Not provided';
+  const formattedTools = agent.tools.length > 0 ? agent.tools.join(', ') : 'Not provided';
+
+  return [
+    `Canvas Description:\n${normalizedCanvasDescription}`,
+    `Agent Title:\n${agent.name}`,
+    `Agent Description:\n${normalizedAgentDescription}`,
+    `User Journey:\n${formattedJourney}`,
+    `Tools:\n${formattedTools}`,
+  ].join('\n\n');
+}
+
+function buildDestinationHref(baseUrl: string, promptContext: string): string | null {
+  try {
+    const url = new URL(baseUrl);
+    url.searchParams.set('prompt', `"${promptContext}"`);
+    return url.toString();
+  } catch {
+    return null;
+  }
+}
+
 export function AgentCard({
   agent,
   index = 0,
@@ -44,8 +79,43 @@ export function AgentCard({
   isWorkflowActiveAgent = false,
   isWorkflowMuted = false,
 }: AgentCardProps) {
-  const metrics = agent.metrics || {};
-  const statusColor = getAgentStatusConfig(agent.status).color;
+  const statusConfig = getAgentStatusConfig(agent.status);
+  const statusColor = statusConfig.color;
+  const riskConfig = getRegulatoryRiskConfig(agent.regulatoryRisk);
+  const valueConfig = getAgentValueConfig(agent.value);
+  const { currentCanvas } = useCanvas();
+  const compactIndicators = normalizeCompactCardIndicators(currentCanvas?.compactIndicators);
+  const promptContext = useMemo(
+    () => buildPromptContext(agent, currentCanvas?.description),
+    [agent, currentCanvas?.description]
+  );
+  const canvasDestinationLinks = useMemo(() => {
+    const destinations = [
+      {
+        href: currentCanvas?.businessCaseAgentUrl,
+        icon: 'briefcase',
+        ariaLabel: 'Open business case agent',
+      },
+      {
+        href: currentCanvas?.regulatoryAssessmentAgentUrl,
+        icon: 'shield-check',
+        ariaLabel: 'Open regulatory assessment agent',
+      },
+    ];
+
+    return destinations.flatMap((destination) => {
+      const normalizedHref = destination.href?.trim();
+      if (!normalizedHref) return [];
+      const href = buildDestinationHref(normalizedHref, promptContext);
+      if (!href) return [];
+      return [{ ...destination, href }];
+    });
+  }, [
+    currentCanvas?.businessCaseAgentUrl,
+    currentCanvas?.regulatoryAssessmentAgentUrl,
+    promptContext,
+  ]);
+
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const { toggleVote } = useAgentVoteActions(agent._id);
@@ -54,13 +124,71 @@ export function AgentCard({
   useClickOutside(menuRef, closeMenu, menuOpen);
 
   const handleCardClick = (e: React.MouseEvent) => {
-    // Don't trigger quick look if clicking on actions menu or links
     if ((e.target as HTMLElement).closest('.agent-card__actions, .btn-link, a')) {
       return;
     }
     if (onQuickLook) {
       onQuickLook();
     }
+  };
+
+  const renderToolsIndicator = () => {
+    if (!agent.tools || agent.tools.length === 0) {
+      return <span className="agent-card__indicator-empty">No tools</span>;
+    }
+
+    return (
+      <div className="agent-card__indicator-tools">
+        {agent.tools.slice(0, 4).map((tool) => {
+          const toolDisplay = getToolDisplay(tool);
+          return (
+            <span
+              key={tool}
+              className="tool-dot"
+              style={{ backgroundColor: toolDisplay.color }}
+              title={toolDisplay.label}
+            />
+          );
+        })}
+        {agent.tools.length > 4 && (
+          <span className="agent-card__indicator-count">+{agent.tools.length - 4}</span>
+        )}
+      </div>
+    );
+  };
+
+  const renderDotWithLabel = (color: string, shortLabel: string, fullLabel: string) => (
+    <Tooltip content={fullLabel} placement="top">
+      <span className="agent-card__dot-label">
+        <span className="agent-card__indicator-dot" style={{ backgroundColor: color }} />
+        <span className="agent-card__indicator-label">{shortLabel}</span>
+      </span>
+    </Tooltip>
+  );
+
+  const renderIndicator = (indicator: CompactCardIndicator) => {
+    if (indicator === COMPACT_CARD_INDICATOR.TOOLS) {
+      return renderToolsIndicator();
+    }
+
+    if (indicator === COMPACT_CARD_INDICATOR.STATUS) {
+      if (!agent.status) {
+        return <span className="agent-card__indicator-empty">No status</span>;
+      }
+      return renderDotWithLabel(statusConfig.color, statusConfig.shortLabel, statusConfig.label);
+    }
+
+    if (indicator === COMPACT_CARD_INDICATOR.REGULATORY_RISK) {
+      if (!agent.regulatoryRisk) {
+        return <span className="agent-card__indicator-empty">No risk</span>;
+      }
+      return renderDotWithLabel(riskConfig.color, riskConfig.shortLabel, `Risk: ${riskConfig.label}`);
+    }
+
+    if (!agent.value) {
+      return <span className="agent-card__indicator-empty">No value</span>;
+    }
+    return renderDotWithLabel(valueConfig.color, valueConfig.shortLabel, `Value: ${valueConfig.label}`);
   };
 
   return (
@@ -77,7 +205,7 @@ export function AgentCard({
       tabIndex={-1}
       style={{
         '--status-color': statusColor,
-        '--animation-delay': `${index * 50}ms`
+        '--animation-delay': `${index * 50}ms`,
       } as React.CSSProperties}
     >
       {workflowStepNumber !== undefined && (
@@ -86,71 +214,17 @@ export function AgentCard({
         </span>
       )}
 
-      {/* Status indicator strip */}
       <div
         className="agent-card__status-strip"
         style={{ backgroundColor: statusColor }}
       />
 
-      {/* Card Header */}
       <div className="agent-card__header">
-        <div className="agent-card__header-left">
-          <span className="agent-card__number">
-            {(agent.agentOrder ?? 0) + 1}
-          </span>
-          {agent.owner && (
-            <AvatarPopover
-              src={agent.owner.avatarUrl}
-              alt={agent.owner.name}
-              name={agent.owner.name}
-              title={agent.owner.title}
-              size="sm"
-            />
-          )}
-          {agent.status && (
-            <span className={`agent-card__status-badge badge badge--${getAgentStatusConfig(agent.status).badgeVariant}`}>
-              <span className={`status-dot status-dot--${agent.status}`} />
-              {getAgentStatusConfig(agent.status).label}
-            </span>
-          )}
-        </div>
+        <span className="agent-card__number">
+          {(agent.agentOrder ?? 0) + 1}
+        </span>
 
-        <div className="agent-card__header-right">
-          {/* Tool dots - right aligned */}
-          {agent.tools && agent.tools.length > 0 && (
-            <div className="tool-dots-container">
-              {agent.tools.slice(0, 5).map((tool) => {
-                const toolDisplay = getToolDisplay(tool);
-                return (
-                  <span
-                    key={tool}
-                    className="tool-dot"
-                    style={{ backgroundColor: toolDisplay.color }}
-                  />
-                );
-              })}
-              {agent.tools.length > 5 && (
-                <span className="tool-dots-more">+{agent.tools.length - 5}</span>
-              )}
-              {/* Styled tooltip on hover */}
-              <div className="tool-dots-tooltip">
-                <div className="tool-dots-tooltip__title">Capabilities</div>
-                <div className="tool-dots-tooltip__list">
-                  {agent.tools.map((tool) => {
-                    const toolDisplay = getToolDisplay(tool);
-                    return (
-                      <div key={tool} className="tool-dots-tooltip__item">
-                        <span className="tool-dot" style={{ backgroundColor: toolDisplay.color }} />
-                        <span>{toolDisplay.label}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          )}
-
-          <div className="agent-card__actions" ref={menuRef}>
+        <div className="agent-card__actions" ref={menuRef}>
           <button
             className="agent-card__menu-trigger"
             onClick={() => setMenuOpen(!menuOpen)}
@@ -186,124 +260,37 @@ export function AgentCard({
               </button>
             </div>
           )}
-          </div>
         </div>
       </div>
 
-      {/* Title - line clamped to 2 lines, tooltip shows full name when truncated */}
       <Tooltip content={agent.name} placement="top" showOnlyWhenTruncated>
         <h3 className="agent-card__name">{agent.name}</h3>
       </Tooltip>
 
-      {/* Objective - highlighted (primary content) */}
-      {agent.objective && (
-        <p className="agent-card__objective">{agent.objective}</p>
-      )}
-
-      {/* Footer with Links, Metrics, and Journey - icons only with tooltips */}
-      <div className="agent-card__footer">
-        {/* Owner avatar - bottom left */}
-        {agent.owner && (
+      <div className="agent-card__meta-row">
+        {agent.owner ? (
           <AvatarPopover
             src={agent.owner.avatarUrl}
             alt={agent.owner.name}
             name={agent.owner.name}
             title={agent.owner.title}
-            size="sm"
-            className="agent-card__footer-avatar"
+            size="xs"
+            className="agent-card__compact-avatar"
           />
+        ) : (
+          <span className="agent-card__compact-avatar agent-card__compact-avatar--placeholder">
+            <Icon name="user" />
+          </span>
         )}
-        {agent.demoLink && (
-          <Tooltip content="View Demo" placement="top">
-            <a
-              href={agent.demoLink}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="agent-card__footer-icon"
-              aria-label="View Demo"
-            >
-              <Icon name="play-circle" />
-            </a>
-          </Tooltip>
-        )}
-        {agent.videoLink && (
-          <Tooltip content="Watch Video" placement="top">
-            <a
-              href={agent.videoLink}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="agent-card__footer-icon"
-              aria-label="Watch Video"
-            >
-              <Icon name="video" />
-            </a>
-          </Tooltip>
-        )}
-        {(metrics.numberOfUsers !== undefined || metrics.timesUsed !== undefined ||
-          metrics.timeSaved !== undefined || metrics.roi !== undefined) && (
-          <div className="agent-card__stats">
-            <button
-              type="button"
-              className="agent-card__footer-icon"
-              aria-label="View performance stats"
-            >
-              <Icon name="bar-chart-2" />
-            </button>
-            <div className="agent-card__stats-tooltip">
-              <div className="stats-tooltip__title">Performance</div>
-              <div className="stats-tooltip__grid">
-                {metrics.numberOfUsers !== undefined && (
-                  <div className="stats-tooltip__item">
-                    <Icon name="users" />
-                    <span className="stats-tooltip__label">Users</span>
-                    <span className="stats-tooltip__value">{metrics.numberOfUsers}</span>
-                  </div>
-                )}
-                {metrics.timesUsed !== undefined && (
-                  <div className="stats-tooltip__item">
-                    <Icon name="activity" />
-                    <span className="stats-tooltip__label">Uses</span>
-                    <span className="stats-tooltip__value">{metrics.timesUsed}</span>
-                  </div>
-                )}
-                {metrics.timeSaved !== undefined && (
-                  <div className="stats-tooltip__item">
-                    <Icon name="clock" />
-                    <span className="stats-tooltip__label">Saved</span>
-                    <span className="stats-tooltip__value">{metrics.timeSaved}h</span>
-                  </div>
-                )}
-                {metrics.roi !== undefined && (
-                  <div className="stats-tooltip__item">
-                    <Icon name="trending-up" />
-                    <span className="stats-tooltip__label">ROI</span>
-                    <span className="stats-tooltip__value">{formatCurrency(metrics.roi)}</span>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-        {agent.journeySteps && agent.journeySteps.length > 0 && (
-          <div className="agent-card__journey">
-            <button
-              type="button"
-              className="agent-card__footer-icon"
-              aria-label="View user journey steps"
-            >
-              <Icon name="route" />
-            </button>
-            <div className="agent-card__journey-tooltip">
-              <div className="journey-tooltip__title">User Journey</div>
-              <ol className="journey-tooltip__steps">
-                {agent.journeySteps.map((step, i) => (
-                  <li key={i}>{step}</li>
-                ))}
-              </ol>
-            </div>
-          </div>
-        )}
-        {/* Feedback hover bar - vote buttons + comment button */}
+
+        <div className="agent-card__indicators">
+          {compactIndicators.map((indicator) => (
+            <span key={indicator} className="agent-card__indicator-slot">
+              {renderIndicator(indicator)}
+            </span>
+          ))}
+        </div>
+
         <div className="agent-card__feedback-bar">
           <button
             type="button"
@@ -334,6 +321,25 @@ export function AgentCard({
           </button>
         </div>
       </div>
+
+      {canvasDestinationLinks.length > 0 && (
+        <div className="agent-card__canvas-links">
+          {canvasDestinationLinks.map((link) => (
+            <Tooltip key={link.ariaLabel} content={link.ariaLabel} placement="top">
+              <a
+                href={link.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="agent-card__canvas-link"
+                aria-label={link.ariaLabel}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <Icon name={link.icon} />
+              </a>
+            </Tooltip>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

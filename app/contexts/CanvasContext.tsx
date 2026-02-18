@@ -23,7 +23,13 @@ interface CanvasContextValue {
   isLoading: boolean;
   initialCanvasError: 'unavailable' | null;
   setCurrentCanvasId: (canvasId: string | null) => void;
-  createCanvas: (title: string, slug: string, description?: string) => Promise<string>;
+  createCanvas: (
+    title: string,
+    slug: string,
+    description?: string,
+    businessCaseAgentUrl?: string,
+    regulatoryAssessmentAgentUrl?: string
+  ) => Promise<string>;
   updateCanvas: (canvasId: string, data: Partial<Canvas>) => Promise<void>;
   deleteCanvas: (canvasId: string) => Promise<void>;
   reorderPhases: (phases: string[]) => Promise<void>;
@@ -125,13 +131,21 @@ export function CanvasProvider({ children, initialCanvasId }: CanvasProviderProp
     setCurrentCanvasIdState(canvasId);
   }, [setCurrentCanvasIdState]);
 
-  const createCanvas = useCallback(async (title: string, slug: string, description?: string) => {
+  const createCanvas = useCallback(async (
+    title: string,
+    slug: string,
+    description?: string,
+    businessCaseAgentUrl?: string,
+    regulatoryAssessmentAgentUrl?: string
+  ) => {
     if (!currentOrgId) throw new Error('No organization selected');
     const canvasId = await createCanvasMutation({
       workosOrgId: currentOrgId,
       title,
       slug,
       description,
+      businessCaseAgentUrl,
+      regulatoryAssessmentAgentUrl,
     });
     return canvasId as string;
   }, [currentOrgId, createCanvasMutation]);

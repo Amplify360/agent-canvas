@@ -12,6 +12,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Icon } from '@/components/ui/Icon';
 import { Tooltip } from '@/components/ui/Tooltip';
 import { TAG_TYPES } from '@/utils/config';
+import { COMPACT_CARD_INDICATOR_OPTIONS, type CompactCardIndicator } from '@/types/validationConstants';
+import { getCompactCardIndicatorLabel, normalizeCompactCardIndicators } from '@/utils/compactIndicators';
 import { useClickOutside } from '@/hooks/useClickOutside';
 import { copyTextToClipboard } from '@/utils/clipboard';
 import { useQuery, useAction, useCanQuery } from '@/hooks/useConvex';
@@ -32,19 +34,23 @@ export function MainToolbar({
   onCloseWorkflow,
   isWorkflowActive,
 }: MainToolbarProps) {
-  const { currentCanvas, currentCanvasId } = useCanvas();
+  const { currentCanvas, currentCanvasId, updateCanvas } = useCanvas();
   const { agents } = useAgents();
   const { currentOrgId } = useAuth();
   const { showToast } = useAppState();
   const { activeTagType, setActiveTagType, viewMode, setViewMode } = useGrouping();
   const [isGroupingOpen, setIsGroupingOpen] = useState(false);
+  const [isIndicatorsOpen, setIsIndicatorsOpen] = useState(false);
   const [showCopied, setShowCopied] = useState(false);
   const [isSeeding, setIsSeeding] = useState(false);
   const groupingDropdownRef = useRef<HTMLDivElement>(null);
+  const indicatorsDropdownRef = useRef<HTMLDivElement>(null);
   const { canQuery } = useCanQuery();
 
   const closeGrouping = useCallback(() => setIsGroupingOpen(false), []);
+  const closeIndicators = useCallback(() => setIsIndicatorsOpen(false), []);
   useClickOutside(groupingDropdownRef, closeGrouping, isGroupingOpen);
+  useClickOutside(indicatorsDropdownRef, closeIndicators, isIndicatorsOpen);
 
   // Check if users exist (lab feature) — gated on Convex auth readiness
   const existingUsers = useQuery(
@@ -55,6 +61,10 @@ export function MainToolbar({
   const assignMissingOwners = useAction(api.users.assignMissingOwners);
 
   const activeTag = TAG_TYPES[activeTagType as keyof typeof TAG_TYPES];
+  const selectedCompactIndicators = normalizeCompactCardIndicators(currentCanvas?.compactIndicators);
+  const compactIndicatorSummary = selectedCompactIndicators
+    .map((indicator) => getCompactCardIndicatorLabel(indicator))
+    .join(' + ');
 
   const handleShare = async () => {
     if (!currentCanvasId) return;
@@ -100,6 +110,33 @@ export function MainToolbar({
       showToast(`Failed to assign owners: ${message}`, 'error');
     } finally {
       setIsSeeding(false);
+    }
+  };
+
+  const handleToggleCompactIndicator = async (indicator: CompactCardIndicator) => {
+    if (!currentCanvasId) return;
+
+    const isSelected = selectedCompactIndicators.includes(indicator);
+    let nextIndicators: CompactCardIndicator[];
+
+    if (isSelected) {
+      nextIndicators = selectedCompactIndicators.filter((value) => value !== indicator);
+      if (nextIndicators.length === 0) {
+        showToast('At least one compact indicator is required', 'error');
+        return;
+      }
+    } else if (selectedCompactIndicators.length >= 2) {
+      showToast('You can select up to two compact indicators', 'error');
+      return;
+    } else {
+      nextIndicators = [...selectedCompactIndicators, indicator];
+    }
+
+    try {
+      await updateCanvas(currentCanvasId, { compactIndicators: nextIndicators });
+    } catch (error) {
+      console.error('Failed to update compact indicators:', error);
+      showToast('Failed to update compact indicators', 'error');
     }
   };
 
@@ -195,6 +232,35 @@ export function MainToolbar({
                 <span>{tag.label}</span>
               </button>
             ))}
+          </div>
+        </div>
+
+        <div className="toolbar__control" ref={indicatorsDropdownRef}>
+          <span className="toolbar__control-label">Indicators</span>
+          <button
+            type="button"
+            className="toolbar__control-btn"
+            onClick={() => setIsIndicatorsOpen(!isIndicatorsOpen)}
+            disabled={!currentCanvasId}
+          >
+            <span>{compactIndicatorSummary}</span>
+            <Icon name="chevron-down" />
+          </button>
+          <div className={`toolbar__dropdown ${isIndicatorsOpen ? 'open' : ''}`}>
+            {COMPACT_CARD_INDICATOR_OPTIONS.map((option) => {
+              const isActive = selectedCompactIndicators.includes(option.value);
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  className={`toolbar__dropdown-item ${isActive ? 'is-active' : ''}`}
+                  onClick={() => handleToggleCompactIndicator(option.value)}
+                >
+                  <span>{option.label}</span>
+                  {isActive && <Icon name="check" className="toolbar__dropdown-check" />}
+                </button>
+              );
+            })}
           </div>
         </div>
 

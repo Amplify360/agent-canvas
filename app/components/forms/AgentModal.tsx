@@ -14,7 +14,15 @@ import { useAsyncOperation } from '@/hooks/useAsyncOperation';
 import { useQuery, useCanQuery } from '@/hooks/useConvex';
 import { validateAgentForm } from '@/utils/validation';
 import { getAvailableTools, getToolDisplay, DEFAULT_PHASE } from '@/utils/config';
-import { AGENT_STATUS, AGENT_STATUS_OPTIONS, AgentStatus } from '@/types/validationConstants';
+import {
+  AGENT_STATUS,
+  AGENT_STATUS_OPTIONS,
+  AGENT_REGULATORY_RISK_OPTIONS,
+  AGENT_VALUE_OPTIONS,
+  type AgentStatus,
+  type AgentRegulatoryRisk,
+  type AgentValue,
+} from '@/types/validationConstants';
 import { Icon } from '@/components/ui/Icon';
 import { Tooltip } from '@/components/ui/Tooltip';
 import { api } from '../../../convex/_generated/api';
@@ -64,6 +72,8 @@ function getEmptyAgentFormData(defaults?: AgentCreateDefaults): AgentFormData {
     metrics: {},
     category: '',
     status: AGENT_STATUS.IDEA,
+    regulatoryRisk: undefined,
+    value: undefined,
     phase: DEFAULT_PHASE,
     agentOrder: 0,
     ownerId: undefined,
@@ -115,6 +125,8 @@ export function AgentModal({ isOpen, onClose, agent, defaults }: AgentModalProps
         metrics: agent.metrics || {},
         category: agent.category || '',
         status: agent.status || AGENT_STATUS.IDEA,
+        regulatoryRisk: agent.regulatoryRisk,
+        value: agent.value,
         phase: agent.phase,
         agentOrder: agent.agentOrder,
         ownerId: agent.ownerId ?? undefined,
@@ -299,6 +311,52 @@ export function AgentModal({ isOpen, onClose, agent, defaults }: AgentModalProps
                 </option>
               ))}
             </select>
+          </div>
+
+          <div className="form-row">
+            <div className="form-group">
+              <label htmlFor="agent-regulatoryRisk" className="form-label">
+                Regulatory Risk
+              </label>
+              <select
+                id="agent-regulatoryRisk"
+                className="form-select"
+                value={formData.regulatoryRisk ?? ''}
+                onChange={(e) => setFormData((prev) => ({
+                  ...prev,
+                  regulatoryRisk: e.target.value ? (e.target.value as AgentRegulatoryRisk) : undefined,
+                }))}
+              >
+                <option value="">Not set</option>
+                {AGENT_REGULATORY_RISK_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="agent-value" className="form-label">
+                Value
+              </label>
+              <select
+                id="agent-value"
+                className="form-select"
+                value={formData.value ?? ''}
+                onChange={(e) => setFormData((prev) => ({
+                  ...prev,
+                  value: e.target.value ? (e.target.value as AgentValue) : undefined,
+                }))}
+              >
+                <option value="">Not set</option>
+                {AGENT_VALUE_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
           {/* Owner selector (lab demos) */}

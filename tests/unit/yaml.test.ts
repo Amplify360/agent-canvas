@@ -182,6 +182,29 @@ agents:
     expect(result.agents[1].status).toBe('idea');
   });
 
+  it('parses regulatory risk and value tiers', () => {
+    const yamlText = `
+documentTitle: Risk Value Canvas
+agents:
+  - name: Governance Agent
+    phase: Risk
+    regulatoryRisk: critical
+    value: high
+  - name: Unknown Agent
+    phase: Risk
+    regulatoryRisk: invalid
+    value: invalid
+    `.trim();
+
+    const result = parseYaml(yamlText);
+
+    expect(result.agents).toHaveLength(2);
+    expect(result.agents[0].regulatoryRisk).toBe('critical');
+    expect(result.agents[0].value).toBe('high');
+    expect(result.agents[1].regulatoryRisk).toBeUndefined();
+    expect(result.agents[1].value).toBeUndefined();
+  });
+
   it('preserves duplicate and ordered tool/journey entries', () => {
     const yamlText = `
 documentTitle: Duplicate Lists
@@ -225,6 +248,32 @@ agents:
     // Top-level order preserved; new values from agents are merged.
     expect(result.phases).toEqual(['Discovery', 'Delivery']);
     expect(result.categories).toEqual(['Sales', 'Support']);
+  });
+
+  it('parses canvas-level destination URLs', () => {
+    const yamlText = `
+documentTitle: Canvas With Destinations
+businessCaseAgentUrl: https://example.com/business
+regulatoryAssessmentAgentUrl: https://example.com/regulatory
+agents:
+  - name: Agent A
+    `.trim();
+
+    const result = parseYaml(yamlText);
+
+    expect(result.businessCaseAgentUrl).toBe('https://example.com/business');
+    expect(result.regulatoryAssessmentAgentUrl).toBe('https://example.com/regulatory');
+  });
+
+  it('rejects non-http canvas destination URLs', () => {
+    const yamlText = `
+documentTitle: Canvas With Invalid Destinations
+businessCaseAgentUrl: ftp://example.com/business
+agents:
+  - name: Agent A
+    `.trim();
+
+    expect(() => parseYaml(yamlText)).toThrow(/Business case agent URL must be a valid URL/);
   });
 
   it('parses legacy agentGroups and tags mappings', () => {
@@ -291,6 +340,8 @@ describe('YAML export', () => {
         metrics: { numberOfUsers: 100, timesUsed: 50, timeSaved: 10, roi: 5000 },
         category: 'Sales',
         status: 'live',
+        regulatoryRisk: 'high',
+        value: 'medium',
       }),
       mockAgent({
         name: 'Agent 2',
@@ -307,9 +358,23 @@ describe('YAML export', () => {
     expect(yaml).toContain('- Tool A');
     expect(yaml).toContain('category: Sales');
     expect(yaml).toContain('status: live');
+    expect(yaml).toContain('regulatoryRisk: high');
+    expect(yaml).toContain('value: medium');
     expect(yaml).toContain('numberOfUsers: 100');
     expect(yaml).toContain('roi: 5000');
     expect(yaml).toContain('name: Agent 2');
+  });
+
+  it('exports canvas-level destination URLs', () => {
+    const yaml = exportToYaml({
+      title: 'Destinations Canvas',
+      businessCaseAgentUrl: 'https://example.com/business',
+      regulatoryAssessmentAgentUrl: 'https://example.com/regulatory',
+      agents: [mockAgent()],
+    });
+
+    expect(yaml).toContain('businessCaseAgentUrl: https://example.com/business');
+    expect(yaml).toContain('regulatoryAssessmentAgentUrl: https://example.com/regulatory');
   });
 
   it('exports full canvas metadata in canonical spec', () => {

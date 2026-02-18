@@ -6,6 +6,7 @@ import {
   validateSlug,
   validateTitle,
   validateCanvasDescription,
+  validateCompactIndicators,
   validateAgentName,
   validatePhase,
   validateObjective,
@@ -222,6 +223,29 @@ describe('Convex Backend Validation', () => {
     });
   });
 
+  describe('validateCompactIndicators', () => {
+    it('should accept undefined and valid 1-2 indicator arrays', () => {
+      expect(() => validateCompactIndicators(undefined)).not.toThrow();
+      expect(() => validateCompactIndicators(['tools'])).not.toThrow();
+      expect(() => validateCompactIndicators(['status', 'regulatoryRisk'])).not.toThrow();
+    });
+
+    it('should throw for empty, too many, invalid, and duplicate indicators', () => {
+      expect(() => validateCompactIndicators([])).toThrow(
+        'Validation: compactIndicators must include at least one entry'
+      );
+      expect(() => validateCompactIndicators(['tools', 'status', 'value'])).toThrow(
+        'Validation: compactIndicators can include at most two entries'
+      );
+      expect(() => validateCompactIndicators(['tools', 'unknown'])).toThrow(
+        "Validation: Invalid compact indicator 'unknown'"
+      );
+      expect(() => validateCompactIndicators(['tools', 'tools'])).toThrow(
+        "Validation: Duplicate compact indicator 'tools'"
+      );
+    });
+  });
+
   describe('validateAgentName', () => {
     it('should accept valid name', () => {
       expect(() => validateAgentName('Sales Agent')).not.toThrow();
@@ -338,6 +362,12 @@ describe('Convex Backend Validation', () => {
         'Validation: demoLink must be a valid URL'
       );
       expect(() => validateOptionalUrl('just some words', 'link')).toThrow(
+        'Validation: link must be a valid URL'
+      );
+      expect(() => validateOptionalUrl('ftp://example.com', 'link')).toThrow(
+        'Validation: link must be a valid URL'
+      );
+      expect(() => validateOptionalUrl('javascript:alert(1)', 'link')).toThrow(
         'Validation: link must be a valid URL'
       );
     });

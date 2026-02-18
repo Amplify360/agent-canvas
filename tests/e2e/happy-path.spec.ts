@@ -19,19 +19,22 @@ test('happy path: add, edit, delete an agent', async ({ page }) => {
 
   const card = page.locator('[data-agent-id]').filter({ hasText: agentName });
   await expect(card).toBeVisible();
-  await expect(card.locator('.agent-card__objective')).toHaveText(objective1);
 
   // Open Quick Look by clicking the card content (not the menu).
   await card.locator('.agent-card__name').click();
   const quickLook = page.getByRole('dialog', { name: `Agent details: ${agentName}` });
   await expect(quickLook).toBeVisible();
+  await expect(quickLook.locator('.quick-look-panel__objective')).toHaveText(objective1);
 
   // Edit from Quick Look.
   await quickLook.getByRole('button', { name: 'Edit Agent' }).click();
   await expect(page.locator('.modal__header h2')).toHaveText('Edit Agent');
   await page.locator('#agent-objective').fill(objective2);
   await page.getByRole('button', { name: 'Update Agent' }).click();
-  await expect(card.locator('.agent-card__objective')).toHaveText(objective2);
+  await card.locator('.agent-card__name').click();
+  await expect(quickLook).toBeVisible();
+  await expect(quickLook.locator('.quick-look-panel__objective')).toHaveText(objective2);
+  await quickLook.getByRole('button', { name: 'Close panel' }).click();
 
   // Delete via card menu (accept native confirm).
   await card.getByRole('button', { name: 'More actions' }).click();

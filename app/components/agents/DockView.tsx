@@ -10,9 +10,17 @@
 import { useState, useEffect } from 'react';
 import { AgentWithOwner } from '@/types/agent';
 import { getToolDisplay } from '@/utils/config';
-import { getAgentStatusConfig } from '@/types/validationConstants';
+import {
+  COMPACT_CARD_INDICATOR,
+  getAgentStatusConfig,
+  getRegulatoryRiskConfig,
+  getAgentValueConfig,
+  type CompactCardIndicator,
+} from '@/types/validationConstants';
 import { Icon } from '@/components/ui/Icon';
 import { AvatarPopover } from '@/components/ui/AvatarPopover';
+import { useCanvas } from '@/contexts/CanvasContext';
+import { normalizeCompactCardIndicators } from '@/utils/compactIndicators';
 import type { WorkflowHighlightState } from '@/types/workflow';
 
 interface DockViewProps {
@@ -22,6 +30,9 @@ interface DockViewProps {
 }
 
 export function DockView({ agents, onAgentClick, workflowHighlightState }: DockViewProps) {
+  const { currentCanvas } = useCanvas();
+  const compactIndicators = normalizeCompactCardIndicators(currentCanvas?.compactIndicators);
+
   // Track by agent ID for stability with real-time updates
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
   const workflowSequenceByAgentId = workflowHighlightState?.sequenceByAgentId ?? {};
@@ -59,6 +70,61 @@ export function DockView({ agents, onAgentClick, workflowHighlightState }: DockV
 
   const handleClose = () => {
     setSelectedAgentId(null);
+  };
+
+  const renderDotWithLabel = (color: string, shortLabel: string, title: string) => (
+    <span className="dock-item__dot-label" title={title}>
+      <span className="dock-item__indicator-dot" style={{ backgroundColor: color }} />
+      <span>{shortLabel}</span>
+    </span>
+  );
+
+  const renderIndicator = (agent: AgentWithOwner, indicator: CompactCardIndicator) => {
+    if (indicator === COMPACT_CARD_INDICATOR.TOOLS) {
+      if (agent.tools.length === 0) {
+        return <span className="dock-item__indicator-empty">No tools</span>;
+      }
+      return (
+        <span className="dock-item__indicator-tools">
+          {agent.tools.slice(0, 3).map((tool: string) => {
+            const toolDisplay = getToolDisplay(tool);
+            return (
+              <span
+                key={tool}
+                className="tool-dot"
+                style={{ backgroundColor: toolDisplay.color }}
+                title={toolDisplay.label}
+              />
+            );
+          })}
+          {agent.tools.length > 3 && (
+            <span className="dock-item__indicator-count">+{agent.tools.length - 3}</span>
+          )}
+        </span>
+      );
+    }
+
+    if (indicator === COMPACT_CARD_INDICATOR.STATUS) {
+      if (!agent.status) {
+        return <span className="dock-item__indicator-empty">No status</span>;
+      }
+      const status = getAgentStatusConfig(agent.status);
+      return renderDotWithLabel(status.color, status.shortLabel, status.label);
+    }
+
+    if (indicator === COMPACT_CARD_INDICATOR.REGULATORY_RISK) {
+      if (!agent.regulatoryRisk) {
+        return <span className="dock-item__indicator-empty">No risk</span>;
+      }
+      const risk = getRegulatoryRiskConfig(agent.regulatoryRisk);
+      return renderDotWithLabel(risk.color, risk.shortLabel, `Risk: ${risk.label}`);
+    }
+
+    if (!agent.value) {
+      return <span className="dock-item__indicator-empty">No value</span>;
+    }
+    const value = getAgentValueConfig(agent.value);
+    return renderDotWithLabel(value.color, value.shortLabel, `Value: ${value.label}`);
   };
 
   return (
@@ -110,17 +176,12 @@ export function DockView({ agents, onAgentClick, workflowHighlightState }: DockV
               <span className="dock-item__compact-name">
                 {agent.name}
               </span>
-              <div className="dock-item__tools-compact">
-                {agent.tools.slice(0, 3).map((tool: string) => {
-                  const toolDisplay = getToolDisplay(tool);
-                  return (
-                    <span
-                      key={tool}
-                      className="tool-dot"
-                      style={{ backgroundColor: toolDisplay.color }}
-                    />
-                  );
-                })}
+              <div className="dock-item__indicators">
+                {compactIndicators.map((indicator) => (
+                  <span key={indicator} className="dock-item__indicator-slot">
+                    {renderIndicator(agent, indicator)}
+                  </span>
+                ))}
               </div>
             </button>
           );

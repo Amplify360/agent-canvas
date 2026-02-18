@@ -71,6 +71,41 @@ export const statusValidator = v.optional(
 );
 
 /**
+ * Regulatory risk union type validator
+ */
+export const regulatoryRiskValidator = v.optional(
+  v.union(
+    v.literal("low"),
+    v.literal("medium"),
+    v.literal("high"),
+    v.literal("critical")
+  )
+);
+
+/**
+ * Business value union type validator
+ */
+export const valueValidator = v.optional(
+  v.union(
+    v.literal("low"),
+    v.literal("medium"),
+    v.literal("high")
+  )
+);
+
+/**
+ * Compact card indicator values
+ */
+export const COMPACT_INDICATOR = {
+  TOOLS: "tools",
+  STATUS: "status",
+  REGULATORY_RISK: "regulatoryRisk",
+  VALUE: "value",
+} as const;
+
+export type CompactIndicator = (typeof COMPACT_INDICATOR)[keyof typeof COMPACT_INDICATOR];
+
+/**
  * Shared validator components for agent fields
  */
 export const agentFieldValidators = {
@@ -98,6 +133,8 @@ export const agentFieldValidators = {
   ),
   category: v.optional(v.string()),
   status: statusValidator,
+  regulatoryRisk: regulatoryRiskValidator,
+  value: valueValidator,
   ownerId: v.optional(v.id("users")), // Lab demos: reference to sample user
 } as const;
 
@@ -124,5 +161,7 @@ export const agentUpdateValidator = {
   metrics: agentFieldValidators.metrics,
   category: agentFieldValidators.category,
   status: agentFieldValidators.status,
+  regulatoryRisk: agentFieldValidators.regulatoryRisk,
+  value: agentFieldValidators.value,
   ownerId: agentFieldValidators.ownerId,
 };

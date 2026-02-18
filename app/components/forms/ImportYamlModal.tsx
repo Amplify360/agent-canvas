@@ -86,7 +86,16 @@ export function ImportYamlModal({ isOpen, onClose, onSuccess }: ImportYamlModalP
         const existingSlugs = new Set(canvases.map(c => c.slug));
 
         // Prepare import data
-        const { title, slug, description, agents, phases, categories } = prepareYamlImport({
+        const {
+          title,
+          slug,
+          description,
+          businessCaseAgentUrl,
+          regulatoryAssessmentAgentUrl,
+          agents,
+          phases,
+          categories,
+        } = prepareYamlImport({
           yamlText,
           overrideTitle: customTitle,
           existingSlugs,
@@ -98,6 +107,8 @@ export function ImportYamlModal({ isOpen, onClose, onSuccess }: ImportYamlModalP
           title,
           slug,
           description,
+          businessCaseAgentUrl,
+          regulatoryAssessmentAgentUrl,
           phases,
           categories,
         });

@@ -67,7 +67,13 @@ export function Sidebar() {
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
   const [isCreateCanvasModalOpen, setIsCreateCanvasModalOpen] = useState(false);
   const [canvasMenu, setCanvasMenu] = useState<CanvasMenuState | null>(null);
-  const [renameCanvas, setRenameCanvas] = useState<{ id: string; title: string; description?: string } | null>(null);
+  const [renameCanvas, setRenameCanvas] = useState<{
+    id: string;
+    title: string;
+    description?: string;
+    businessCaseAgentUrl?: string;
+    regulatoryAssessmentAgentUrl?: string;
+  } | null>(null);
   const [copyCanvas, setCopyCanvas] = useState<{ id: string; title: string } | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; title: string } | null>(null);
   const [orgDropdownOpen, setOrgDropdownOpen] = useState(false);
@@ -147,7 +153,13 @@ export function Sidebar() {
     if (!canvas) return;
 
     if (action === 'rename') {
-      setRenameCanvas({ id: canvas._id, title: canvas.title, description: canvas.description });
+      setRenameCanvas({
+        id: canvas._id,
+        title: canvas.title,
+        description: canvas.description,
+        businessCaseAgentUrl: canvas.businessCaseAgentUrl,
+        regulatoryAssessmentAgentUrl: canvas.regulatoryAssessmentAgentUrl,
+      });
     } else if (action === 'copy') {
       setCopyCanvas({ id: canvas._id, title: canvas.title });
     } else if (action === 'delete') {
@@ -195,6 +207,8 @@ export function Sidebar() {
         title: currentCanvas.title,
         slug: currentCanvas.slug,
         description: currentCanvas.description,
+        businessCaseAgentUrl: currentCanvas.businessCaseAgentUrl,
+        regulatoryAssessmentAgentUrl: currentCanvas.regulatoryAssessmentAgentUrl,
         phases: currentCanvas.phases,
         categories: currentCanvas.categories,
         agents,
@@ -553,6 +567,8 @@ export function Sidebar() {
           canvasId={renameCanvas.id}
           currentTitle={renameCanvas.title}
           currentDescription={renameCanvas.description}
+          currentBusinessCaseAgentUrl={renameCanvas.businessCaseAgentUrl}
+          currentRegulatoryAssessmentAgentUrl={renameCanvas.regulatoryAssessmentAgentUrl}
           onClose={() => setRenameCanvas(null)}
         />
       )}

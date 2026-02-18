@@ -4,6 +4,7 @@
  */
 
 import { VALIDATION_CONSTANTS } from "../../app/types/validationConstants";
+import { COMPACT_INDICATOR } from "./validators";
 
 /**
  * Validate metric value is non-negative
@@ -99,6 +100,34 @@ export function validateCanvasDescription(description: string | undefined): void
 }
 
 /**
+ * Validate compact card indicator configuration
+ */
+export function validateCompactIndicators(indicators: string[] | undefined): void {
+  if (indicators === undefined) return;
+
+  if (indicators.length === 0) {
+    throw new Error("Validation: compactIndicators must include at least one entry");
+  }
+
+  if (indicators.length > 2) {
+    throw new Error("Validation: compactIndicators can include at most two entries");
+  }
+
+  const validIndicators = new Set<string>(Object.values(COMPACT_INDICATOR));
+  const uniqueIndicators = new Set<string>();
+
+  for (const indicator of indicators) {
+    if (!validIndicators.has(indicator)) {
+      throw new Error(`Validation: Invalid compact indicator '${indicator}'`);
+    }
+    if (uniqueIndicators.has(indicator)) {
+      throw new Error(`Validation: Duplicate compact indicator '${indicator}'`);
+    }
+    uniqueIndicators.add(indicator);
+  }
+}
+
+/**
  * Validate agent name (max chars from shared constants)
  */
 export function validateAgentName(name: string): void {
@@ -150,10 +179,16 @@ export function validateOptionalUrl(
   fieldName: string
 ): void {
   if (!url) return;
+  if (url.length > VALIDATION_CONSTANTS.URL_MAX_LENGTH) {
+    throw new Error(`Validation: ${fieldName} must be ${VALIDATION_CONSTANTS.URL_MAX_LENGTH} characters or less`);
+  }
   // Allow "#" as a placeholder for missing URLs
   if (url === "#") return;
   try {
-    new URL(url);
+    const parsed = new URL(url);
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+      throw new Error("invalid_protocol");
+    }
   } catch {
     throw new Error(`Validation: ${fieldName} must be a valid URL`);
   }

@@ -156,6 +156,11 @@ export function MockConvexProvider({
         return Array.from(categories).sort(byString);
       }
 
+      case 'users:list': {
+        // E2E mock does not model user records; return empty so owner UI hides cleanly.
+        return [];
+      }
+
       case 'agentVotes:getVoteCountsForCanvas': {
         const { canvasId } = (args ?? {}) as { canvasId?: string };
         if (!canvasId) return {};
@@ -258,13 +263,26 @@ export function MockConvexProvider({
   const mutation = async (functionName: string, args: unknown) => {
     switch (functionName) {
       case 'canvases:create': {
-        const { workosOrgId, title, slug, description, phases, categories } = (args ?? {}) as {
+        const {
+          workosOrgId,
+          title,
+          slug,
+          description,
+          businessCaseAgentUrl,
+          regulatoryAssessmentAgentUrl,
+          phases,
+          categories,
+          compactIndicators,
+        } = (args ?? {}) as {
           workosOrgId?: string;
           title?: string;
           slug?: string;
           description?: string;
+          businessCaseAgentUrl?: string;
+          regulatoryAssessmentAgentUrl?: string;
           phases?: string[];
           categories?: string[];
+          compactIndicators?: string[];
         };
         if (!workosOrgId || !title || !slug) {
           throw new Error('[MockConvex] canvases:create missing required fields');
@@ -272,6 +290,8 @@ export function MockConvexProvider({
         const id = nextId('canvas');
         const now = nowMs();
         const normalizedDescription = description?.trim() || undefined;
+        const normalizedBusinessCaseAgentUrl = businessCaseAgentUrl?.trim() || undefined;
+        const normalizedRegulatoryAssessmentAgentUrl = regulatoryAssessmentAgentUrl?.trim() || undefined;
         const canvas: Canvas = {
           _id: id as any,
           _creationTime: now,
@@ -279,8 +299,11 @@ export function MockConvexProvider({
           title,
           slug,
           description: normalizedDescription,
+          businessCaseAgentUrl: normalizedBusinessCaseAgentUrl,
+          regulatoryAssessmentAgentUrl: normalizedRegulatoryAssessmentAgentUrl,
           phases: phases ?? ['Backlog'],
           categories: categories ?? ['Uncategorized'],
+          compactIndicators: compactIndicators ?? ['tools'],
           createdBy: currentUserId,
           updatedBy: currentUserId,
           createdAt: now,
@@ -301,6 +324,18 @@ export function MockConvexProvider({
           const rawDescription = normalizedUpdates.description;
           if (typeof rawDescription === 'string') {
             normalizedUpdates.description = rawDescription.trim() || undefined;
+          }
+        }
+        if (Object.prototype.hasOwnProperty.call(normalizedUpdates, 'businessCaseAgentUrl')) {
+          const rawBusinessCaseAgentUrl = normalizedUpdates.businessCaseAgentUrl;
+          if (typeof rawBusinessCaseAgentUrl === 'string') {
+            normalizedUpdates.businessCaseAgentUrl = rawBusinessCaseAgentUrl.trim() || undefined;
+          }
+        }
+        if (Object.prototype.hasOwnProperty.call(normalizedUpdates, 'regulatoryAssessmentAgentUrl')) {
+          const rawRegulatoryAssessmentAgentUrl = normalizedUpdates.regulatoryAssessmentAgentUrl;
+          if (typeof rawRegulatoryAssessmentAgentUrl === 'string') {
+            normalizedUpdates.regulatoryAssessmentAgentUrl = rawRegulatoryAssessmentAgentUrl.trim() || undefined;
           }
         }
         const now = nowMs();
@@ -472,6 +507,8 @@ export function MockConvexProvider({
           metrics: (agentInput.metrics as any) ?? {},
           category: safeString(agentInput.category) || undefined,
           status: (agentInput.status as any) ?? undefined,
+          regulatoryRisk: (agentInput.regulatoryRisk as any) ?? undefined,
+          value: (agentInput.value as any) ?? undefined,
           createdBy: currentUserId,
           updatedBy: currentUserId,
           createdAt: now,
@@ -563,6 +600,8 @@ export function MockConvexProvider({
               metrics: agentInput.metrics ?? {},
               category: category || undefined,
               status: agentInput.status ?? undefined,
+              regulatoryRisk: agentInput.regulatoryRisk ?? undefined,
+              value: agentInput.value ?? undefined,
               createdBy: currentUserId,
               updatedBy: currentUserId,
               createdAt: now,

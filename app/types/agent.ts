@@ -42,6 +42,7 @@ export type AgentFormData = Pick<
   Agent,
   'name' | 'objective' | 'description' | 'tools' | 'journeySteps' |
   'demoLink' | 'videoLink' | 'metrics' | 'category' | 'status' |
+  'regulatoryRisk' | 'value' |
   'phase' | 'agentOrder' | 'ownerId'
 >;
 

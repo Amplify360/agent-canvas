@@ -19,8 +19,11 @@ export default defineSchema({
     title: v.string(),
     slug: v.string(), // Document name/identifier
     description: v.optional(v.string()), // Optional canvas/company narrative context
+    businessCaseAgentUrl: v.optional(v.string()), // Canvas-level destination URL for business case handoff
+    regulatoryAssessmentAgentUrl: v.optional(v.string()), // Canvas-level destination URL for regulatory assessment handoff
     phases: v.optional(v.array(v.string())), // Ordered phase names (optional for legacy data)
     categories: v.optional(v.array(v.string())), // Ordered category names (optional for legacy data)
+    compactIndicators: v.optional(v.array(v.string())), // Compact card indicators (1-2 entries)
     deletedAt: v.optional(v.number()), // Soft delete timestamp
     createdBy: v.string(), // WorkOS user ID
     updatedBy: v.string(),
@@ -63,6 +66,21 @@ export default defineSchema({
         v.literal("testing"),
         v.literal("live"),
         v.literal("shelved")
+      )
+    ),
+    regulatoryRisk: v.optional(
+      v.union(
+        v.literal("low"),
+        v.literal("medium"),
+        v.literal("high"),
+        v.literal("critical")
+      )
+    ),
+    value: v.optional(
+      v.union(
+        v.literal("low"),
+        v.literal("medium"),
+        v.literal("high")
       )
     ),
     ownerId: v.optional(v.id("users")), // Reference to sample user (lab demos)
