@@ -1,85 +1,87 @@
 # Canvas YAML Specification
 
-Compact spec for LLM-generated agent canvas documents.
+Canonical YAML format for canvas import/export.
 
-## Structure
+## Current Canonical Format
 
 ```yaml
-documentTitle: string (required, max 200 chars)
-agentGroups:                    # optional, defaults to []
-  - groupName: string           # optional, defaults to "Phase N", max 50 chars
-    agents:                     # optional, defaults to []
-      - name: string            # required, max 100 chars
-        objective: string       # max 500 chars
-        description: string     # max 1000 chars
-        tools: [string]         # defaults to []
-        journeySteps: [string]  # defaults to []
-        demoLink: url
-        videoLink: url
-        metrics:
-          numberOfUsers: number # >= 0
-          timesUsed: number     # >= 0
-          timeSaved: number     # >= 0, hours saved
-          roi: number           # >= 0, currency value
-        tags:
-          department: string    # maps to "category" in database
-          status: string        # valid: "idea", "approved", "wip", "testing", "live", "shelved"
+specVersion: 1
+documentTitle: string                  # required, max 200 chars
+documentSlug: string                   # optional, lowercase kebab-case, max 100 chars
+documentDescription: string            # optional, max 5000 chars
+phases: [string]                       # optional, ordered canvas phases
+categories: [string]                   # optional, ordered canvas categories
+agents:                                # optional (defaults to [])
+  - name: string                       # required, max 100 chars
+    phase: string                      # optional, defaults to "Backlog"
+    agentOrder: number                 # optional, defaults to 0
+    objective: string                  # optional, max 500 chars
+    description: string                # optional, max 10000 chars
+    tools: [string]                    # optional, defaults to []
+    journeySteps: [string]             # optional, defaults to []
+    demoLink: string                   # optional URL
+    videoLink: string                  # optional URL
+    metrics:                           # optional
+      numberOfUsers: number            # >= 0
+      timesUsed: number                # >= 0
+      timeSaved: number                # >= 0
+      roi: number                      # any numeric value
+    category: string                   # optional
+    status: string                     # optional: idea|approved|wip|testing|live|shelved
+    ownerId: string                    # optional Convex users table ID
 ```
 
-## Rules
+## Legacy Compatibility
 
-- `documentTitle`: Required. Canvas name, max 200 chars
-- `agentGroups`: Optional. Array of phases/stages. Omit or use `[]` if empty
-- `groupName`: Optional. Defaults to "Phase 1", "Phase 2", etc. Max 50 chars
-- `name`: Required per agent. Max 100 chars
-- `tools`: Valid names: `forms`, `code`, `rag`, `web-search`, `deep-research`, `context`, `email`, `calendar`, `ms-teams`, `api`. Case-insensitive. Unknown names accepted with generic styling
-- `metrics`: All values must be numbers ≥ 0. Can also be numeric strings (e.g., `"42"`)
-- `tags.department`: Maps to `category` field in database
-- `tags.status`: Valid values: `idea`, `approved`, `wip`, `testing`, `live`, `shelved`. Invalid values are ignored
-- All other fields: Optional—omit if empty/unused
+Importer is backward-compatible with the previous legacy shape:
+
+- `agentGroups[].groupName` is mapped to `agent.phase` when `phase` is missing.
+- `tags.department` is mapped to `category`.
+- `tags.status` is mapped to `status`.
+
+## Notes
+
+- Unknown fields are ignored.
+- If `phases`/`categories` are omitted, they are derived from agents.
+- If no phases/categories can be derived, defaults are:
+  - phases: `["Backlog"]`
+  - categories: `["Uncategorized"]`
 
 ## Example
 
 ```yaml
+specVersion: 1
 documentTitle: Customer Onboarding Agents
-
-agentGroups:
-  - groupName: Initial Contact
-    agents:
-      - name: Lead Qualifier
-        objective: Assess and score incoming leads based on fit criteria
-        description: |
-          Analyzes lead data from multiple sources, applies scoring rules,
-          and routes qualified leads to the appropriate sales team.
-        tools:
-          - context
-          - email
-          - deep-research
-        journeySteps:
-          - Receive lead notification
-          - Pull company profile data
-          - Calculate fit score
-          - Route to sales or nurture
-        demoLink: https://demo.example.com/lead-qualifier
-        videoLink: https://videos.example.com/lead-qualifier-overview
-        metrics:
-          numberOfUsers: 12
-          timesUsed: 450
-          timeSaved: 120
-          roi: 25000
-        tags:
-          department: Sales
-          status: live
-
-  - groupName: Account Setup
-    agents:
-      - name: Account Creator
-        objective: Provision new customer accounts automatically
-        tools:
-          - forms
-          - api
-        journeySteps:
-          - Create account record
-          - Set initial permissions
-          - Generate welcome email
+documentSlug: customer-onboarding-agents
+documentDescription: End-to-end onboarding automation plan for enterprise customers.
+phases:
+  - Discovery
+  - Rollout
+categories:
+  - Sales
+  - Customer Success
+agents:
+  - name: Lead Qualifier
+    phase: Discovery
+    agentOrder: 0
+    objective: Assess and score incoming leads based on fit criteria
+    description: |
+      Analyzes lead data from multiple sources, applies scoring rules,
+      and routes qualified leads to the right owner.
+    tools:
+      - context
+      - email
+      - deep-research
+    journeySteps:
+      - Receive lead notification
+      - Pull company profile data
+      - Calculate fit score
+      - Route to sales or nurture
+    metrics:
+      numberOfUsers: 12
+      timesUsed: 450
+      timeSaved: 120
+      roi: 25000
+    category: Sales
+    status: live
 ```

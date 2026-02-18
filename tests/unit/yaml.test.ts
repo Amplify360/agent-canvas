@@ -84,6 +84,23 @@ agents:
     expect(result.phases).toEqual(['Sales']);
   });
 
+  it('preserves documentSlug from YAML when title is not overridden', () => {
+    const yamlText = `
+documentTitle: Example Canvas
+documentSlug: custom-canvas-slug
+agents:
+  - name: Lead Qualifier
+    phase: Sales
+    `.trim();
+
+    const result = prepareYamlImport({
+      yamlText,
+      existingSlugs: new Set(),
+    });
+
+    expect(result.slug).toBe('custom-canvas-slug');
+  });
+
   it('handles YAML with no agents', () => {
     const yamlText = `
 documentTitle: Empty
@@ -164,6 +181,71 @@ agents:
     expect(result.agents[0].status).toBe('live');
     expect(result.agents[1].status).toBe('idea');
   });
+
+  it('preserves duplicate and ordered tool/journey entries', () => {
+    const yamlText = `
+documentTitle: Duplicate Lists
+agents:
+  - name: Duplicate Agent
+    tools: [api, api, email]
+    journeySteps:
+      - Step 1
+      - Step 1
+      - Step 2
+    `.trim();
+
+    const result = parseYaml(yamlText);
+
+    expect(result.agents).toHaveLength(1);
+    expect(result.agents[0].tools).toEqual(['api', 'api', 'email']);
+    expect(result.agents[0].journeySteps).toEqual(['Step 1', 'Step 1', 'Step 2']);
+  });
+
+  it('parses canvas-level description, phases, and categories', () => {
+    const yamlText = `
+specVersion: 1
+documentTitle: Canvas With Metadata
+documentDescription: Metadata description
+phases:
+  - Discovery
+  - Delivery
+categories:
+  - Sales
+  - Support
+agents:
+  - name: Agent A
+    phase: Delivery
+    category: Sales
+    `.trim();
+
+    const result = parseYaml(yamlText);
+
+    expect(result.title).toBe('Canvas With Metadata');
+    expect(result.description).toBe('Metadata description');
+    // Top-level order preserved; new values from agents are merged.
+    expect(result.phases).toEqual(['Discovery', 'Delivery']);
+    expect(result.categories).toEqual(['Sales', 'Support']);
+  });
+
+  it('parses legacy agentGroups and tags mappings', () => {
+    const yamlText = `
+documentTitle: Legacy Shape
+agentGroups:
+  - groupName: Phase Legacy
+    agents:
+      - name: Legacy Agent
+        tags:
+          department: Legal
+          status: approved
+    `.trim();
+
+    const result = parseYaml(yamlText);
+
+    expect(result.agents).toHaveLength(1);
+    expect(result.agents[0].phase).toBe('Phase Legacy');
+    expect(result.agents[0].category).toBe('Legal');
+    expect(result.agents[0].status).toBe('approved');
+  });
 });
 
 describe('slug utilities', () => {
@@ -228,6 +310,35 @@ describe('YAML export', () => {
     expect(yaml).toContain('numberOfUsers: 100');
     expect(yaml).toContain('roi: 5000');
     expect(yaml).toContain('name: Agent 2');
+  });
+
+  it('exports full canvas metadata in canonical spec', () => {
+    const agents: Agent[] = [
+      mockAgent({
+        name: 'Owner Agent',
+        ownerId: 'owner-id' as Id<'users'>,
+        phase: 'Discovery',
+      }),
+    ];
+
+    const yaml = exportToYaml({
+      title: 'Full Canvas',
+      slug: 'full-canvas',
+      description: 'Canvas description',
+      phases: ['Discovery', 'Delivery'],
+      categories: ['Sales', 'Support'],
+      agents,
+    });
+
+    expect(yaml).toContain('specVersion: 1');
+    expect(yaml).toContain('documentTitle: Full Canvas');
+    expect(yaml).toContain('documentSlug: full-canvas');
+    expect(yaml).toContain('documentDescription: Canvas description');
+    expect(yaml).toContain('phases:');
+    expect(yaml).toContain('- Discovery');
+    expect(yaml).toContain('categories:');
+    expect(yaml).toContain('- Sales');
+    expect(yaml).toContain('ownerId: owner-id');
   });
 
   it('omits empty optional fields', () => {
@@ -391,6 +502,7 @@ describe('YAML full canvas import', () => {
     const reimported = parseYaml(exported);
 
     expect(reimported.title).toBe(imported.title);
+    expect(reimported.description).toBe(imported.description);
     expect(reimported.agents).toHaveLength(imported.agents.length);
     expect(reimported.phases).toEqual(imported.phases);
 

@@ -1,5 +1,5 @@
 /**
- * ImportYamlModal - Modal for importing legacy YAML files
+ * ImportYamlModal - Modal for importing YAML canvas files
  */
 
 'use client';
@@ -86,7 +86,7 @@ export function ImportYamlModal({ isOpen, onClose, onSuccess }: ImportYamlModalP
         const existingSlugs = new Set(canvases.map(c => c.slug));
 
         // Prepare import data
-        const { title, slug, agents, phases, categories } = prepareYamlImport({
+        const { title, slug, description, agents, phases, categories } = prepareYamlImport({
           yamlText,
           overrideTitle: customTitle,
           existingSlugs,
@@ -97,6 +97,7 @@ export function ImportYamlModal({ isOpen, onClose, onSuccess }: ImportYamlModalP
           workosOrgId: currentOrgId,
           title,
           slug,
+          description,
           phases,
           categories,
         });
@@ -203,8 +204,8 @@ export function ImportYamlModal({ isOpen, onClose, onSuccess }: ImportYamlModalP
         {/* Help Text */}
         <div className="alert alert--info u-mt-4">
           <p style={{ margin: 0 }}>
-            <strong>Legacy YAML Import:</strong> This is a one-way import. The YAML file will be
-            converted to Convex-native storage. All future editing happens in the app.
+            <strong>YAML Import:</strong> YAML is converted into Convex-native canvas and agent
+            records. Exported YAML files from this app are fully compatible with this importer.
           </p>
         </div>
       </div>
