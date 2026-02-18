@@ -58,7 +58,9 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
     await deleteAgentMutation({ agentId: agentId as Id<"agents"> });
   }, [deleteAgentMutation]);
 
-  const isLoading = (!isInitialized || isCanvasLoading || isConvexAuthLoading || isQueryLoading) && !hasLoadedAgents;
+  // Not loading if there's simply no canvas to query agents for
+  const hasNoCanvas = isInitialized && !isCanvasLoading && !currentCanvas;
+  const isLoading = !hasNoCanvas && (!isInitialized || isCanvasLoading || isConvexAuthLoading || isQueryLoading) && !hasLoadedAgents;
 
   const value = useMemo<AgentContextValue>(() => ({
     agents,

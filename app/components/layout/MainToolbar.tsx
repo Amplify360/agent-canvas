@@ -16,6 +16,7 @@ import { useClickOutside } from '@/hooks/useClickOutside';
 import { copyTextToClipboard } from '@/utils/clipboard';
 import { useQuery, useAction, useCanQuery } from '@/hooks/useConvex';
 import { api } from '../../../convex/_generated/api';
+import { Id } from '../../../convex/_generated/dataModel';
 import { useAppState } from '@/contexts/AppStateContext';
 
 interface MainToolbarProps {
@@ -51,6 +52,7 @@ export function MainToolbar({
     canQuery && currentOrgId ? { workosOrgId: currentOrgId } : 'skip'
   ) || [];
   const seedUsers = useAction(api.users.seedSampleUsers);
+  const assignMissingOwners = useAction(api.users.assignMissingOwners);
 
   const activeTag = TAG_TYPES[activeTagType as keyof typeof TAG_TYPES];
 
@@ -81,6 +83,26 @@ export function MainToolbar({
     }
   };
 
+  const handleAssignOwners = async () => {
+    if (!currentCanvasId || isSeeding) return;
+    setIsSeeding(true);
+    try {
+      const result = await assignMissingOwners({ canvasId: currentCanvasId as Id<"canvases"> });
+      showToast(
+        result.agentsAssigned > 0
+          ? `Assigned owners to ${result.agentsAssigned} agents`
+          : 'All agents already have owners',
+        'success'
+      );
+    } catch (error) {
+      console.error('Failed to assign owners:', error);
+      const message = error instanceof Error ? error.message : 'Unknown error occurred';
+      showToast(`Failed to assign owners: ${message}`, 'error');
+    } finally {
+      setIsSeeding(false);
+    }
+  };
+
   return (
     <header className="toolbar">
       <div className="toolbar__left">
@@ -100,9 +122,9 @@ export function MainToolbar({
           <Icon name="bot" />
           <span>{agents.length} Agents</span>
         </span>
-        {/* Lab feature: Seed demo users if none exist */}
-        {existingUsers.length === 0 && (
-          <Tooltip content="Add sample users with avatars for demo" placement="bottom">
+        {/* Lab feature: Seed demo users or assign owners to unassigned agents */}
+        {existingUsers.length === 0 ? (
+          <Tooltip content="Add 20 sample users with avatars and assign as agent owners" placement="bottom">
             <button
               type="button"
               className="btn btn--sm btn--secondary"
@@ -111,6 +133,18 @@ export function MainToolbar({
             >
               <Icon name="users" />
               <span>{isSeeding ? 'Seeding...' : 'Seed Demo Users'}</span>
+            </button>
+          </Tooltip>
+        ) : (
+          <Tooltip content="Assign existing demo users as owners to any unassigned agents" placement="bottom">
+            <button
+              type="button"
+              className="btn btn--sm btn--secondary"
+              onClick={handleAssignOwners}
+              disabled={isSeeding || !currentCanvasId}
+            >
+              <Icon name="user-check" />
+              <span>{isSeeding ? 'Assigning...' : 'Assign Owners'}</span>
             </button>
           </Tooltip>
         )}

@@ -4,7 +4,7 @@
  */
 
 import { v } from "convex/values";
-import { mutation, query, action, internalMutation } from "./_generated/server";
+import { mutation, query, action, internalMutation, internalQuery } from "./_generated/server";
 import { requireAuth, requireOrgAccess } from "./lib/auth";
 import { internal } from "./_generated/api";
 import { Id } from "./_generated/dataModel";
@@ -109,16 +109,17 @@ export const autoAssignOwners = internalMutation({
 
     if (allAgents.length === 0) return 0;
 
-    // Batch assign owners in parallel
+    // Batch assign owners in parallel (only agents without an existing owner)
+    const unassigned = allAgents.filter(agent => !agent.ownerId);
     await Promise.all(
-      allAgents.map(agent => {
+      unassigned.map(agent => {
         const randomUserIndex = Math.floor(Math.random() * args.userIds.length);
         const ownerId = args.userIds[randomUserIndex];
         return ctx.db.patch(agent._id, { ownerId });
       })
     );
 
-    return allAgents.length;
+    return unassigned.length;
   },
 });
 
@@ -155,6 +156,19 @@ export const createUser = internalMutation({
       title: args.title,
       createdAt: Date.now(),
     });
+  },
+});
+
+/**
+ * Internal: list users for an org (used by actions that can't call public queries)
+ */
+export const listInternal = internalQuery({
+  args: { workosOrgId: v.string() },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("users")
+      .withIndex("by_org", (q) => q.eq("workosOrgId", args.workosOrgId))
+      .collect();
   },
 });
 
@@ -215,6 +229,73 @@ export const deleteAll = mutation({
     }
 
     return { deleted: users.length };
+  },
+});
+
+/**
+ * Internal: get a canvas document (for auth checks in actions)
+ */
+export const getCanvasForAssignment = internalQuery({
+  args: { canvasId: v.id("canvases") },
+  handler: async (ctx, args) => {
+    return await ctx.db.get(args.canvasId);
+  },
+});
+
+/**
+ * Internal: assign owners to unassigned agents in a single canvas
+ */
+export const assignMissingOwnersForCanvas = internalMutation({
+  args: {
+    canvasId: v.id("canvases"),
+    userIds: v.array(v.id("users")),
+  },
+  handler: async (ctx, args) => {
+    if (args.userIds.length === 0) return 0;
+
+    const agents = await ctx.db
+      .query("agents")
+      .withIndex("by_canvas", (q) => q.eq("canvasId", args.canvasId))
+      .filter((q) => q.eq(q.field("deletedAt"), undefined))
+      .collect();
+
+    const unassigned = agents.filter(agent => !agent.ownerId);
+    await Promise.all(
+      unassigned.map(agent => {
+        const ownerId = args.userIds[Math.floor(Math.random() * args.userIds.length)];
+        return ctx.db.patch(agent._id, { ownerId });
+      })
+    );
+
+    return unassigned.length;
+  },
+});
+
+/**
+ * Assign owners to agents missing one in the selected canvas only.
+ * Used when users already exist but a new canvas has been imported.
+ */
+export const assignMissingOwners = action({
+  args: {
+    canvasId: v.id("canvases"),
+  },
+  handler: async (ctx, args): Promise<{ agentsAssigned: number }> => {
+    const auth = await requireAuth(ctx);
+
+    const canvas = await ctx.runQuery(internal.users.getCanvasForAssignment, { canvasId: args.canvasId });
+    if (!canvas || canvas.deletedAt) throw new Error('Canvas not found');
+    requireOrgAccess(auth, canvas.workosOrgId);
+
+    const users = await ctx.runQuery(internal.users.listInternal, { workosOrgId: canvas.workosOrgId });
+    if (users.length === 0) throw new Error('No users found. Seed demo users first.');
+
+    const userIds = users.map((u: { _id: Id<"users"> }) => u._id);
+    const agentsAssigned = await ctx.runMutation(internal.users.assignMissingOwnersForCanvas, {
+      canvasId: args.canvasId,
+      userIds,
+    });
+
+    return { agentsAssigned };
   },
 });
 
