@@ -14,6 +14,7 @@ interface AvatarPopoverProps {
   title?: string;
   size?: 'xs' | 'sm' | 'md' | 'lg';
   className?: string;
+  onOpenChange?: (isOpen: boolean) => void;
 }
 
 export function AvatarPopover({
@@ -22,15 +23,26 @@ export function AvatarPopover({
   name,
   title,
   size = 'sm',
-  className = ''
+  className = '',
+  onOpenChange,
 }: AvatarPopoverProps) {
   const [showPopover, setShowPopover] = useState(false);
+
+  const handleOpen = () => {
+    setShowPopover(true);
+    onOpenChange?.(true);
+  };
+
+  const handleClose = () => {
+    setShowPopover(false);
+    onOpenChange?.(false);
+  };
 
   return (
     <div
       className={`avatar-popover-container ${className}`}
-      onMouseEnter={() => setShowPopover(true)}
-      onMouseLeave={() => setShowPopover(false)}
+      onMouseEnter={handleOpen}
+      onMouseLeave={handleClose}
     >
       <Avatar
         src={src}

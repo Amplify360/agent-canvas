@@ -1665,6 +1665,7 @@ body.is-resizing-sidebar .main-wrapper {
 
 .agent-card {
     position: relative;
+    z-index: 0;
     background: var(--bg-secondary);
     border: 1px solid var(--border-subtle);
     border-radius: var(--radius-xl);
@@ -1679,6 +1680,20 @@ body.is-resizing-sidebar .main-wrapper {
     border-color: var(--border-muted);
     transform: translateY(-2px);
     box-shadow: var(--shadow-card-hover);
+    z-index: 40;
+}
+
+.agent-card--owner-popover-open {
+    z-index: 80;
+}
+
+.agent-card:focus-within,
+.agent-card:has(.avatar-popover),
+.agent-card:has(.agent-card__dropdown),
+.agent-card:has(.agent-card__description-tooltip),
+.agent-card:has(.agent-card__journey-tooltip),
+.agent-card:has(.agent-card__stats-tooltip) {
+    z-index: 40;
 }
 
 /* Accent bar at top */
@@ -5395,27 +5410,16 @@ body.is-resizing-sidebar .main-wrapper {
     border-radius: var(--radius-sm);
 }
 
-/* Agent Card Feedback Bar - Appears on Hover */
+/* Agent Card Feedback Bar - Inline in footer row */
 .agent-card__feedback-bar {
-    position: absolute;
-    top: 50%;
-    right: 0;
-    display: flex;
+    position: static;
+    display: inline-flex;
     align-items: center;
     gap: var(--space-1);
-    padding: 2px;
+    margin-left: auto;
+    padding: 0;
     border-radius: var(--radius-sm);
-    background: color-mix(in srgb, var(--bg-secondary) 92%, transparent);
-    opacity: 0;
-    pointer-events: none;
-    transform: translate(calc(var(--space-2)), -50%);
-    transition: all var(--duration-fast) var(--ease-out);
-}
-
-.agent-card:hover .agent-card__feedback-bar {
-    opacity: 1;
-    pointer-events: auto;
-    transform: translate(0, -50%);
+    background: transparent;
 }
 
 .agent-card__vote-btn,

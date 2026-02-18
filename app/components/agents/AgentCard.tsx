@@ -65,6 +65,10 @@ function buildDestinationHref(baseUrl: string, promptContext: string): string | 
   }
 }
 
+function normalizeToolName(toolName: string): string {
+  return toolName.trim().toLowerCase().replace(/\s+/g, '-');
+}
+
 export function AgentCard({
   agent,
   index = 0,
@@ -115,8 +119,17 @@ export function AgentCard({
     currentCanvas?.regulatoryAssessmentAgentUrl,
     promptContext,
   ]);
+  const normalizedDescription = agent.description?.trim();
+  const normalizedDemoLink = agent.demoLink?.trim();
+  const normalizedVideoLink = agent.videoLink?.trim();
+  const hasJourneySteps = agent.journeySteps.length > 0;
+  const hasFormsTool = agent.tools.some((tool) => {
+    const normalizedTool = normalizeToolName(tool);
+    return normalizedTool === 'forms' || normalizedTool === 'form';
+  });
 
   const [menuOpen, setMenuOpen] = useState(false);
+  const [isOwnerPopoverOpen, setIsOwnerPopoverOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const { toggleVote } = useAgentVoteActions(agent._id);
 
@@ -199,6 +212,7 @@ export function AgentCard({
         workflowStepNumber !== undefined ? 'agent-card--workflow' : '',
         isWorkflowActiveAgent ? 'agent-card--workflow-active' : '',
         isWorkflowMuted ? 'agent-card--workflow-muted' : '',
+        isOwnerPopoverOpen ? 'agent-card--owner-popover-open' : '',
       ].filter(Boolean).join(' ')}
       data-agent-id={agent._id}
       onClick={handleCardClick}
@@ -267,6 +281,13 @@ export function AgentCard({
         <h3 className="agent-card__name">{agent.name}</h3>
       </Tooltip>
 
+      {normalizedDescription && (
+        <div className="agent-card__description-wrapper">
+          <p className="agent-card__description">{normalizedDescription}</p>
+          <div className="agent-card__description-tooltip">{normalizedDescription}</div>
+        </div>
+      )}
+
       <div className="agent-card__meta-row">
         {agent.owner ? (
           <AvatarPopover
@@ -276,6 +297,7 @@ export function AgentCard({
             title={agent.owner.title}
             size="xs"
             className="agent-card__compact-avatar"
+            onOpenChange={setIsOwnerPopoverOpen}
           />
         ) : (
           <span className="agent-card__compact-avatar agent-card__compact-avatar--placeholder">
@@ -290,6 +312,92 @@ export function AgentCard({
             </span>
           ))}
         </div>
+
+      </div>
+
+      <div className="agent-card__footer">
+        {(hasFormsTool || normalizedDemoLink || normalizedVideoLink || hasJourneySteps || canvasDestinationLinks.length > 0) && (
+          <>
+          {hasFormsTool && (
+            <Tooltip content="Uses Forms tool" placement="top">
+              <button
+                type="button"
+                className="agent-card__footer-icon"
+                aria-label="Uses Forms tool"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <Icon name="file-input" />
+              </button>
+            </Tooltip>
+          )}
+
+          {normalizedDemoLink && (
+            <Tooltip content="Open demo link" placement="top">
+              <a
+                href={normalizedDemoLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="agent-card__footer-icon"
+                aria-label="Open demo link"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <Icon name="play-circle" />
+              </a>
+            </Tooltip>
+          )}
+
+          {normalizedVideoLink && (
+            <Tooltip content="Watch video" placement="top">
+              <a
+                href={normalizedVideoLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="agent-card__footer-icon"
+                aria-label="Watch video"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <Icon name="video" />
+              </a>
+            </Tooltip>
+          )}
+
+          {hasJourneySteps && (
+            <div className="agent-card__journey">
+              <button
+                type="button"
+                className="agent-card__footer-icon"
+                aria-label="View user journey steps"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <Icon name="route" />
+              </button>
+              <div className="agent-card__journey-tooltip">
+                <div className="journey-tooltip__title">User Journey</div>
+                <ol className="journey-tooltip__steps">
+                  {agent.journeySteps.map((step, i) => (
+                    <li key={i}>{step}</li>
+                  ))}
+                </ol>
+              </div>
+            </div>
+          )}
+
+          {canvasDestinationLinks.map((link) => (
+            <Tooltip key={link.ariaLabel} content={link.ariaLabel} placement="top">
+              <a
+                href={link.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="agent-card__footer-icon"
+                aria-label={link.ariaLabel}
+                onClick={(e) => e.stopPropagation()}
+              >
+                  <Icon name={link.icon} />
+                </a>
+              </Tooltip>
+            ))}
+          </>
+        )}
 
         <div className="agent-card__feedback-bar">
           <button
@@ -321,25 +429,6 @@ export function AgentCard({
           </button>
         </div>
       </div>
-
-      {canvasDestinationLinks.length > 0 && (
-        <div className="agent-card__canvas-links">
-          {canvasDestinationLinks.map((link) => (
-            <Tooltip key={link.ariaLabel} content={link.ariaLabel} placement="top">
-              <a
-                href={link.href}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="agent-card__canvas-link"
-                aria-label={link.ariaLabel}
-                onClick={(e) => e.stopPropagation()}
-              >
-                <Icon name={link.icon} />
-              </a>
-            </Tooltip>
-          ))}
-        </div>
-      )}
     </div>
   );
 }
