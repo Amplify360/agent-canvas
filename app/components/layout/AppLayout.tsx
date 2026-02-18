@@ -200,10 +200,15 @@ export function AppLayout() {
         return null;
       }
 
+      const activeAgentId = previous.steps[previous.activeStepIndex]?.agent._id;
+      const newIndex = activeAgentId
+        ? nextSteps.findIndex((step) => step.agent._id === activeAgentId)
+        : -1;
+
       return {
         ...previous,
         steps: nextSteps,
-        activeStepIndex: Math.min(previous.activeStepIndex, nextSteps.length - 1),
+        activeStepIndex: newIndex >= 0 ? newIndex : Math.min(previous.activeStepIndex, nextSteps.length - 1),
       };
     });
   }, [agents, currentCanvasId]);
