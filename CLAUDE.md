@@ -106,10 +106,8 @@ Generate: `echo -n '{...}' | base64`. Machine-specific encoded values for this i
    - BUT: Schema changes won't auto-deploy to lab
 
 3. **Deploying Schema to Lab Backend**
-   - `npx convex deploy` does NOT respect `.env.local`
-   - It uses its own project config which defaults to prod deployment
-   - **Solution**: Push to `lab` branch → Vercel auto-deploys backend
-   - For urgent local deploys: Use Convex dashboard or get proper deploy keys
+   - Vercel does NOT deploy Convex — it only builds the Next.js frontend
+   - **Solution**: `npx convex deploy --preview-name lab --yes` (CLI auth is sufficient, no deploy key needed)
 
 4. **Swappable Environment Files**
    ```bash
@@ -122,12 +120,11 @@ Generate: `echo -n '{...}' | base64`. Machine-specific encoded values for this i
    ```
 
 5. **Testing Lab Features Locally**
-   - Push schema changes to `lab` branch first
-   - Wait for Vercel deployment to sync backend (~2-3 min)
+   - Deploy schema: `npx convex deploy --preview-name lab --yes`
    - Then run local server with `.env.local.lab`
    - Alternatively: Use dev backend locally for faster iteration
 
-**TL;DR**: For lab features, push to `lab` branch and test on canvas-lab.amplify360.ai OR use dev backend locally for rapid development.
+**TL;DR**: Deploy Convex to lab with `npx convex deploy --preview-name lab --yes`, then test on canvas-lab.amplify360.ai or locally with `.env.local.lab`.
 
 
 ## Environment Variables
