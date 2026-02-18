@@ -14,15 +14,23 @@ import { Tooltip } from '@/components/ui/Tooltip';
 import { TAG_TYPES } from '@/utils/config';
 import { useClickOutside } from '@/hooks/useClickOutside';
 import { copyTextToClipboard } from '@/utils/clipboard';
-import { useQuery, useAction } from '@/hooks/useConvex';
+import { useQuery, useAction, useCanQuery } from '@/hooks/useConvex';
 import { api } from '../../../convex/_generated/api';
 import { useAppState } from '@/contexts/AppStateContext';
 
 interface MainToolbarProps {
   onAddAgent: () => void;
+  onOpenWorkflowPrompt: () => void;
+  onCloseWorkflow: () => void;
+  isWorkflowActive: boolean;
 }
 
-export function MainToolbar({ onAddAgent }: MainToolbarProps) {
+export function MainToolbar({
+  onAddAgent,
+  onOpenWorkflowPrompt,
+  onCloseWorkflow,
+  isWorkflowActive,
+}: MainToolbarProps) {
   const { currentCanvas, currentCanvasId } = useCanvas();
   const { agents } = useAgents();
   const { currentOrgId } = useAuth();
@@ -32,14 +40,15 @@ export function MainToolbar({ onAddAgent }: MainToolbarProps) {
   const [showCopied, setShowCopied] = useState(false);
   const [isSeeding, setIsSeeding] = useState(false);
   const groupingDropdownRef = useRef<HTMLDivElement>(null);
+  const { canQuery } = useCanQuery();
 
   const closeGrouping = useCallback(() => setIsGroupingOpen(false), []);
   useClickOutside(groupingDropdownRef, closeGrouping, isGroupingOpen);
 
-  // Check if users exist (lab feature)
+  // Check if users exist (lab feature) — gated on Convex auth readiness
   const existingUsers = useQuery(
     api.users.list,
-    currentOrgId ? { workosOrgId: currentOrgId } : 'skip'
+    canQuery && currentOrgId ? { workosOrgId: currentOrgId } : 'skip'
   ) || [];
   const seedUsers = useAction(api.users.seedSampleUsers);
 
@@ -108,6 +117,17 @@ export function MainToolbar({ onAddAgent }: MainToolbarProps) {
       </div>
 
       <div className="toolbar__right">
+        <Tooltip content="Open workflow guide" placement="bottom">
+          <button
+            type="button"
+            className={`btn btn--sm workflow-launch-btn ${isWorkflowActive ? 'workflow-launch-btn--active' : ''}`}
+            onClick={onOpenWorkflowPrompt}
+          >
+            <Icon name="sparkles" />
+            <span>What do you want to do?</span>
+          </button>
+        </Tooltip>
+
         {/* Grouping Control */}
         <div className="toolbar__control" ref={groupingDropdownRef}>
           <span className="toolbar__control-label">Group by</span>
@@ -164,6 +184,14 @@ export function MainToolbar({ onAddAgent }: MainToolbarProps) {
           <Icon name="plus" />
           <span>Add Agent</span>
         </button>
+
+        {isWorkflowActive && (
+          <Tooltip content="Exit workflow mode" placement="bottom">
+            <button type="button" className="icon-btn" onClick={onCloseWorkflow} aria-label="Exit workflow mode">
+              <Icon name="x" />
+            </button>
+          </Tooltip>
+        )}
       </div>
     </header>
   );

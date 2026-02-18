@@ -25,6 +25,9 @@ interface AgentCardProps {
   voteCounts?: { up: number; down: number };
   userVote?: VoteType | null;
   commentCount?: number;
+  workflowStepNumber?: number;
+  isWorkflowActiveAgent?: boolean;
+  isWorkflowMuted?: boolean;
 }
 
 export function AgentCard({
@@ -37,6 +40,9 @@ export function AgentCard({
   voteCounts,
   userVote,
   commentCount = 0,
+  workflowStepNumber,
+  isWorkflowActiveAgent = false,
+  isWorkflowMuted = false,
 }: AgentCardProps) {
   const metrics = agent.metrics || {};
   const statusColor = getAgentStatusConfig(agent.status).color;
@@ -59,14 +65,27 @@ export function AgentCard({
 
   return (
     <div
-      className={`agent-card ${onQuickLook ? 'agent-card--clickable' : ''}`}
+      className={[
+        'agent-card',
+        onQuickLook ? 'agent-card--clickable' : '',
+        workflowStepNumber !== undefined ? 'agent-card--workflow' : '',
+        isWorkflowActiveAgent ? 'agent-card--workflow-active' : '',
+        isWorkflowMuted ? 'agent-card--workflow-muted' : '',
+      ].filter(Boolean).join(' ')}
       data-agent-id={agent._id}
       onClick={handleCardClick}
+      tabIndex={-1}
       style={{
         '--status-color': statusColor,
         '--animation-delay': `${index * 50}ms`
       } as React.CSSProperties}
     >
+      {workflowStepNumber !== undefined && (
+        <span className="agent-card__workflow-step">
+          Step {workflowStepNumber}
+        </span>
+      )}
+
       {/* Status indicator strip */}
       <div
         className="agent-card__status-strip"

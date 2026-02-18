@@ -145,5 +145,6 @@ export default defineSchema({
     createdAt: v.number(),
   })
     .index("by_org", ["workosOrgId"])
-    .index("by_email", ["email"]),
+    .index("by_email", ["email"])
+    .index("by_org_email", ["workosOrgId", "email"]),
 });

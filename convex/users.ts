@@ -137,10 +137,10 @@ export const createUser = internalMutation({
   handler: async (ctx, args) => {
     // Note: Auth check removed - internal mutations are only called by authenticated actions
 
-    // Check if user already exists
+    // Check if user already exists within this org (scoped to prevent cross-org collisions)
     const existing = await ctx.db
       .query("users")
-      .withIndex("by_email", (q) => q.eq("email", args.email))
+      .withIndex("by_org_email", (q) => q.eq("workosOrgId", args.workosOrgId).eq("email", args.email))
       .first();
 
     if (existing) {

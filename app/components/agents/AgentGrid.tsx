@@ -5,7 +5,7 @@
 'use client';
 
 import React from 'react';
-import { Agent } from '@/types/agent';
+import { AgentWithOwner } from '@/types/agent';
 import { AgentGroupSection } from './AgentGroupSection';
 import { useGrouping } from '@/contexts/GroupingContext';
 import { useAgents } from '@/contexts/AgentContext';
@@ -16,15 +16,23 @@ import type { AgentCreateDefaults } from '@/types/agent';
 import { useCanvas } from '@/contexts/CanvasContext';
 import { useCanvasFeedback } from '@/hooks/useCanvasFeedback';
 import type { Id } from '../../../convex/_generated/dataModel';
+import type { WorkflowHighlightState } from '@/types/workflow';
 
 interface AgentGridProps {
-  onEditAgent: (agent: Agent) => void;
+  onEditAgent: (agent: AgentWithOwner) => void;
   onAddAgent: (defaults?: AgentCreateDefaults) => void;
-  onQuickLook?: (agent: Agent) => void;
-  onOpenComments?: (agent: Agent) => void;
+  onQuickLook?: (agent: AgentWithOwner) => void;
+  onOpenComments?: (agent: AgentWithOwner) => void;
+  workflowHighlightState?: WorkflowHighlightState;
 }
 
-export function AgentGrid({ onEditAgent, onAddAgent, onQuickLook, onOpenComments }: AgentGridProps) {
+export function AgentGrid({
+  onEditAgent,
+  onAddAgent,
+  onQuickLook,
+  onOpenComments,
+  workflowHighlightState,
+}: AgentGridProps) {
   const { computedGroups } = useGrouping();
   const { isLoading } = useAgents();
   const { currentCanvasId } = useCanvas();
@@ -34,7 +42,7 @@ export function AgentGrid({ onEditAgent, onAddAgent, onQuickLook, onOpenComments
     (currentCanvasId as Id<'canvases'> | null)
   );
 
-  const handleDeleteAgent = async (agent: Agent) => {
+  const handleDeleteAgent = async (agent: AgentWithOwner) => {
     await confirmAndDelete(agent._id, agent.name);
   };
 
@@ -101,6 +109,7 @@ export function AgentGrid({ onEditAgent, onAddAgent, onQuickLook, onOpenComments
           voteCountsByAgent={voteCountsByAgent}
           userVotesByAgent={userVotesByAgent}
           commentCountsByAgent={commentCountsByAgent}
+          workflowHighlightState={workflowHighlightState}
         />
       ))}
     </div>

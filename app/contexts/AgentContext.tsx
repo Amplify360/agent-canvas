@@ -5,7 +5,7 @@
 'use client';
 
 import React, { createContext, useContext, useCallback, useMemo } from 'react';
-import { Agent, AgentFormData } from '@/types/agent';
+import { AgentWithOwner, AgentFormData } from '@/types/agent';
 import { useMutation, useCanQuery } from '@/hooks/useConvex';
 import { useStableQuery } from '@/hooks/useStableQuery';
 import { useAuth } from './AuthContext';
@@ -14,7 +14,7 @@ import { api } from '../../convex/_generated/api';
 import { Id } from '../../convex/_generated/dataModel';
 
 interface AgentContextValue {
-  agents: Agent[];
+  agents: AgentWithOwner[];
   isLoading: boolean;
   createAgent: (data: AgentFormData) => Promise<string>;
   updateAgent: (agentId: string, data: Partial<AgentFormData>) => Promise<void>;

@@ -30,7 +30,7 @@ export type AgentMetrics = NonNullable<Agent['metrics']>;
 export interface AgentGroup {
   id: string;
   label: string;
-  agents: Agent[];
+  agents: AgentWithOwner[];
   color?: string;
   icon?: string;
 }

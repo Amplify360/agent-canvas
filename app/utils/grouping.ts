@@ -2,7 +2,7 @@
  * Grouping and filtering utilities for agents
  */
 
-import { Agent, AgentGroup } from '@/types/agent';
+import { AgentWithOwner, AgentGroup } from '@/types/agent';
 import { TAG_TYPES, TAG_TYPE_ID, DEFAULT_GROUPING_TAG, DEFAULT_CATEGORY, DEFAULT_PHASE, SECTION_COLOR_PALETTE, getTagValue, isValidTagTypeId } from './config';
 
 /**
@@ -15,7 +15,7 @@ const UNKNOWN_ORDER_INDEX = Number.MAX_SAFE_INTEGER;
  * Get tag value from agent for the specified tag type
  * Returns undefined if tag type is unknown or agent doesn't have the value
  */
-export function getAgentTagValue(agent: Agent, tagType: string): string | undefined {
+export function getAgentTagValue(agent: AgentWithOwner, tagType: string): string | undefined {
   const tagValueMap: Record<string, string | undefined> = {
     [TAG_TYPE_ID.CATEGORY]: agent.category,
     [TAG_TYPE_ID.PHASE]: agent.phase,
@@ -28,7 +28,7 @@ export function getAgentTagValue(agent: Agent, tagType: string): string | undefi
  * Get tag value from agent with a default fallback
  */
 export function getAgentTagValueWithDefault(
-  agent: Agent,
+  agent: AgentWithOwner,
   tagType: string,
   defaultValue = 'unassigned'
 ): string {
@@ -49,7 +49,7 @@ export interface GroupAgentsOptions {
  * Uses canvas-level phase/category ordering when provided
  */
 export function groupAgentsByTag(
-  agents: Agent[],
+  agents: AgentWithOwner[],
   tagTypeOrOptions: string | GroupAgentsOptions = DEFAULT_GROUPING_TAG
 ): AgentGroup[] {
   // Normalize arguments
@@ -146,7 +146,7 @@ export function groupAgentsByTag(
 /**
  * Filter agents by tag values
  */
-export function filterAgents(agents: Agent[], filters: Record<string, string[]>): Agent[] {
+export function filterAgents(agents: AgentWithOwner[], filters: Record<string, string[]>): AgentWithOwner[] {
   if (!filters || Object.keys(filters).length === 0) {
     return agents;
   }

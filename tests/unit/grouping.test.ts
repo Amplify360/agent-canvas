@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { groupAgentsByTag, GroupAgentsOptions, filterAgents, getAgentTagValue, getAgentTagValueWithDefault } from '@/utils/grouping';
-import { Agent } from '@/types/agent';
+import { AgentWithOwner } from '@/types/agent';
 import { Id } from '../../convex/_generated/dataModel';
 
 /**
@@ -8,7 +8,7 @@ import { Id } from '../../convex/_generated/dataModel';
  */
 const NOW = 1_700_000_000_000;
 let agentIdCounter = 0;
-function mockAgent(overrides: Partial<Agent> = {}): Agent {
+function mockAgent(overrides: Partial<AgentWithOwner> = {}): AgentWithOwner {
   agentIdCounter += 1;
   return {
     _id: `agent-${agentIdCounter}` as Id<"agents">,
@@ -23,13 +23,14 @@ function mockAgent(overrides: Partial<Agent> = {}): Agent {
     updatedBy: 'user-1',
     createdAt: NOW,
     updatedAt: NOW,
+    owner: null,
     ...overrides,
   };
 }
 
 describe('groupAgentsByTag', () => {
   it('groups agents by phase', () => {
-    const agents: Agent[] = [
+    const agents: AgentWithOwner[] = [
       mockAgent({ name: 'Agent 1', phase: 'Phase A' }),
       mockAgent({ name: 'Agent 2', phase: 'Phase B' }),
       mockAgent({ name: 'Agent 3', phase: 'Phase A' }),
@@ -43,7 +44,7 @@ describe('groupAgentsByTag', () => {
   });
 
   it('excludes soft-deleted agents', () => {
-    const agents: Agent[] = [
+    const agents: AgentWithOwner[] = [
       mockAgent({ name: 'Active', phase: 'Phase A' }),
       mockAgent({ name: 'Deleted', phase: 'Phase A', deletedAt: Date.now() }),
     ];
@@ -56,7 +57,7 @@ describe('groupAgentsByTag', () => {
   });
 
   it('sorts groups by canvas phaseOrder array', () => {
-    const agents: Agent[] = [
+    const agents: AgentWithOwner[] = [
       mockAgent({ name: 'Agent C', phase: 'Phase C', agentOrder: 0 }),
       mockAgent({ name: 'Agent A', phase: 'Phase A', agentOrder: 0 }),
       mockAgent({ name: 'Agent B', phase: 'Phase B', agentOrder: 0 }),
@@ -73,7 +74,7 @@ describe('groupAgentsByTag', () => {
   });
 
   it('places unknown phases at the end', () => {
-    const agents: Agent[] = [
+    const agents: AgentWithOwner[] = [
       mockAgent({ name: 'Agent Unknown', phase: 'Unknown Phase', agentOrder: 0 }),
       mockAgent({ name: 'Agent A', phase: 'Phase A', agentOrder: 0 }),
       mockAgent({ name: 'Agent B', phase: 'Phase B', agentOrder: 0 }),
@@ -90,7 +91,7 @@ describe('groupAgentsByTag', () => {
   });
 
   it('sorts agents by agentOrder within each group', () => {
-    const agents: Agent[] = [
+    const agents: AgentWithOwner[] = [
       mockAgent({ name: 'Third', phase: 'Phase A', agentOrder: 2 }),
       mockAgent({ name: 'First', phase: 'Phase A', agentOrder: 0 }),
       mockAgent({ name: 'Second', phase: 'Phase A', agentOrder: 1 }),
@@ -102,7 +103,7 @@ describe('groupAgentsByTag', () => {
   });
 
   it('defaults to category grouping when no options provided', () => {
-    const agents: Agent[] = [
+    const agents: AgentWithOwner[] = [
       mockAgent({ phase: 'Phase A', category: 'Sales' }),
       mockAgent({ phase: 'Phase B', category: 'Support' }),
     ];
@@ -116,7 +117,7 @@ describe('groupAgentsByTag', () => {
 
 describe('filterAgents', () => {
   it('returns all agents when no filters provided', () => {
-    const agents: Agent[] = [
+    const agents: AgentWithOwner[] = [
       mockAgent({ name: 'Agent 1', phase: 'Phase A' }),
       mockAgent({ name: 'Agent 2', phase: 'Phase B' }),
       mockAgent({ name: 'Agent 3', phase: 'Phase A' }),
@@ -131,7 +132,7 @@ describe('filterAgents', () => {
   });
 
   it('filters agents by phase', () => {
-    const agents: Agent[] = [
+    const agents: AgentWithOwner[] = [
       mockAgent({ name: 'Agent A1', phase: 'Phase A' }),
       mockAgent({ name: 'Agent A2', phase: 'Phase A' }),
       mockAgent({ name: 'Agent B1', phase: 'Phase B' }),
@@ -144,7 +145,7 @@ describe('filterAgents', () => {
   });
 
   it('filters agents by category', () => {
-    const agents: Agent[] = [
+    const agents: AgentWithOwner[] = [
       mockAgent({ name: 'Sales Agent', category: 'Sales' }),
       mockAgent({ name: 'Support Agent', category: 'Support' }),
       mockAgent({ name: 'Sales Agent 2', category: 'Sales' }),
@@ -157,7 +158,7 @@ describe('filterAgents', () => {
   });
 
   it('filters agents by status', () => {
-    const agents: Agent[] = [
+    const agents: AgentWithOwner[] = [
       mockAgent({ name: 'Live Agent', status: 'live' }),
       mockAgent({ name: 'Idea Agent', status: 'idea' }),
       mockAgent({ name: 'Live Agent 2', status: 'live' }),
@@ -170,7 +171,7 @@ describe('filterAgents', () => {
   });
 
   it('filters by multiple tag types', () => {
-    const agents: Agent[] = [
+    const agents: AgentWithOwner[] = [
       mockAgent({ name: 'Match', phase: 'Phase A', category: 'Sales' }),
       mockAgent({ name: 'Phase Only', phase: 'Phase A', category: 'Support' }),
       mockAgent({ name: 'Category Only', phase: 'Phase B', category: 'Sales' }),
@@ -187,7 +188,7 @@ describe('filterAgents', () => {
   });
 
   it('skips empty filter arrays', () => {
-    const agents: Agent[] = [
+    const agents: AgentWithOwner[] = [
       mockAgent({ name: 'Agent 1', phase: 'Phase A' }),
       mockAgent({ name: 'Agent 2', phase: 'Phase B' }),
     ];
@@ -198,7 +199,7 @@ describe('filterAgents', () => {
   });
 
   it('handles unknown tag types gracefully', () => {
-    const agents: Agent[] = [
+    const agents: AgentWithOwner[] = [
       mockAgent({ name: 'Agent 1', phase: 'Phase A' }),
       mockAgent({ name: 'Agent 2', phase: 'Phase B' }),
     ];
@@ -211,7 +212,7 @@ describe('filterAgents', () => {
 
 describe('groupAgentsByTag categoryOrder', () => {
   it('sorts groups by canvas categoryOrder array', () => {
-    const agents: Agent[] = [
+    const agents: AgentWithOwner[] = [
       mockAgent({ name: 'Agent C', category: 'Category C', agentOrder: 0 }),
       mockAgent({ name: 'Agent A', category: 'Category A', agentOrder: 0 }),
       mockAgent({ name: 'Agent B', category: 'Category B', agentOrder: 0 }),
@@ -228,7 +229,7 @@ describe('groupAgentsByTag categoryOrder', () => {
   });
 
   it('places unknown categories at the end', () => {
-    const agents: Agent[] = [
+    const agents: AgentWithOwner[] = [
       mockAgent({ name: 'Agent Unknown', category: 'Unknown Category', agentOrder: 0 }),
       mockAgent({ name: 'Agent A', category: 'Category A', agentOrder: 0 }),
       mockAgent({ name: 'Agent B', category: 'Category B', agentOrder: 0 }),

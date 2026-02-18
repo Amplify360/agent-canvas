@@ -12,16 +12,21 @@ import { AgentWithOwner } from '@/types/agent';
 import { getToolDisplay } from '@/utils/config';
 import { getAgentStatusConfig } from '@/types/validationConstants';
 import { Icon } from '@/components/ui/Icon';
-import { Avatar } from '@/components/ui/Avatar';
+import { AvatarPopover } from '@/components/ui/AvatarPopover';
+import type { WorkflowHighlightState } from '@/types/workflow';
 
 interface DockViewProps {
   agents: AgentWithOwner[];
   onAgentClick: (agent: AgentWithOwner) => void;
+  workflowHighlightState?: WorkflowHighlightState;
 }
 
-export function DockView({ agents, onAgentClick }: DockViewProps) {
+export function DockView({ agents, onAgentClick, workflowHighlightState }: DockViewProps) {
   // Track by agent ID for stability with real-time updates
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
+  const workflowSequenceByAgentId = workflowHighlightState?.sequenceByAgentId ?? {};
+  const activeWorkflowAgentId = workflowHighlightState?.activeAgentId ?? null;
+  const isWorkflowMode = workflowHighlightState?.isActive ?? false;
 
   // Derive index and agent from ID
   const selectedIndex = selectedAgentId
@@ -67,21 +72,35 @@ export function DockView({ agents, onAgentClick }: DockViewProps) {
           return (
             <button
               key={agent._id}
-              className={`dock-item ${isSelected ? 'dock-item--selected' : ''}`}
+              className={[
+                'dock-item',
+                isSelected ? 'dock-item--selected' : '',
+                workflowSequenceByAgentId[agent._id] !== undefined ? 'dock-item--workflow' : '',
+                activeWorkflowAgentId === agent._id ? 'dock-item--workflow-active' : '',
+                isWorkflowMode && workflowSequenceByAgentId[agent._id] === undefined ? 'dock-item--workflow-muted' : '',
+              ].filter(Boolean).join(' ')}
               onClick={() => handleItemClick(agent)}
+              data-agent-id={agent._id}
             >
               <span className="dock-item__order">
                 {(agent.agentOrder ?? index) + 1}
               </span>
+              {workflowSequenceByAgentId[agent._id] !== undefined && (
+                <span className="dock-item__workflow-step">
+                  {workflowSequenceByAgentId[agent._id]}
+                </span>
+              )}
               <span
                 className="dock-item__status-dot"
                 style={{ backgroundColor: statusConfig.color }}
               />
               <div className="dock-item__icon">
                 {agent.owner ? (
-                  <Avatar
+                  <AvatarPopover
                     src={agent.owner.avatarUrl}
                     alt={agent.owner.name}
+                    name={agent.owner.name}
+                    title={agent.owner.title}
                     size="sm"
                   />
                 ) : (

@@ -10,7 +10,7 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Tooltip } from './Tooltip';
 
 interface AvatarProps {
@@ -23,6 +23,7 @@ interface AvatarProps {
 
 export function Avatar({ src, alt, size = 'md', title, className = '' }: AvatarProps) {
   const [imageError, setImageError] = useState(false);
+  useEffect(() => { setImageError(false); }, [src]);
   const sizeClass = `avatar--${size}`;
 
   // Generate initials from alt text as fallback
