@@ -81,11 +81,25 @@ pnpm test:all
 - **Lab** (`little-avocet-928`): Spike/prototype experimental features (throwaway or re-implement in dev)
 - **Prod** (`quaint-bee-380`): Used by prod frontend
 
+### Convex MCP Selectors
+
+The `status` tool always returns `ownDev` — ignore it; the selector passed per tool call determines the actual target.
+
+Selectors are `{kind}:base64(json)` where the JSON is:
+```json
+{"projectDir": "/abs/path/to/project", "deployment": {"kind": "ownDev"}}
+{"projectDir": "/abs/path/to/project", "deployment": {"kind": "previewName", "previewName": "lab"}}
+```
+
+Generate: `echo -n '{...}' | base64`. Machine-specific encoded values for this install are in `MEMORY.md`.
+
+**Prod MCP access is intentionally disabled. Never add `--dangerously-enable-production-deployments` to `.mcp.json`.**
+
 ### Important: Deploying to Lab Convex Backend
 
 **Key Learnings:**
 
-1. **Lab is a PROD deployment, not a dev deployment**
+1. **Lab is a preview deployment, not a dev deployment**
    - `npx convex dev` only works with dev deployments
    - `npx convex dev` will OVERWRITE .env.local and revert to dev deployment
    - NEVER use `npx convex dev` when working with lab backend

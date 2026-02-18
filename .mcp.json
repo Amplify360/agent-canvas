@@ -1,13 +1,10 @@
 {
   "mcpServers": {
     "convex": {
-      "command": "npx",
+      "command": "/bin/zsh",
       "args": [
-        "convex",
-        "mcp",
-        "start",
-        "--project-dir", ".",
-        "--dangerously-enable-production-deployments"
+        "-lc",
+        "npx convex mcp start --project-dir /Users/andreas/src/agent-canvas"
       ]
     }
   }
