@@ -112,6 +112,7 @@ export function AppLayout() {
       prompt,
       steps: resolvedSteps,
       activeStepIndex: 0,
+      isTourActive: false,
     });
     setIsWorkflowPromptOpen(false);
     showToast(`Workflow loaded: ${workflow.name}`, 'success');
@@ -120,6 +121,7 @@ export function AppLayout() {
   const handlePreviousWorkflowStep = () => {
     setWorkflowRun((previous) => {
       if (!previous) return previous;
+      if (!previous.isTourActive) return previous;
       return {
         ...previous,
         activeStepIndex: Math.max(0, previous.activeStepIndex - 1),
@@ -130,9 +132,31 @@ export function AppLayout() {
   const handleNextWorkflowStep = () => {
     setWorkflowRun((previous) => {
       if (!previous) return previous;
+      if (!previous.isTourActive) return previous;
       return {
         ...previous,
         activeStepIndex: Math.min(previous.steps.length - 1, previous.activeStepIndex + 1),
+      };
+    });
+  };
+
+  const handleStartWorkflowTour = () => {
+    setWorkflowRun((previous) => {
+      if (!previous) return previous;
+      return {
+        ...previous,
+        isTourActive: true,
+        activeStepIndex: Math.min(previous.activeStepIndex, previous.steps.length - 1),
+      };
+    });
+  };
+
+  const handleStopWorkflowTour = () => {
+    setWorkflowRun((previous) => {
+      if (!previous) return previous;
+      return {
+        ...previous,
+        isTourActive: false,
       };
     });
   };
@@ -149,7 +173,7 @@ export function AppLayout() {
 
     return {
       isActive: true,
-      activeAgentId: activeWorkflowStep?.agent._id ?? null,
+      activeAgentId: workflowRun.isTourActive ? activeWorkflowStep?.agent._id ?? null : null,
       sequenceByAgentId: workflowRun.steps.reduce<Record<string, number>>((acc, step, index) => {
         acc[step.agent._id] = index + 1;
         return acc;
@@ -209,6 +233,33 @@ export function AppLayout() {
           isWorkflowActive={workflowHighlightState.isActive}
         />
         <main className="main-content">
+          {workflowRun && (
+            <section className="workflow-overview-banner" aria-label="Active workflow">
+              <div className="workflow-overview-banner__meta">
+                <span className="workflow-overview-banner__eyebrow">Workflow</span>
+                <h2>{workflowRun.workflow.name}</h2>
+                <p>{workflowRun.workflow.description}</p>
+              </div>
+              <div className="workflow-overview-banner__actions">
+                {!workflowRun.isTourActive ? (
+                  <button type="button" className="btn btn--primary btn--sm" onClick={handleStartWorkflowTour}>
+                    <Icon name="play" />
+                    Start Guided Tour
+                  </button>
+                ) : (
+                  <button type="button" className="btn btn--sm" onClick={handleStopWorkflowTour}>
+                    <Icon name="pause" />
+                    Hide Tour
+                  </button>
+                )}
+                <button type="button" className="btn btn--sm" onClick={handleCloseWorkflowMode}>
+                  <Icon name="x" />
+                  Clear Workflow
+                </button>
+              </div>
+            </section>
+          )}
+
           <AgentGrid
             onEditAgent={(agent) => handleOpenAgentModal(agent)}
             onAddAgent={(defaults) => handleOpenAgentModal(undefined, defaults)}
@@ -247,7 +298,7 @@ export function AppLayout() {
       />
 
       <WorkflowTourCallout
-        isOpen={workflowHighlightState.isActive && !isWorkflowPromptOpen}
+        isOpen={workflowHighlightState.isActive && !isWorkflowPromptOpen && Boolean(workflowRun?.isTourActive)}
         workflowName={workflowRun?.workflow.name ?? ''}
         step={activeWorkflowStep}
         stepIndex={workflowRun?.activeStepIndex ?? 0}

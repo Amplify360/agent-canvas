@@ -6326,6 +6326,54 @@ body.is-resizing-sidebar .main-wrapper {
     color: var(--text-muted);
 }
 
+.workflow-overview-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+    margin: 0 0 var(--space-4) 0;
+    padding: var(--space-4) var(--space-5);
+    border-radius: var(--radius-xl);
+    border: 1px solid color-mix(in srgb, var(--accent-primary) 26%, var(--border-default));
+    background:
+        linear-gradient(135deg,
+            color-mix(in srgb, var(--accent-primary) 10%, var(--bg-secondary)) 0%,
+            color-mix(in srgb, var(--accent-violet) 8%, var(--bg-secondary)) 100%);
+    box-shadow: var(--shadow-sm);
+}
+
+.workflow-overview-banner__meta {
+    display: grid;
+    gap: 2px;
+}
+
+.workflow-overview-banner__eyebrow {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--accent-primary);
+}
+
+.workflow-overview-banner__meta h2 {
+    font-size: var(--text-lg);
+    line-height: 1.2;
+    color: var(--text-primary);
+}
+
+.workflow-overview-banner__meta p {
+    font-size: var(--text-sm);
+    color: var(--text-secondary);
+}
+
+.workflow-overview-banner__actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
 .agent-group--workflow-focus {
     border-color: color-mix(in srgb, var(--accent-primary) 38%, transparent);
     box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent-primary) 14%, transparent);
@@ -6543,5 +6591,15 @@ body.is-resizing-sidebar .main-wrapper {
     .workflow-prompt__footer {
         flex-direction: column;
         align-items: flex-start;
+    }
+
+    .workflow-overview-banner {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .workflow-overview-banner__actions {
+        width: 100%;
+        justify-content: flex-start;
     }
 }

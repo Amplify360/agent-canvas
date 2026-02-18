@@ -31,6 +31,7 @@ export interface WorkflowRunState {
   prompt: string;
   steps: ResolvedWorkflowStep[];
   activeStepIndex: number;
+  isTourActive: boolean;
 }
 
 export interface WorkflowHighlightState {
