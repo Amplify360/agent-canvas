@@ -7,7 +7,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { AgentWithOwner } from '@/types/agent';
 import { getToolDisplay } from '@/utils/config';
 import {
@@ -19,8 +19,10 @@ import {
 } from '@/types/validationConstants';
 import { Icon } from '@/components/ui/Icon';
 import { AvatarPopover } from '@/components/ui/AvatarPopover';
+import { Modal } from '@/components/ui/Modal';
 import { useCanvas } from '@/contexts/CanvasContext';
 import { normalizeCompactCardIndicators } from '@/utils/compactIndicators';
+import { getVideoPresentation } from '@/utils/video';
 import type { WorkflowHighlightState } from '@/types/workflow';
 
 interface DockViewProps {
@@ -35,9 +37,14 @@ export function DockView({ agents, onAgentClick, workflowHighlightState }: DockV
 
   // Track by agent ID for stability with real-time updates
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
+  const [videoModalUrl, setVideoModalUrl] = useState<string | null>(null);
   const workflowSequenceByAgentId = workflowHighlightState?.sequenceByAgentId ?? {};
   const activeWorkflowAgentId = workflowHighlightState?.activeAgentId ?? null;
   const isWorkflowMode = workflowHighlightState?.isActive ?? false;
+  const selectedVideoPresentation = useMemo(
+    () => (videoModalUrl ? getVideoPresentation(videoModalUrl) : null),
+    [videoModalUrl]
+  );
 
   // Derive index and agent from ID
   const selectedIndex = selectedAgentId
@@ -66,6 +73,13 @@ export function DockView({ agents, onAgentClick, workflowHighlightState }: DockV
 
   const handleItemClick = (agent: AgentWithOwner) => {
     setSelectedAgentId(selectedAgentId === agent._id ? null : agent._id);
+  };
+
+  const handleItemKeyDown = (event: React.KeyboardEvent<HTMLDivElement>, agent: AgentWithOwner) => {
+    if ((event.target as HTMLElement).closest('.dock-item__video-link')) return;
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    event.preventDefault();
+    handleItemClick(agent);
   };
 
   const handleClose = () => {
@@ -134,9 +148,10 @@ export function DockView({ agents, onAgentClick, workflowHighlightState }: DockV
         {agents.map((agent, index) => {
           const statusConfig = getAgentStatusConfig(agent.status);
           const isSelected = selectedAgentId === agent._id;
+          const demoVideoUrl = agent.videoLink?.trim() || agent.demoLink?.trim();
 
           return (
-            <button
+            <div
               key={agent._id}
               className={[
                 'dock-item',
@@ -146,7 +161,10 @@ export function DockView({ agents, onAgentClick, workflowHighlightState }: DockV
                 isWorkflowMode && workflowSequenceByAgentId[agent._id] === undefined ? 'dock-item--workflow-muted' : '',
               ].filter(Boolean).join(' ')}
               onClick={() => handleItemClick(agent)}
+              onKeyDown={(event) => handleItemKeyDown(event, agent)}
               data-agent-id={agent._id}
+              role="button"
+              tabIndex={0}
             >
               <span className="dock-item__order">
                 {(agent.agentOrder ?? index) + 1}
@@ -160,6 +178,20 @@ export function DockView({ agents, onAgentClick, workflowHighlightState }: DockV
                 className="dock-item__status-dot"
                 style={{ backgroundColor: statusConfig.color }}
               />
+              {demoVideoUrl && (
+                <button
+                  type="button"
+                  className="dock-item__video-link"
+                  aria-label="Open demo video in modal"
+                  title="Open demo video"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    setVideoModalUrl(demoVideoUrl);
+                  }}
+                >
+                  <Icon name="video" />
+                </button>
+              )}
               <div className="dock-item__icon">
                 {agent.owner ? (
                   <AvatarPopover
@@ -183,7 +215,7 @@ export function DockView({ agents, onAgentClick, workflowHighlightState }: DockV
                   </span>
                 ))}
               </div>
-            </button>
+            </div>
           );
         })}
       </div>
@@ -268,6 +300,39 @@ export function DockView({ agents, onAgentClick, workflowHighlightState }: DockV
         </div>
         );
       })()}
+
+      <Modal
+        isOpen={Boolean(videoModalUrl && selectedVideoPresentation)}
+        onClose={() => setVideoModalUrl(null)}
+        title="Demo video"
+        size="large"
+      >
+        {videoModalUrl && selectedVideoPresentation && (
+          <div className="video-modal">
+            <div className="video-modal__frame-wrap">
+              {selectedVideoPresentation.type === 'native' ? (
+                <video src={selectedVideoPresentation.src} controls autoPlay playsInline />
+              ) : (
+                <iframe
+                  src={selectedVideoPresentation.src}
+                  title="Demo video player"
+                  allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
+                  allowFullScreen
+                />
+              )}
+            </div>
+            <a
+              href={videoModalUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="video-modal__external-link"
+            >
+              <Icon name="external-link" />
+              Open in new tab
+            </a>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }

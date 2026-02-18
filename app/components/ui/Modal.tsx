@@ -4,7 +4,8 @@
 
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Icon } from '@/components/ui/Icon';
 import { useEscapeKey } from '@/hooks/useEscapeKey';
 import { useBodyScrollLock } from '@/hooks/useBodyScrollLock';
@@ -20,12 +21,17 @@ interface ModalProps {
 }
 
 export function Modal({ isOpen, onClose, title, children, size = 'medium', closeOnOverlayClick = true }: ModalProps) {
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   // Escape should close the top-most overlay only.
   useEscapeKey(isOpen, onClose);
   useBodyScrollLock(isOpen);
 
-  if (!isOpen) return null;
+  if (!isOpen || !isMounted) return null;
 
   const sizeClass = {
     small: 'modal--small',
@@ -33,7 +39,7 @@ export function Modal({ isOpen, onClose, title, children, size = 'medium', close
     large: 'modal--large',
   }[size];
 
-  return (
+  return createPortal(
     <div className="modal-overlay show" onClick={closeOnOverlayClick ? onClose : undefined}>
       <div className={`modal ${sizeClass}`} onClick={(e) => e.stopPropagation()}>
         <div className="modal__header">
@@ -49,6 +55,7 @@ export function Modal({ isOpen, onClose, title, children, size = 'medium', close
         </div>
         <div className="modal__body">{children}</div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

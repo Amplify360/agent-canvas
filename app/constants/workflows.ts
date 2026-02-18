@@ -11,7 +11,7 @@ import type { WorkflowDefinition, ResolvedWorkflowStep, WorkflowStepDefinition }
 export const WORKFLOW_LIBRARY: WorkflowDefinition[] = [
   {
     id: 'proudfoot-poc-value-realization',
-    name: 'Proudfoot POC Value Realization',
+    name: 'Client maintenance diagnostic analysis and opportunity identification',
     description: 'Move from source-system data to quantified opportunities and client-ready executive deliverables.',
     suggestedPrompts: [
       'Run the Proudfoot POC workflow',

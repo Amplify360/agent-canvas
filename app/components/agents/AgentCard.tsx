@@ -9,6 +9,7 @@ import { AgentWithOwner } from '@/types/agent';
 import { getToolDisplay } from '@/utils/config';
 import { Icon } from '@/components/ui/Icon';
 import { Tooltip } from '@/components/ui/Tooltip';
+import { Modal } from '@/components/ui/Modal';
 import { AvatarPopover } from '@/components/ui/AvatarPopover';
 import {
   COMPACT_CARD_INDICATOR,
@@ -22,6 +23,7 @@ import { normalizeCompactCardIndicators } from '@/utils/compactIndicators';
 import { useClickOutside } from '@/hooks/useClickOutside';
 import { useAgentVoteActions } from '@/hooks/useAgentVoteActions';
 import { useCanvas } from '@/contexts/CanvasContext';
+import { getVideoPresentation } from '@/utils/video';
 
 interface AgentCardProps {
   agent: AgentWithOwner;
@@ -58,7 +60,7 @@ function buildPromptContext(agent: AgentWithOwner, canvasDescription?: string): 
 function buildDestinationHref(baseUrl: string, promptContext: string): string | null {
   try {
     const url = new URL(baseUrl);
-    url.searchParams.set('prompt', `"${promptContext}"`);
+    url.searchParams.set('prompt', promptContext);
     return url.toString();
   } catch {
     return null;
@@ -130,6 +132,11 @@ export function AgentCard({
 
   const [menuOpen, setMenuOpen] = useState(false);
   const [isOwnerPopoverOpen, setIsOwnerPopoverOpen] = useState(false);
+  const [videoModalUrl, setVideoModalUrl] = useState<string | null>(null);
+  const selectedVideoPresentation = useMemo(
+    () => (videoModalUrl ? getVideoPresentation(videoModalUrl) : null),
+    [videoModalUrl]
+  );
   const menuRef = useRef<HTMLDivElement>(null);
   const { toggleVote } = useAgentVoteActions(agent._id);
 
@@ -348,16 +355,17 @@ export function AgentCard({
 
           {normalizedVideoLink && (
             <Tooltip content="Watch video" placement="top">
-              <a
-                href={normalizedVideoLink}
-                target="_blank"
-                rel="noopener noreferrer"
+              <button
+                type="button"
                 className="agent-card__footer-icon"
-                aria-label="Watch video"
-                onClick={(e) => e.stopPropagation()}
+                aria-label="Watch video in modal"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setVideoModalUrl(normalizedVideoLink);
+                }}
               >
                 <Icon name="video" />
-              </a>
+              </button>
             </Tooltip>
           )}
 
@@ -429,6 +437,39 @@ export function AgentCard({
           </button>
         </div>
       </div>
+
+      <Modal
+        isOpen={Boolean(videoModalUrl && selectedVideoPresentation)}
+        onClose={() => setVideoModalUrl(null)}
+        title="Demo video"
+        size="large"
+      >
+        {videoModalUrl && selectedVideoPresentation && (
+          <div className="video-modal">
+            <div className="video-modal__frame-wrap">
+              {selectedVideoPresentation.type === 'native' ? (
+                <video src={selectedVideoPresentation.src} controls autoPlay playsInline />
+              ) : (
+                <iframe
+                  src={selectedVideoPresentation.src}
+                  title="Demo video player"
+                  allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
+                  allowFullScreen
+                />
+              )}
+            </div>
+            <a
+              href={videoModalUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="video-modal__external-link"
+            >
+              <Icon name="external-link" />
+              Open in new tab
+            </a>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }
