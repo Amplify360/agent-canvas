@@ -88,6 +88,17 @@ export function validateTitle(title: string): void {
 }
 
 /**
+ * Validate optional canvas description (max chars from shared constants)
+ */
+export function validateCanvasDescription(description: string | undefined): void {
+  validateOptionalStringField(
+    description,
+    "description",
+    VALIDATION_CONSTANTS.CANVAS_DESCRIPTION_MAX_LENGTH
+  );
+}
+
+/**
  * Validate agent name (max chars from shared constants)
  */
 export function validateAgentName(name: string): void {
@@ -168,4 +179,3 @@ export function validateAgentData(data: Record<string, unknown>): void {
   if (typeof data.demoLink === 'string') validateOptionalUrl(data.demoLink, "demoLink");
   if (typeof data.videoLink === 'string') validateOptionalUrl(data.videoLink, "videoLink");
 }
-

@@ -39,7 +39,7 @@ const VIEWPORT_PADDING = 8;
 
 export function Sidebar() {
   const { user, userOrgs, currentOrgId, setCurrentOrgId, signOut } = useAuth();
-  const { canvases, currentCanvasId, setCurrentCanvasId, createCanvas, deleteCanvas } = useCanvas();
+  const { canvases, currentCanvasId, setCurrentCanvasId, deleteCanvas } = useCanvas();
   const { isSidebarCollapsed, toggleSidebar, showToast, sidebarWidth, setSidebarWidth, themePreference, setThemePreference } = useAppState();
 
   const { isDragging, resizeHandleProps } = useResizable({
@@ -62,8 +62,9 @@ export function Sidebar() {
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [isMembersModalOpen, setIsMembersModalOpen] = useState(false);
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
+  const [isCreateCanvasModalOpen, setIsCreateCanvasModalOpen] = useState(false);
   const [canvasMenu, setCanvasMenu] = useState<CanvasMenuState | null>(null);
-  const [renameCanvas, setRenameCanvas] = useState<{ id: string; title: string } | null>(null);
+  const [renameCanvas, setRenameCanvas] = useState<{ id: string; title: string; description?: string } | null>(null);
   const [copyCanvas, setCopyCanvas] = useState<{ id: string; title: string } | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; title: string } | null>(null);
   const [orgDropdownOpen, setOrgDropdownOpen] = useState(false);
@@ -143,7 +144,7 @@ export function Sidebar() {
     if (!canvas) return;
 
     if (action === 'rename') {
-      setRenameCanvas({ id: canvas._id, title: canvas.title });
+      setRenameCanvas({ id: canvas._id, title: canvas.title, description: canvas.description });
     } else if (action === 'copy') {
       setCopyCanvas({ id: canvas._id, title: canvas.title });
     } else if (action === 'delete') {
@@ -176,19 +177,8 @@ export function Sidebar() {
     window.history.replaceState(null, '', `/c/${canvasId}`);
   };
 
-  const handleCreateCanvas = async () => {
-    const title = prompt('Enter canvas name:');
-    if (!title?.trim()) return;
-
-    try {
-      const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-      const canvasId = await createCanvas(title.trim(), slug);
-      handleSelectCanvas(canvasId);
-      showToast('Canvas created successfully', 'success');
-    } catch (error) {
-      console.error('Failed to create canvas:', error);
-      showToast('Failed to create canvas', 'error');
-    }
+  const handleCreateCanvas = () => {
+    setIsCreateCanvasModalOpen(true);
   };
 
   return (
@@ -488,7 +478,7 @@ export function Sidebar() {
             onClick={() => handleMenuAction('rename')}
           >
             <Icon name="pencil" />
-            <span>Rename</span>
+            <span>Edit details</span>
           </button>
           <button
             className="context-menu__item context-menu__item--danger"
@@ -500,12 +490,21 @@ export function Sidebar() {
         </div>
       )}
 
+      <CanvasRenameModal
+        isOpen={isCreateCanvasModalOpen}
+        mode="create"
+        onClose={() => setIsCreateCanvasModalOpen(false)}
+        onCreated={handleSelectCanvas}
+      />
+
       {/* Rename Modal */}
       {renameCanvas && (
         <CanvasRenameModal
           isOpen={true}
+          mode="edit"
           canvasId={renameCanvas.id}
           currentTitle={renameCanvas.title}
+          currentDescription={renameCanvas.description}
           onClose={() => setRenameCanvas(null)}
         />
       )}

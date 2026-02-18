@@ -3,7 +3,7 @@ import { mutation, query } from "./_generated/server";
 import { Doc } from "./_generated/dataModel";
 import { requireAuth, requireOrgAccess, hasOrgAccess } from "./lib/auth";
 import { getAgentSnapshot, getCanvasWithAccess, recordHistory } from "./lib/helpers";
-import { validateSlug, validateTitle } from "./lib/validation";
+import { validateCanvasDescription, validateSlug, validateTitle } from "./lib/validation";
 import { CHANGE_TYPE } from "./lib/validators";
 
 /**
@@ -102,16 +102,18 @@ export const create = mutation({
     workosOrgId: v.string(),
     title: v.string(),
     slug: v.string(),
+    description: v.optional(v.string()),
     phases: v.optional(v.array(v.string())),
     categories: v.optional(v.array(v.string())),
   },
-  handler: async (ctx, { workosOrgId, title, slug, phases, categories }) => {
+  handler: async (ctx, { workosOrgId, title, slug, description, phases, categories }) => {
     const auth = await requireAuth(ctx);
     requireOrgAccess(auth, workosOrgId);
 
     // Validate inputs
     validateTitle(title);
     validateSlug(slug);
+    validateCanvasDescription(description);
 
     // Check slug doesn't already exist in org (exclude soft-deleted)
     const existing = await ctx.db
@@ -127,11 +129,13 @@ export const create = mutation({
     }
 
     const now = Date.now();
+    const normalizedDescription = description?.trim() || undefined;
 
     return await ctx.db.insert("canvases", {
       workosOrgId,
       title,
       slug,
+      description: normalizedDescription,
       phases: phases ?? ["Backlog"],
       categories: categories ?? ["Uncategorized"],
       createdBy: auth.workosUserId,
@@ -150,10 +154,11 @@ export const update = mutation({
     canvasId: v.id("canvases"),
     title: v.optional(v.string()),
     slug: v.optional(v.string()),
+    description: v.optional(v.string()),
     phases: v.optional(v.array(v.string())),
     categories: v.optional(v.array(v.string())),
   },
-  handler: async (ctx, { canvasId, title, slug, phases, categories }) => {
+  handler: async (ctx, { canvasId, title, slug, description, phases, categories }) => {
     const auth = await requireAuth(ctx);
 
     const canvas = await ctx.db.get(canvasId);
@@ -166,6 +171,7 @@ export const update = mutation({
     // Validate inputs (only validate provided fields)
     if (title !== undefined) validateTitle(title);
     if (slug !== undefined) validateSlug(slug);
+    if (description !== undefined) validateCanvasDescription(description);
 
     // If changing slug, check it doesn't conflict (exclude soft-deleted)
     if (slug && slug !== canvas.slug) {
@@ -188,6 +194,7 @@ export const update = mutation({
     };
     if (title !== undefined) updates.title = title;
     if (slug !== undefined) updates.slug = slug;
+    if (description !== undefined) updates.description = description.trim() || undefined;
     if (phases !== undefined) updates.phases = phases;
     if (categories !== undefined) updates.categories = categories;
 
@@ -378,6 +385,7 @@ export const copyToOrgs = mutation({
         workosOrgId: targetOrgId,
         title: newTitle,
         slug: uniqueSlug,
+        description: sourceCanvas.description,
         phases: sourceCanvas.phases ?? ["Backlog"],
         categories: sourceCanvas.categories ?? ["Uncategorized"],
         createdBy: auth.workosUserId,

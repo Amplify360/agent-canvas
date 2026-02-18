@@ -106,7 +106,14 @@ export function MainToolbar({
   return (
     <header className="toolbar">
       <div className="toolbar__left">
-        <h1 className="toolbar__title">{currentCanvas?.title || ''}</h1>
+        <div className="toolbar__title-group">
+          <h1 className="toolbar__title">{currentCanvas?.title || ''}</h1>
+          {currentCanvas?.description?.trim() && (
+            <p className="toolbar__description" title={currentCanvas.description}>
+              {currentCanvas.description}
+            </p>
+          )}
+        </div>
         <Tooltip content="Copy link to canvas" placement="bottom">
           <button
             type="button"

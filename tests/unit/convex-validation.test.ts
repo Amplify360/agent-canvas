@@ -5,6 +5,7 @@ import {
   validateNonEmptyString,
   validateSlug,
   validateTitle,
+  validateCanvasDescription,
   validateAgentName,
   validatePhase,
   validateObjective,
@@ -193,6 +194,31 @@ describe('Convex Backend Validation', () => {
 
     it('should accept string at exactly 200 characters', () => {
       expect(() => validateTitle('a'.repeat(200))).not.toThrow();
+    });
+  });
+
+  describe('validateCanvasDescription', () => {
+    it('should accept undefined (optional field)', () => {
+      expect(() => validateCanvasDescription(undefined)).not.toThrow();
+    });
+
+    it('should accept whitespace-only (treated as empty, no-op)', () => {
+      expect(() => validateCanvasDescription('   ')).not.toThrow();
+      expect(() => validateCanvasDescription('\n\t')).not.toThrow();
+    });
+
+    it('should accept valid string within limit', () => {
+      expect(() => validateCanvasDescription('Canvas narrative context')).not.toThrow();
+    });
+
+    it('should throw for string exceeding 5000 characters', () => {
+      expect(() => validateCanvasDescription('a'.repeat(5001))).toThrow(
+        'Validation: description must be 5000 characters or less'
+      );
+    });
+
+    it('should accept string at exactly 5000 characters', () => {
+      expect(() => validateCanvasDescription('a'.repeat(5000))).not.toThrow();
     });
   });
 

@@ -258,10 +258,11 @@ export function MockConvexProvider({
   const mutation = async (functionName: string, args: unknown) => {
     switch (functionName) {
       case 'canvases:create': {
-        const { workosOrgId, title, slug, phases, categories } = (args ?? {}) as {
+        const { workosOrgId, title, slug, description, phases, categories } = (args ?? {}) as {
           workosOrgId?: string;
           title?: string;
           slug?: string;
+          description?: string;
           phases?: string[];
           categories?: string[];
         };
@@ -270,12 +271,14 @@ export function MockConvexProvider({
         }
         const id = nextId('canvas');
         const now = nowMs();
+        const normalizedDescription = description?.trim() || undefined;
         const canvas: Canvas = {
           _id: id as any,
           _creationTime: now,
           workosOrgId,
           title,
           slug,
+          description: normalizedDescription,
           phases: phases ?? ['Backlog'],
           categories: categories ?? ['Uncategorized'],
           createdBy: currentUserId,
@@ -293,6 +296,13 @@ export function MockConvexProvider({
       case 'canvases:update': {
         const { canvasId, ...updates } = (args ?? {}) as Record<string, unknown> & { canvasId?: string };
         if (!canvasId) throw new Error('[MockConvex] canvases:update missing canvasId');
+        const normalizedUpdates = { ...updates };
+        if (Object.prototype.hasOwnProperty.call(normalizedUpdates, 'description')) {
+          const rawDescription = normalizedUpdates.description;
+          if (typeof rawDescription === 'string') {
+            normalizedUpdates.description = rawDescription.trim() || undefined;
+          }
+        }
         const now = nowMs();
         setState((prev) => ({
           ...prev,
@@ -300,7 +310,7 @@ export function MockConvexProvider({
             c._id === canvasId
               ? ({
                   ...c,
-                  ...updates,
+                  ...normalizedUpdates,
                   updatedBy: currentUserId,
                   updatedAt: now,
                 } as Canvas)

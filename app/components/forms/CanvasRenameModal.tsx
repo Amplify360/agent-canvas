@@ -1,5 +1,5 @@
 /**
- * CanvasRenameModal - Modal for renaming a canvas
+ * CanvasRenameModal - Modal for creating/editing canvas title and description
  */
 
 'use client';
@@ -8,27 +8,62 @@ import React, { useState, useEffect } from 'react';
 import { Modal } from '@/components/ui/Modal';
 import { useCanvas } from '@/contexts/CanvasContext';
 import { useAppState } from '@/contexts/AppStateContext';
+import { VALIDATION_CONSTANTS } from '@/types/validationConstants';
+import type { Canvas } from '@/types/canvas';
 
 interface CanvasRenameModalProps {
   isOpen: boolean;
-  canvasId: string;
-  currentTitle: string;
+  mode: 'create' | 'edit';
+  canvasId?: string;
+  currentTitle?: string;
+  currentDescription?: string;
   onClose: () => void;
+  onCreated?: (canvasId: string) => void;
 }
 
-export function CanvasRenameModal({ isOpen, canvasId, currentTitle, onClose }: CanvasRenameModalProps) {
-  const { updateCanvas } = useCanvas();
+function slugifyTitle(title: string): string {
+  return title
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    || 'canvas';
+}
+
+function generateUniqueSlug(title: string, existingSlugs: Set<string>): string {
+  const base = slugifyTitle(title);
+  let candidate = base;
+  let suffix = 2;
+
+  while (existingSlugs.has(candidate)) {
+    candidate = `${base}-${suffix++}`;
+  }
+
+  return candidate;
+}
+
+export function CanvasRenameModal({
+  isOpen,
+  mode,
+  canvasId,
+  currentTitle,
+  currentDescription,
+  onClose,
+  onCreated,
+}: CanvasRenameModalProps) {
+  const { canvases, createCanvas, updateCanvas } = useCanvas();
   const { showToast } = useAppState();
-  const [title, setTitle] = useState(currentTitle);
+  const [title, setTitle] = useState(currentTitle ?? '');
+  const [description, setDescription] = useState(currentDescription ?? '');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (isOpen) {
-      setTitle(currentTitle);
+      setTitle(currentTitle ?? '');
+      setDescription(currentDescription ?? '');
       setError(null);
     }
-  }, [isOpen, currentTitle]);
+  }, [isOpen, currentTitle, currentDescription]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,8 +74,17 @@ export function CanvasRenameModal({ isOpen, canvasId, currentTitle, onClose }: C
       return;
     }
 
-    if (trimmedTitle === currentTitle) {
-      onClose();
+    if (trimmedTitle.length > VALIDATION_CONSTANTS.CANVAS_TITLE_MAX_LENGTH) {
+      setError(`Title must be ${VALIDATION_CONSTANTS.CANVAS_TITLE_MAX_LENGTH} characters or less`);
+      return;
+    }
+
+    const normalizedDescription = description.trim() || undefined;
+    if (
+      normalizedDescription &&
+      normalizedDescription.length > VALIDATION_CONSTANTS.CANVAS_DESCRIPTION_MAX_LENGTH
+    ) {
+      setError(`Description must be ${VALIDATION_CONSTANTS.CANVAS_DESCRIPTION_MAX_LENGTH} characters or less`);
       return;
     }
 
@@ -48,11 +92,45 @@ export function CanvasRenameModal({ isOpen, canvasId, currentTitle, onClose }: C
     setError(null);
 
     try {
-      await updateCanvas(canvasId, { title: trimmedTitle });
-      showToast('Canvas renamed successfully', 'success');
+      if (mode === 'create') {
+        const existingSlugs = new Set(canvases.map((canvas) => canvas.slug));
+        const slug = generateUniqueSlug(trimmedTitle, existingSlugs);
+        const createdCanvasId = await createCanvas(trimmedTitle, slug, normalizedDescription);
+        showToast('Canvas created successfully', 'success');
+        onCreated?.(createdCanvasId);
+        onClose();
+        return;
+      }
+
+      if (!canvasId) {
+        setError('Canvas ID is required');
+        return;
+      }
+
+      const normalizedCurrentDescription = currentDescription?.trim() || undefined;
+      const normalizedCurrentTitle = currentTitle?.trim() || '';
+      const hasTitleChanged = trimmedTitle !== normalizedCurrentTitle;
+      const hasDescriptionChanged = normalizedDescription !== normalizedCurrentDescription;
+
+      if (!hasTitleChanged && !hasDescriptionChanged) {
+        onClose();
+        return;
+      }
+
+      const updateData: Partial<Canvas> = {};
+      if (hasTitleChanged) {
+        updateData.title = trimmedTitle;
+      }
+      if (hasDescriptionChanged) {
+        // Empty string intentionally clears description on backend.
+        updateData.description = normalizedDescription ?? '';
+      }
+
+      await updateCanvas(canvasId, updateData);
+      showToast('Canvas updated successfully', 'success');
       onClose();
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to rename canvas';
+      const message = err instanceof Error ? err.message : 'Failed to save canvas';
       setError(message);
     } finally {
       setIsSubmitting(false);
@@ -60,7 +138,12 @@ export function CanvasRenameModal({ isOpen, canvasId, currentTitle, onClose }: C
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Rename Canvas" size="small" closeOnOverlayClick={false}>
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={mode === 'create' ? 'Create Canvas' : 'Canvas Details'}
+      closeOnOverlayClick={false}
+    >
       <form onSubmit={handleSubmit}>
         <div className="form-group">
           <label htmlFor="canvas-title" className="form-label">
@@ -75,7 +158,27 @@ export function CanvasRenameModal({ isOpen, canvasId, currentTitle, onClose }: C
             placeholder="Enter canvas name"
             autoFocus
             disabled={isSubmitting}
+            maxLength={VALIDATION_CONSTANTS.CANVAS_TITLE_MAX_LENGTH}
           />
+        </div>
+
+        <div className="form-group">
+          <label htmlFor="canvas-description" className="form-label">
+            Description (Optional)
+          </label>
+          <textarea
+            id="canvas-description"
+            className="form-textarea"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Add context about this canvas or company..."
+            disabled={isSubmitting}
+            rows={6}
+            maxLength={VALIDATION_CONSTANTS.CANVAS_DESCRIPTION_MAX_LENGTH}
+          />
+          <p style={{ marginTop: '0.5rem', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+            {description.length}/{VALIDATION_CONSTANTS.CANVAS_DESCRIPTION_MAX_LENGTH} characters
+          </p>
           {error && <p className="form-error">{error}</p>}
         </div>
 
@@ -93,7 +196,9 @@ export function CanvasRenameModal({ isOpen, canvasId, currentTitle, onClose }: C
             className="btn btn--primary"
             disabled={isSubmitting || !title.trim()}
           >
-            {isSubmitting ? 'Saving...' : 'Save'}
+            {isSubmitting
+              ? (mode === 'create' ? 'Creating...' : 'Saving...')
+              : (mode === 'create' ? 'Create Canvas' : 'Save')}
           </button>
         </div>
       </form>

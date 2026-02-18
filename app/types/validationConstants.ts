@@ -15,6 +15,7 @@ export const VALIDATION_CONSTANTS = {
   // Canvas constraints
   CANVAS_TITLE_MAX_LENGTH: 200,
   CANVAS_SLUG_MAX_LENGTH: 100,
+  CANVAS_DESCRIPTION_MAX_LENGTH: 5000,
 
   // Metrics constraints
   METRIC_MIN_VALUE: 0,

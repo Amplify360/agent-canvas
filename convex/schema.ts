@@ -18,6 +18,7 @@ export default defineSchema({
     workosOrgId: v.string(),
     title: v.string(),
     slug: v.string(), // Document name/identifier
+    description: v.optional(v.string()), // Optional canvas/company narrative context
     phases: v.optional(v.array(v.string())), // Ordered phase names (optional for legacy data)
     categories: v.optional(v.array(v.string())), // Ordered category names (optional for legacy data)
     deletedAt: v.optional(v.number()), // Soft delete timestamp
