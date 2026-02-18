@@ -10,6 +10,78 @@ import type { WorkflowDefinition, ResolvedWorkflowStep, WorkflowStepDefinition }
 
 export const WORKFLOW_LIBRARY: WorkflowDefinition[] = [
   {
+    id: 'proudfoot-poc-value-realization',
+    name: 'Proudfoot POC Value Realization',
+    description: 'Move from source-system data to quantified opportunities and client-ready executive deliverables.',
+    suggestedPrompts: [
+      'Run the Proudfoot POC workflow',
+      'Show me the POC value realization flow',
+      'Walk through the Proudfoot POC agents',
+    ],
+    steps: [
+      {
+        id: 'poc-data-ingestion-validation',
+        label: 'Data Ingestion and Validation',
+        agentNameIncludes: ['data ingestion & validation agent (poc)'],
+        inputs: [
+          'Raw CMMS exports, ERP records, and maintenance logs',
+          'Source-system schema mappings and data quality rules',
+          'Consultant-selected asset scope and timeframe',
+        ],
+        outputs: [
+          'Validated and analysis-ready canonical dataset',
+          'Data quality assessment with anomaly flags and fixes',
+          'Transparent accept/reject rationale for source records',
+        ],
+      },
+      {
+        id: 'poc-advanced-analysis',
+        label: 'Advanced Analysis and Insight Discovery',
+        agentNameIncludes: ['advanced data analysis agent (poc)'],
+        inputs: [
+          'Validated operational dataset from ingestion',
+          'Analysis objectives, hypotheses, and KPI focus areas',
+          'TPS methodology context via RAG knowledge base',
+        ],
+        outputs: [
+          'Failure patterns, utilization trends, and anomaly insights',
+          'Context-aware findings linked to operational pain points',
+          'Evidence package to support opportunity sizing',
+        ],
+      },
+      {
+        id: 'poc-opportunity-identification',
+        label: 'Opportunity Identification and Prioritization',
+        agentNameIncludes: ['opportunities identification agent (poc)'],
+        inputs: [
+          'Analytical findings and baseline performance gaps',
+          'TPS benchmarks, playbooks, and relevant case patterns',
+          'Impact and feasibility criteria from engagement team',
+        ],
+        outputs: [
+          'Prioritized improvement opportunities across operations and maintenance',
+          'Quantified prize model (cost, throughput, and revenue impact)',
+          'Recommendation stack ordered by value and execution feasibility',
+        ],
+      },
+      {
+        id: 'poc-client-deliverables',
+        label: 'Client Deliverable Generation',
+        agentNameIncludes: ['client deliverables generator (poc)'],
+        inputs: [
+          'Prioritized opportunities and quantified value story',
+          'Supporting evidence, visuals, and diagnostic findings',
+          'Client communication format (deck, dashboard, or report)',
+        ],
+        outputs: [
+          'Client-ready presentation, dashboard, and report artifacts',
+          'Executive narrative from baseline gaps to value realization',
+          'Actionable recommendation package for stakeholder decision-making',
+        ],
+      },
+    ],
+  },
+  {
     id: 'customer-escalation-resolution',
     name: 'Customer Escalation Resolution',
     description: 'Guide a high-priority customer issue from intake through response and closeout.',

@@ -114,6 +114,12 @@ export function WorkflowTourCallout({
   }, [isOpen, updatePosition]);
 
   const journeySteps = useMemo(() => step?.agent.journeySteps ?? [], [step]);
+  const processSteps = useMemo(() => {
+    if (!step) return [];
+    if (journeySteps.length > 0) return journeySteps;
+    if (step.agent.objective) return [step.agent.objective];
+    return ['Run the defined workflow logic for this agent.'];
+  }, [journeySteps, step]);
 
   if (!isOpen || !step) return null;
 
@@ -139,7 +145,7 @@ export function WorkflowTourCallout({
       <div className="workflow-tour-callout__header">
         <div className="workflow-tour-callout__title-block">
           <span className="workflow-tour-callout__workflow">{workflowName}</span>
-          <strong>{step.label}</strong>
+          <strong className="workflow-tour-callout__step-title">{step.label}</strong>
           <span className="workflow-tour-callout__agent">{step.agent.name}</span>
         </div>
         <span className="workflow-tour-callout__counter">
@@ -147,26 +153,37 @@ export function WorkflowTourCallout({
         </span>
       </div>
 
-      <div className="workflow-tour-callout__body">
-        <section className="workflow-tour-callout__section">
-          <h4>Inputs</h4>
-          <ul>
+      <div className="workflow-tour-callout__pipeline">
+        <section className="workflow-tour-callout__lane workflow-tour-callout__lane--inputs">
+          <h4>
+            <Icon name="download" />
+            Inputs
+          </h4>
+          <ul className="workflow-tour-callout__list">
             {step.inputs.map((input) => (
               <li key={input}>{input}</li>
             ))}
           </ul>
         </section>
-        <section className="workflow-tour-callout__section">
-          <h4>User Journey</h4>
-          <ul>
-            {journeySteps.length > 0 ? journeySteps.map((entry, index) => (
+
+        <section className="workflow-tour-callout__lane workflow-tour-callout__lane--process">
+          <h4>
+            <Icon name="route" />
+            Process Journey
+          </h4>
+          <ol className="workflow-tour-callout__list workflow-tour-callout__list--ordered">
+            {processSteps.map((entry, index) => (
               <li key={`${index}-${entry}`}>{entry}</li>
-            )) : <li>No journey steps defined on this agent yet.</li>}
-          </ul>
+            ))}
+          </ol>
         </section>
-        <section className="workflow-tour-callout__section">
-          <h4>Outputs</h4>
-          <ul>
+
+        <section className="workflow-tour-callout__lane workflow-tour-callout__lane--outputs">
+          <h4>
+            <Icon name="upload" />
+            Outputs
+          </h4>
+          <ul className="workflow-tour-callout__list">
             {step.outputs.map((output) => (
               <li key={output}>{output}</li>
             ))}

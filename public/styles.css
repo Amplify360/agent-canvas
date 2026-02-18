@@ -6449,7 +6449,7 @@ body.is-resizing-sidebar .main-wrapper {
     --workflow-arrow-left: 24px;
     position: fixed;
     z-index: 650;
-    width: min(380px, calc(100vw - 24px));
+    width: min(760px, calc(100vw - 24px));
     border-radius: var(--radius-xl);
     border: 1px solid var(--border-default);
     background: color-mix(in srgb, var(--bg-elevated) 97%, transparent);
@@ -6494,6 +6494,13 @@ body.is-resizing-sidebar .main-wrapper {
     gap: 2px;
 }
 
+.workflow-tour-callout__step-title {
+    font-size: var(--text-lg);
+    line-height: 1.2;
+    letter-spacing: var(--tracking-tight);
+    color: var(--text-primary);
+}
+
 .workflow-tour-callout__workflow {
     font-size: 11px;
     font-weight: 700;
@@ -6514,30 +6521,63 @@ body.is-resizing-sidebar .main-wrapper {
     font-family: var(--font-mono);
 }
 
-.workflow-tour-callout__body {
+.workflow-tour-callout__pipeline {
     display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: var(--space-3);
 }
 
-.workflow-tour-callout__section h4 {
+.workflow-tour-callout__lane {
+    position: relative;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    padding: var(--space-3);
+    background: var(--bg-secondary);
+}
+
+.workflow-tour-callout__lane--inputs {
+    background: color-mix(in srgb, var(--info) 6%, var(--bg-secondary));
+}
+
+.workflow-tour-callout__lane--process {
+    background: color-mix(in srgb, var(--accent-primary) 8%, var(--bg-secondary));
+}
+
+.workflow-tour-callout__lane--outputs {
+    background: color-mix(in srgb, var(--success) 7%, var(--bg-secondary));
+}
+
+.workflow-tour-callout__lane h4 {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
     font-size: 11px;
     text-transform: uppercase;
     letter-spacing: 0.04em;
     color: var(--text-muted);
-    margin-bottom: 6px;
+    margin-bottom: 8px;
 }
 
-.workflow-tour-callout__section ul {
+.workflow-tour-callout__lane h4 svg {
+    width: 14px;
+    height: 14px;
+}
+
+.workflow-tour-callout__list {
     margin: 0;
-    padding-left: 18px;
+    padding-left: 16px;
     display: grid;
-    gap: 4px;
+    gap: 6px;
 }
 
-.workflow-tour-callout__section li {
+.workflow-tour-callout__list li {
     font-size: var(--text-sm);
-    line-height: 1.45;
+    line-height: 1.4;
     color: var(--text-secondary);
+}
+
+.workflow-tour-callout__list--ordered {
+    padding-left: 18px;
 }
 
 .workflow-tour-callout__actions {
@@ -6601,5 +6641,13 @@ body.is-resizing-sidebar .main-wrapper {
     .workflow-overview-banner__actions {
         width: 100%;
         justify-content: flex-start;
+    }
+
+    .workflow-tour-callout {
+        width: min(440px, calc(100vw - 24px));
+    }
+
+    .workflow-tour-callout__pipeline {
+        grid-template-columns: 1fr;
     }
 }
