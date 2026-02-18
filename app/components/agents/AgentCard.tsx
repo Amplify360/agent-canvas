@@ -339,17 +339,18 @@ export function AgentCard({
           )}
 
           {normalizedDemoLink && (
-            <Tooltip content="Open demo link" placement="top">
-              <a
-                href={normalizedDemoLink}
-                target="_blank"
-                rel="noopener noreferrer"
+            <Tooltip content="Watch demo" placement="top">
+              <button
+                type="button"
                 className="agent-card__footer-icon"
-                aria-label="Open demo link"
-                onClick={(e) => e.stopPropagation()}
+                aria-label="Watch demo in modal"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setVideoModalUrl(normalizedDemoLink);
+                }}
               >
                 <Icon name="play-circle" />
-              </a>
+              </button>
             </Tooltip>
           )}
 
