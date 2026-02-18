@@ -9,6 +9,18 @@ import { requireAuth, requireOrgAccess } from "./lib/auth";
 import { internal } from "./_generated/api";
 import { Id } from "./_generated/dataModel";
 
+const DEFAULT_MAX_TITLE_UPDATES = 200;
+
+function assertAdminToken(token: string) {
+  const expectedToken = process.env.MCP_ADMIN_TOKEN;
+  if (!expectedToken) {
+    throw new Error("Auth: MCP_ADMIN_TOKEN is not configured");
+  }
+  if (token !== expectedToken) {
+    throw new Error("Auth: Invalid admin token");
+  }
+}
+
 /**
  * Seed sample users from randomuser.me API
  * Lab environment only - creates realistic demo data
@@ -296,6 +308,90 @@ export const assignMissingOwners = action({
     });
 
     return { agentsAssigned };
+  },
+});
+
+/**
+ * Batch update user titles (internal mutation for admin use via MCP)
+ */
+export const batchUpdateTitles = internalMutation({
+  args: {
+    token: v.string(),
+    workosOrgId: v.string(),
+    dryRun: v.optional(v.boolean()),
+    confirm: v.optional(v.boolean()),
+    maxUsers: v.optional(v.number()),
+    updates: v.array(v.object({
+      userId: v.id("users"),
+      title: v.string(),
+    })),
+  },
+  handler: async (ctx, args) => {
+    assertAdminToken(args.token);
+
+    const dryRun = args.dryRun ?? true;
+    if (!dryRun && args.confirm !== true) {
+      throw new Error("Validation: confirm=true is required when dryRun=false");
+    }
+
+    if (args.updates.length === 0) {
+      throw new Error("Validation: updates cannot be empty");
+    }
+
+    const maxUsers = Math.max(1, args.maxUsers ?? DEFAULT_MAX_TITLE_UPDATES);
+    if (args.updates.length > maxUsers) {
+      throw new Error(`Validation: received ${args.updates.length} updates, above maxUsers=${maxUsers}`);
+    }
+
+    const seenUserIds = new Set<string>();
+    for (const { userId, title } of args.updates) {
+      const key = String(userId);
+      if (seenUserIds.has(key)) {
+        throw new Error(`Validation: duplicate userId in updates: ${key}`);
+      }
+      seenUserIds.add(key);
+      if (!title.trim()) {
+        throw new Error(`Validation: title cannot be empty for userId ${key}`);
+      }
+    }
+
+    const results = await Promise.all(
+      args.updates.map(async ({ userId, title }) => {
+        const user = await ctx.db.get(userId);
+        if (!user) {
+          return { userId, success: false, reason: "not_found" as const };
+        }
+        if (user.workosOrgId !== args.workosOrgId) {
+          return { userId, success: false, reason: "org_mismatch" as const };
+        }
+
+        const nextTitle = title.trim();
+        const oldTitle = user.title ?? null;
+        const changed = oldTitle !== nextTitle;
+
+        if (!dryRun && changed) {
+          await ctx.db.patch(userId, { title: nextTitle });
+        }
+
+        return {
+          userId,
+          success: true,
+          name: user.name,
+          oldTitle,
+          newTitle: nextTitle,
+          changed,
+        };
+      })
+    );
+
+    return {
+      dryRun,
+      requested: args.updates.length,
+      updated: results.filter((r) => r.success && r.changed).length,
+      unchanged: results.filter((r) => r.success && !r.changed).length,
+      failed: results.filter((r) => !r.success).length,
+      results,
+    };
   },
 });
 
