@@ -130,6 +130,10 @@ Generate: `echo -n '{...}' | base64`. Machine-specific encoded values for this i
 
 **TL;DR**: Deploy Convex to lab with `npx convex deploy --preview-name lab --yes`, then test on canvas-lab.amplify360.ai or locally with `.env.local.lab`.
 
+## Admin Batch Tools
+
+`convex/adminAgents.ts` — internal mutations for bulk agent operations via MCP. Auth uses `MCP_ADMIN_TOKEN` env var set on the Convex deployment (not `.env.local`). All functions default to `dryRun: true`; pass `dryRun: false, confirm: true` to apply. Read the file for available operations and args.
+
 ## Environment Variables
 
 ```bash
@@ -217,6 +221,7 @@ BASE_URL=http://localhost:3000
 │   └── styles.css          # Main CSS stylesheet
 ├── convex/                  # Convex backend (TypeScript)
 │   ├── schema.ts           # Database schema (includes userOrgMemberships, syncLog)
+│   ├── adminAgents.ts      # Admin batch tools (MCP-only, internal mutations)
 │   ├── agents.ts           # Agent CRUD + history
 │   ├── canvases.ts         # Canvas CRUD
 │   ├── orgSettings.ts      # Org configuration
