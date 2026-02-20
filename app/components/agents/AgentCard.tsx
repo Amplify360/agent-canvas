@@ -122,6 +122,7 @@ export function AgentCard({
     promptContext,
   ]);
   const normalizedDescription = agent.description?.trim();
+  const normalizedObjective = agent.objective?.trim();
   const normalizedDemoLink = agent.demoLink?.trim();
   const normalizedVideoLink = agent.videoLink?.trim();
   const hasJourneySteps = agent.journeySteps.length > 0;
@@ -323,8 +324,21 @@ export function AgentCard({
       </div>
 
       <div className="agent-card__footer">
-        {(hasFormsTool || normalizedDemoLink || normalizedVideoLink || hasJourneySteps || canvasDestinationLinks.length > 0) && (
+        {(normalizedObjective || hasFormsTool || normalizedDemoLink || normalizedVideoLink || hasJourneySteps || canvasDestinationLinks.length > 0) && (
           <>
+          {normalizedObjective && (
+            <Tooltip content={normalizedObjective} placement="top">
+              <button
+                type="button"
+                className="agent-card__footer-icon"
+                aria-label="View objective"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <Icon name="target" />
+              </button>
+            </Tooltip>
+          )}
+
           {hasFormsTool && (
             <Tooltip content="Uses Forms tool" placement="top">
               <button

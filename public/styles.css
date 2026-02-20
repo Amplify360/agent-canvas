@@ -6048,21 +6048,31 @@ body.is-resizing-sidebar .main-wrapper {
     border-color: var(--accent-primary);
 }
 
-.dock-item__status-dot {
+.dock-item__top-right {
     position: absolute;
     top: 4px;
     right: 4px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
+    z-index: 2;
+}
+
+.dock-item__status-dot {
     width: 7px;
     height: 7px;
     border-radius: 50%;
     border: 2px solid var(--bg-secondary);
-    z-index: 2;
 }
 
-.dock-item__video-link {
-    position: absolute;
-    top: 14px;
-    right: 2px;
+.dock-item__quick-actions {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.dock-item__inline-action {
     width: 16px;
     height: 16px;
     display: inline-flex;
@@ -6072,19 +6082,19 @@ body.is-resizing-sidebar .main-wrapper {
     color: var(--text-muted);
     background: color-mix(in srgb, var(--bg-primary) 88%, transparent);
     text-decoration: none;
-    z-index: 2;
     transition: color 0.15s ease, background-color 0.15s ease;
     border: none;
     cursor: pointer;
+    padding: 0;
 }
 
-.dock-item__video-link:hover,
-.dock-item__video-link:focus-visible {
+.dock-item__inline-action:hover,
+.dock-item__inline-action:focus-visible {
     color: var(--accent-primary);
     background: color-mix(in srgb, var(--accent-primary) 14%, var(--bg-primary));
 }
 
-.dock-item__video-link svg {
+.dock-item__inline-action svg {
     width: 11px;
     height: 11px;
 }

@@ -18,6 +18,7 @@ import {
   type CompactCardIndicator,
 } from '@/types/validationConstants';
 import { Icon } from '@/components/ui/Icon';
+import { Tooltip } from '@/components/ui/Tooltip';
 import { AvatarPopover } from '@/components/ui/AvatarPopover';
 import { Modal } from '@/components/ui/Modal';
 import { useCanvas } from '@/contexts/CanvasContext';
@@ -76,7 +77,7 @@ export function DockView({ agents, onAgentClick, workflowHighlightState }: DockV
   };
 
   const handleItemKeyDown = (event: React.KeyboardEvent<HTMLDivElement>, agent: AgentWithOwner) => {
-    if ((event.target as HTMLElement).closest('.dock-item__video-link')) return;
+    if ((event.target as HTMLElement).closest('.dock-item__inline-action')) return;
     if (event.key !== 'Enter' && event.key !== ' ') return;
     event.preventDefault();
     handleItemClick(agent);
@@ -149,6 +150,7 @@ export function DockView({ agents, onAgentClick, workflowHighlightState }: DockV
           const statusConfig = getAgentStatusConfig(agent.status);
           const isSelected = selectedAgentId === agent._id;
           const demoVideoUrl = agent.videoLink?.trim() || agent.demoLink?.trim();
+          const normalizedObjective = agent.objective?.trim();
 
           return (
             <div
@@ -174,24 +176,44 @@ export function DockView({ agents, onAgentClick, workflowHighlightState }: DockV
                   {workflowSequenceByAgentId[agent._id]}
                 </span>
               )}
-              <span
-                className="dock-item__status-dot"
-                style={{ backgroundColor: statusConfig.color }}
-              />
-              {demoVideoUrl && (
-                <button
-                  type="button"
-                  className="dock-item__video-link"
-                  aria-label="Open demo video in modal"
-                  title="Open demo video"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    setVideoModalUrl(demoVideoUrl);
-                  }}
-                >
-                  <Icon name="video" />
-                </button>
-              )}
+              <div className="dock-item__top-right">
+                <span
+                  className="dock-item__status-dot"
+                  style={{ backgroundColor: statusConfig.color }}
+                />
+                {(normalizedObjective || demoVideoUrl) && (
+                  <div className="dock-item__quick-actions">
+                    {normalizedObjective && (
+                      <Tooltip content={normalizedObjective} placement="top">
+                        <button
+                          type="button"
+                          className="dock-item__inline-action dock-item__objective-link"
+                          aria-label="View objective"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                          }}
+                        >
+                          <Icon name="target" />
+                        </button>
+                      </Tooltip>
+                    )}
+                    {demoVideoUrl && (
+                      <button
+                        type="button"
+                        className="dock-item__inline-action dock-item__video-link"
+                        aria-label="Open demo video in modal"
+                        title="Open demo video"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setVideoModalUrl(demoVideoUrl);
+                        }}
+                      >
+                        <Icon name="video" />
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
               <div className="dock-item__icon">
                 {agent.owner ? (
                   <AvatarPopover
