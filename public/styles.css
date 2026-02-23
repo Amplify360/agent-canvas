@@ -7609,6 +7609,96 @@ body:has(.explore-page) {
     white-space: nowrap;
 }
 
+/* --- Agents Trigger Button --- */
+
+.explore-agents-trigger {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    width: 100%;
+    padding: var(--space-5) var(--space-6);
+    background: var(--accent-primary-muted);
+    border: 2px dashed var(--accent-primary);
+    border-radius: var(--radius-lg);
+    cursor: pointer;
+    font-family: var(--font-sans);
+    font-size: var(--text-base);
+    font-weight: 600;
+    color: var(--accent-primary);
+    transition: background 0.2s, transform 0.2s, box-shadow 0.2s;
+}
+
+.explore-agents-trigger:hover {
+    background: rgba(99, 102, 241, 0.15);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+/* --- Agents Modal --- */
+
+.explore-agents-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-6);
+    animation: explore-overlay-in 0.2s ease-out;
+}
+
+@keyframes explore-overlay-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.explore-agents-modal {
+    background: var(--bg-secondary);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-2xl);
+    max-width: 680px;
+    width: 100%;
+    max-height: 80vh;
+    overflow-y: auto;
+    padding: var(--space-8);
+    animation: explore-modal-in 0.25s var(--ease-out);
+}
+
+@keyframes explore-modal-in {
+    from { opacity: 0; transform: translateY(16px) scale(0.97); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.explore-agents-modal-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: var(--space-6);
+}
+
+.explore-agents-modal-title {
+    font-size: var(--text-xl);
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-top: var(--space-2);
+}
+
+.explore-agents-modal-close {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: var(--space-2);
+    border-radius: var(--radius-md);
+    color: var(--text-muted);
+    transition: background 0.15s, color 0.15s;
+}
+
+.explore-agents-modal-close:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+}
+
 /* --- Section Labels --- */
 
 .explore-section-label {

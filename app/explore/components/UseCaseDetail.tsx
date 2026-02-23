@@ -1,11 +1,13 @@
 'use client';
 
+import { useState } from 'react';
 import {
   AlertCircle,
   TrendingUp,
   Sparkles,
   CheckCircle2,
   Bot,
+  X,
 } from 'lucide-react';
 import type { ExploreUseCase, ExplorePhase } from '@/explore/data/types';
 
@@ -15,6 +17,8 @@ interface UseCaseDetailProps {
 }
 
 export default function UseCaseDetail({ useCase, phase }: UseCaseDetailProps) {
+  const [showAgents, setShowAgents] = useState(false);
+
   return (
     <div className="explore-detail">
       {/* Hero */}
@@ -69,34 +73,54 @@ export default function UseCaseDetail({ useCase, phase }: UseCaseDetailProps) {
         </div>
       </div>
 
-      {/* Agents */}
+      {/* Agents trigger */}
       <div className="explore-detail-section">
-        <div className="explore-section-label">
-          <Bot size={16} /> POWERED BY
-        </div>
-        <div className="explore-detail-agents-grid">
-          {useCase.agents.map((agent, i) => (
-            <div key={i} className="explore-detail-agent-card">
-              <div className="explore-detail-agent-icon">
-                <Bot size={20} />
-              </div>
-              <div>
-                <div className="explore-detail-agent-name">{agent.name}</div>
-                <p className="explore-detail-agent-description">
-                  {agent.description}
-                </p>
-                <div className="explore-detail-agent-tools">
-                  {agent.tools.map((tool) => (
-                    <span key={tool} className="explore-detail-agent-tool">
-                      {tool}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
+        <button className="explore-agents-trigger" onClick={() => setShowAgents(true)}>
+          <Bot size={20} />
+          <span>See the {useCase.agents.length} agents that power this solution</span>
+        </button>
       </div>
+
+      {/* Agents modal */}
+      {showAgents && (
+        <div className="explore-agents-overlay" onClick={() => setShowAgents(false)}>
+          <div className="explore-agents-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="explore-agents-modal-header">
+              <div>
+                <div className="explore-section-label" style={{ marginBottom: 0 }}>
+                  <Bot size={16} /> POWERED BY
+                </div>
+                <h2 className="explore-agents-modal-title">{useCase.solutionName}</h2>
+              </div>
+              <button className="explore-agents-modal-close" onClick={() => setShowAgents(false)}>
+                <X size={20} />
+              </button>
+            </div>
+            <div className="explore-detail-agents-grid">
+              {useCase.agents.map((agent, i) => (
+                <div key={i} className="explore-detail-agent-card">
+                  <div className="explore-detail-agent-icon">
+                    <Bot size={20} />
+                  </div>
+                  <div>
+                    <div className="explore-detail-agent-name">{agent.name}</div>
+                    <p className="explore-detail-agent-description">
+                      {agent.description}
+                    </p>
+                    <div className="explore-detail-agent-tools">
+                      {agent.tools.map((tool) => (
+                        <span key={tool} className="explore-detail-agent-tool">
+                          {tool}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
