@@ -206,3 +206,4 @@ clear-rate-limits.js
 
 # Data exports (local import/export artifacts)
 data/
+!app/explore/data/
