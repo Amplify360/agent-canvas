@@ -6948,10 +6948,37 @@ body.is-resizing-sidebar .main-wrapper {
 /* --- Page Container --- */
 
 .explore-page {
+    /* Force light theme regardless of OS/app dark mode */
+    --bg-primary: #FAFAF9;
+    --bg-secondary: #FFFFFF;
+    --bg-tertiary: #F5F5F4;
+    --bg-elevated: #FFFFFF;
+    --bg-hover: #F5F5F4;
+    --border-subtle: rgba(120, 113, 108, 0.08);
+    --border-muted: rgba(120, 113, 108, 0.12);
+    --border-default: rgba(120, 113, 108, 0.18);
+    --text-primary: #1C1917;
+    --text-secondary: #57534E;
+    --text-muted: #A8A29E;
+    --accent-primary: #6366F1;
+    --accent-primary-hover: #4F46E5;
+    --accent-primary-muted: rgba(99, 102, 241, 0.1);
+    --accent-emerald: #10B981;
+    --accent-rose: #F43F5E;
+    --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.03), 0 4px 8px rgba(0, 0, 0, 0.04);
+    --shadow-card-hover: 0 2px 8px rgba(0, 0, 0, 0.06), 0 8px 24px rgba(0, 0, 0, 0.08);
+
     min-height: 100vh;
     background: var(--bg-primary);
     font-family: var(--font-sans);
     color: var(--text-primary);
+    overflow-y: auto;
+}
+
+/* Override body .app-layout overflow:hidden when explore page is active */
+body:has(.explore-page) {
+    overflow: visible;
+    overflow-y: auto;
 }
 
 .explore-content {
@@ -7331,25 +7358,15 @@ body.is-resizing-sidebar .main-wrapper {
 }
 
 .explore-detail-section {
-    opacity: 0;
-    transform: translateY(20px);
     margin-bottom: var(--space-8);
+    animation: explore-fade-up 0.5s var(--ease-out) both;
 }
 
-.explore-detail-section.visible {
-    opacity: 1;
-    transform: translateY(0);
-    transition: opacity 0.6s var(--ease-out),
-                transform 0.6s var(--ease-out);
-}
-
-/* Stagger delays for detail sections */
-.explore-detail-section.visible:nth-child(1) { transition-delay: 0s; }
-.explore-detail-section.visible:nth-child(2) { transition-delay: 0.1s; }
-.explore-detail-section.visible:nth-child(3) { transition-delay: 0.2s; }
-.explore-detail-section.visible:nth-child(4) { transition-delay: 0.3s; }
-.explore-detail-section.visible:nth-child(5) { transition-delay: 0.4s; }
-.explore-detail-section.visible:nth-child(6) { transition-delay: 0.5s; }
+.explore-detail-section:nth-child(2) { animation-delay: 0.1s; }
+.explore-detail-section:nth-child(3) { animation-delay: 0.2s; }
+.explore-detail-section:nth-child(4) { animation-delay: 0.3s; }
+.explore-detail-section:nth-child(5) { animation-delay: 0.4s; }
+.explore-detail-section:nth-child(6) { animation-delay: 0.5s; }
 
 /* --- Challenge Section --- */
 
@@ -7480,19 +7497,20 @@ body.is-resizing-sidebar .main-wrapper {
     gap: var(--space-3);
     padding: var(--space-3) 0;
     border-bottom: 1px solid var(--border-subtle);
-    opacity: 0;
-    transform: translateX(-10px);
+    animation: explore-fade-up 0.4s var(--ease-out) both;
 }
+
+.explore-detail-capability:nth-child(1) { animation-delay: 0.5s; }
+.explore-detail-capability:nth-child(2) { animation-delay: 0.58s; }
+.explore-detail-capability:nth-child(3) { animation-delay: 0.66s; }
+.explore-detail-capability:nth-child(4) { animation-delay: 0.74s; }
+.explore-detail-capability:nth-child(5) { animation-delay: 0.82s; }
+.explore-detail-capability:nth-child(6) { animation-delay: 0.9s; }
+.explore-detail-capability:nth-child(7) { animation-delay: 0.98s; }
+.explore-detail-capability:nth-child(8) { animation-delay: 1.06s; }
 
 .explore-detail-capability:last-child {
     border-bottom: none;
-}
-
-.explore-detail-capability.visible {
-    opacity: 1;
-    transform: translateX(0);
-    transition: opacity 0.4s var(--ease-out),
-                transform 0.4s var(--ease-out);
 }
 
 .explore-detail-capability-icon {

@@ -1,6 +1,5 @@
 'use client';
 
-import { useEffect } from 'react';
 import {
   AlertCircle,
   TrendingUp,
@@ -16,38 +15,6 @@ interface UseCaseDetailProps {
 }
 
 export default function UseCaseDetail({ useCase, phase }: UseCaseDetailProps) {
-  useEffect(() => {
-    const sections = document.querySelectorAll('[data-section]');
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            entry.target.classList.add('visible');
-
-            // Stagger-reveal capability children when the capabilities container enters
-            const capabilities = entry.target.querySelectorAll(
-              '.explore-detail-capability'
-            );
-            if (capabilities.length > 0) {
-              capabilities.forEach((child, i) => {
-                setTimeout(() => {
-                  child.classList.add('visible');
-                }, i * 80);
-              });
-            }
-
-            observer.unobserve(entry.target);
-          }
-        });
-      },
-      { threshold: 0.15, rootMargin: '0px 0px -50px 0px' }
-    );
-
-    sections.forEach((s) => observer.observe(s));
-
-    return () => observer.disconnect();
-  }, [useCase.id]);
-
   return (
     <div className="explore-detail">
       {/* Hero */}
@@ -63,7 +30,7 @@ export default function UseCaseDetail({ useCase, phase }: UseCaseDetailProps) {
       </div>
 
       {/* Challenge */}
-      <div className="explore-detail-section explore-detail-challenge" data-section>
+      <div className="explore-detail-section explore-detail-challenge">
         <div className="explore-section-label">
           <AlertCircle size={16} /> THE CHALLENGE
         </div>
@@ -71,7 +38,7 @@ export default function UseCaseDetail({ useCase, phase }: UseCaseDetailProps) {
       </div>
 
       {/* Impact */}
-      <div className="explore-detail-section explore-detail-impact" data-section>
+      <div className="explore-detail-section explore-detail-impact">
         <div className="explore-section-label">
           <TrendingUp size={16} /> THE IMPACT
         </div>
@@ -79,7 +46,7 @@ export default function UseCaseDetail({ useCase, phase }: UseCaseDetailProps) {
       </div>
 
       {/* Solution */}
-      <div className="explore-detail-section explore-detail-solution" data-section>
+      <div className="explore-detail-section explore-detail-solution">
         <div className="explore-section-label">
           <Sparkles size={16} /> THE SOLUTION
         </div>
@@ -88,17 +55,13 @@ export default function UseCaseDetail({ useCase, phase }: UseCaseDetailProps) {
       </div>
 
       {/* Capabilities */}
-      <div className="explore-detail-section" data-section>
+      <div className="explore-detail-section">
         <div className="explore-section-label">
           <CheckCircle2 size={16} /> CAPABILITIES
         </div>
         <div className="explore-detail-capabilities">
           {useCase.capabilities.map((cap, i) => (
-            <div
-              key={i}
-              className="explore-detail-capability"
-              style={{ transitionDelay: `${i * 0.08}s` }}
-            >
+            <div key={i} className="explore-detail-capability">
               <CheckCircle2 className="explore-detail-capability-icon" size={18} />
               <span>{cap}</span>
             </div>
@@ -107,7 +70,7 @@ export default function UseCaseDetail({ useCase, phase }: UseCaseDetailProps) {
       </div>
 
       {/* Agents */}
-      <div className="explore-detail-section" data-section>
+      <div className="explore-detail-section">
         <div className="explore-section-label">
           <Bot size={16} /> POWERED BY
         </div>

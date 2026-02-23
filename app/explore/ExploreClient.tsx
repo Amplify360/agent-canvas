@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { explorePhases } from '@/explore/data/exploreData';
 import ExploreHeader from '@/explore/components/ExploreHeader';
 import PhaseBrowser from '@/explore/components/PhaseBrowser';
@@ -62,11 +62,8 @@ export default function ExploreClient() {
     [navigateTo]
   );
 
-  // Re-trigger stagger animations on view change by toggling a key
-  const [viewKey, setViewKey] = useState(0);
-  useEffect(() => {
-    setViewKey((k) => k + 1);
-  }, [state.view, state.phaseId, state.useCaseId]);
+  // Stable key derived from view state — remounts content only when the view actually changes
+  const viewKey = `${state.view}-${state.phaseId ?? ''}-${state.useCaseId ?? ''}`;
 
   return (
     <div className="explore-page">
