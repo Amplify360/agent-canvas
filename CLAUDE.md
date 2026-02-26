@@ -77,6 +77,59 @@ pnpm test:all
 - **Dev** (`expert-narwhal-281`): Used locally and by dev frontend
 - **Prod** (`quaint-bee-380`): Used by prod frontend
 
+### Convex MCP Selectors
+
+The `status` tool always returns `ownDev` — ignore it; the selector passed per tool call determines the actual target.
+
+Selectors are `{kind}:base64(json)` where the JSON is:
+```json
+{"projectDir": "/abs/path/to/project", "deployment": {"kind": "ownDev"}}
+{"projectDir": "/abs/path/to/project", "deployment": {"kind": "previewName", "previewName": "lab"}}
+```
+
+Generate: `echo -n '{...}' | base64`. Machine-specific encoded values for this install are in `MEMORY.md`.
+
+**Prod MCP access is intentionally disabled. Never add `--dangerously-enable-production-deployments` to `.mcp.json`.**
+
+### Important: Deploying to Lab Convex Backend
+
+**Key Learnings:**
+
+1. **Lab is a preview deployment, not a dev deployment**
+   - `npx convex dev` only works with dev deployments
+   - `npx convex dev` will OVERWRITE .env.local and revert to dev deployment
+   - NEVER use `npx convex dev` when working with lab backend
+
+2. **Local Development with Lab Backend**
+   - Use `.env.local.lab` config (swap with `cp .env.local.lab .env.local`)
+   - The Next.js app will connect to lab backend
+   - BUT: Schema changes won't auto-deploy to lab
+
+3. **Deploying Schema to Lab Backend**
+   - Vercel does NOT deploy Convex — it only builds the Next.js frontend
+   - **Solution**: `npx convex deploy --preview-name lab --yes` (CLI auth is sufficient, no deploy key needed)
+
+4. **Swappable Environment Files**
+   ```bash
+   # Switch to lab backend
+   cp .env.local.lab .env.local
+   pnpm dev
+
+   # Switch back to dev
+   cp .env.local.dev .env.local
+   ```
+
+5. **Testing Lab Features Locally**
+   - Deploy schema: `npx convex deploy --preview-name lab --yes`
+   - Then run local server with `.env.local.lab`
+   - Alternatively: Use dev backend locally for faster iteration
+
+**TL;DR**: Deploy Convex to lab with `npx convex deploy --preview-name lab --yes`, then test on canvas-lab.amplify360.ai or locally with `.env.local.lab`.
+
+## Admin Batch Tools
+
+`convex/adminAgents.ts` — internal mutations for bulk agent operations via MCP. Auth uses `MCP_ADMIN_TOKEN` env var set on the Convex deployment (not `.env.local`). All functions default to `dryRun: true`; pass `dryRun: false, confirm: true` to apply. Read the file for available operations and args.
+
 ## Environment Variables
 
 ```bash
@@ -164,6 +217,7 @@ BASE_URL=http://localhost:3000
 │   └── styles.css          # Main CSS stylesheet
 ├── convex/                  # Convex backend (TypeScript)
 │   ├── schema.ts           # Database schema (includes userOrgMemberships, syncLog)
+│   ├── adminAgents.ts      # Admin batch tools (MCP-only, internal mutations)
 │   ├── agents.ts           # Agent CRUD + history
 │   ├── canvases.ts         # Canvas CRUD
 │   ├── orgSettings.ts      # Org configuration

@@ -5,6 +5,9 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
+  outputFileTracingIncludes: {
+    "/api/preview/[token]": ["./client-previews/**/*"],
+  },
 };
 
 export default nextConfig;
