@@ -1,0 +1,2506 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Board Member Prep Brief — Reco | Industry News & Event Intelligence</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap');
+
+  :root {
+    --bg: #ffffff;
+    --surface: #f7f8fa;
+    --surface-2: #eef0f4;
+    --surface-3: #e4e7ed;
+    --border: #d8dce5;
+    --border-light: #e8ebf0;
+    --text: #182a35;
+    --text-secondary: #4a5a6a;
+    --text-muted: #7a8a9a;
+    --accent: #ff531b;
+    --accent-dim: #e64a16;
+    --accent-light: rgba(255, 83, 27, 0.06);
+    --accent-border: rgba(255, 83, 27, 0.2);
+    --ip-dark: #182a35;
+    --ip-dark-90: rgba(24, 42, 53, 0.9);
+    --ip-dark-light: #1e3544;
+    --high: #c0392b;
+    --high-bg: rgba(192, 57, 43, 0.06);
+    --high-border: rgba(192, 57, 43, 0.2);
+    --medium: #d35400;
+    --medium-bg: rgba(211, 84, 0, 0.06);
+    --medium-border: rgba(211, 84, 0, 0.2);
+    --watch: #2c5f8a;
+    --watch-bg: rgba(44, 95, 138, 0.06);
+    --watch-border: rgba(44, 95, 138, 0.2);
+    --green: #1a8a4a;
+    --green-bg: rgba(26, 138, 74, 0.06);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    font-size: 14.5px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1, h2, h3, h4, .section-header, .header-label {
+    font-family: 'Libre Franklin', 'Inter', sans-serif;
+  }
+
+  .container {
+    max-width: 920px;
+    margin: 0 auto;
+    padding: 0 32px 48px;
+  }
+
+  /* Top bar */
+  .top-bar {
+    background: var(--ip-dark);
+    padding: 20px 32px;
+    margin-bottom: 0;
+  }
+
+  .top-bar-inner {
+    max-width: 920px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .ip-logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .ip-logo-mark {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+  }
+
+  .ip-triangle {
+    width: 0;
+    height: 0;
+    border-left: 11px solid transparent;
+    border-right: 11px solid transparent;
+    border-bottom: 19px solid var(--accent);
+  }
+
+  .ip-dot {
+    width: 7px;
+    height: 7px;
+    background: var(--accent);
+    border-radius: 50%;
+    margin-left: 2px;
+    margin-bottom: -6px;
+  }
+
+  .ip-wordmark {
+    font-family: 'Libre Franklin', sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+    color: #ffffff;
+    letter-spacing: 0.5px;
+  }
+
+  .doc-classification {
+    font-family: 'Libre Franklin', sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.5);
+  }
+
+  /* Header */
+  .header {
+    margin-bottom: 40px;
+    padding: 40px 0 32px;
+    border-bottom: 2px solid var(--ip-dark);
+  }
+
+  .header-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 20px;
+  }
+
+  .header-text {
+    flex: 1;
+  }
+
+  .reco-logo-container {
+    flex-shrink: 0;
+    margin-left: 32px;
+  }
+
+  .reco-logo-container img {
+    height: 36px;
+    width: auto;
+  }
+
+  .header-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 10px;
+  }
+
+  .header h1 {
+    font-size: 28px;
+    font-weight: 800;
+    color: var(--ip-dark);
+    margin-bottom: 6px;
+    letter-spacing: -0.5px;
+    line-height: 1.2;
+  }
+
+  .header h1 span {
+    color: var(--accent);
+  }
+
+  .header-subtitle {
+    font-size: 16px;
+    color: var(--text-secondary);
+    font-weight: 400;
+  }
+
+  .header-meta {
+    margin-top: 20px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 28px;
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+
+  .header-meta strong {
+    color: var(--text-secondary);
+    font-weight: 600;
+  }
+
+  .freshness-warning {
+    margin-top: 16px;
+    padding: 12px 16px;
+    background: var(--accent-light);
+    border: 1px solid var(--accent-border);
+    border-radius: 6px;
+    font-size: 12.5px;
+    color: var(--accent-dim);
+    line-height: 1.6;
+  }
+
+  /* Stats bar */
+  .stats-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 36px;
+  }
+
+  .stat-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: var(--surface);
+    border: 1px solid var(--border-light);
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-secondary);
+  }
+
+  .stat-chip .num {
+    font-family: 'Libre Franklin', sans-serif;
+    font-weight: 700;
+    color: var(--ip-dark);
+    font-size: 16px;
+  }
+
+  .stat-chip.high-chip { border-color: var(--high-border); background: var(--high-bg); }
+  .stat-chip.high-chip .num { color: var(--high); }
+
+  /* Verification legend */
+  .legend {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-bottom: 36px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border-light);
+  }
+
+  .legend strong {
+    color: var(--text-secondary);
+  }
+
+  /* Section headers */
+  .section-header {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: var(--ip-dark);
+    margin-top: 52px;
+    margin-bottom: 24px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid var(--ip-dark);
+    position: relative;
+  }
+
+  .section-header::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    width: 48px;
+    height: 2px;
+    background: var(--accent);
+  }
+
+  /* Competitive matrix */
+  .matrix-container {
+    margin-bottom: 40px;
+  }
+
+  .matrix-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    margin-bottom: 16px;
+  }
+
+  .matrix-table th {
+    background: var(--ip-dark);
+    padding: 11px 14px;
+    text-align: left;
+    font-family: 'Libre Franklin', sans-serif;
+    font-weight: 600;
+    color: #ffffff;
+    border: 1px solid var(--ip-dark-light);
+    font-size: 11px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+
+  .matrix-table td {
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--text-secondary);
+    vertical-align: top;
+    line-height: 1.6;
+  }
+
+  .matrix-table td strong {
+    color: var(--ip-dark);
+  }
+
+  .matrix-table tbody tr:nth-child(even) td {
+    background: var(--surface);
+  }
+
+  .matrix-note {
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.7;
+    margin-bottom: 8px;
+  }
+
+  .matrix-note strong {
+    color: var(--ip-dark);
+  }
+
+  .identity-convergence {
+    margin-top: 12px;
+    padding: 12px 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: 0 6px 6px 0;
+    font-size: 13px;
+    color: var(--text-secondary);
+  }
+
+  .identity-convergence strong { color: var(--ip-dark); }
+
+  /* Net Assessment */
+  .net-assessment {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 28px;
+    margin-bottom: 40px;
+  }
+
+  .net-assessment h3 {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--ip-dark);
+    margin-bottom: 16px;
+  }
+
+  .net-assessment p {
+    color: var(--text-secondary);
+    margin-bottom: 14px;
+    line-height: 1.8;
+  }
+
+  .net-assessment p strong {
+    color: var(--ip-dark);
+  }
+
+  .net-assessment p:last-of-type { margin-bottom: 0; }
+
+  .core-question {
+    margin-top: 20px;
+    padding: 18px 22px;
+    background: var(--ip-dark);
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #ffffff;
+    line-height: 1.7;
+  }
+
+  .core-question strong {
+    color: var(--accent);
+  }
+
+  /* Scenarios */
+  .scenario-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 14px;
+    margin-bottom: 40px;
+  }
+
+  .scenario-card {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px 24px;
+  }
+
+  .scenario-card h4 {
+    font-family: 'Libre Franklin', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--ip-dark);
+    margin-bottom: 8px;
+  }
+
+  .scenario-card p {
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.7;
+    margin-bottom: 8px;
+  }
+
+  .scenario-signal {
+    font-size: 12px;
+    color: var(--accent);
+    font-weight: 600;
+    margin-top: 8px;
+  }
+
+  /* Intelligence items */
+  .intel-item {
+    margin-bottom: 20px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    background: var(--bg);
+  }
+
+  .intel-header {
+    padding: 16px 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    user-select: none;
+    transition: background 0.15s ease;
+  }
+
+  .intel-header:hover {
+    background: var(--surface);
+  }
+
+  .severity-badge {
+    flex-shrink: 0;
+    padding: 3px 10px;
+    border-radius: 4px;
+    font-family: 'Libre Franklin', sans-serif;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-top: 2px;
+  }
+
+  .severity-high {
+    background: var(--high-bg);
+    color: var(--high);
+    border: 1px solid var(--high-border);
+  }
+
+  .severity-medium {
+    background: var(--medium-bg);
+    color: var(--medium);
+    border: 1px solid var(--medium-border);
+  }
+
+  .severity-watch {
+    background: var(--watch-bg);
+    color: var(--watch);
+    border: 1px solid var(--watch-border);
+  }
+
+  .intel-title-block {
+    flex: 1;
+  }
+
+  .intel-title {
+    font-family: 'Libre Franklin', sans-serif;
+    font-size: 14.5px;
+    font-weight: 600;
+    color: var(--ip-dark);
+    line-height: 1.4;
+    margin-bottom: 4px;
+  }
+
+  .intel-meta {
+    font-size: 12px;
+    color: var(--text-muted);
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .intel-meta .verified {
+    color: var(--green);
+    font-weight: 500;
+  }
+
+  .intel-toggle {
+    flex-shrink: 0;
+    font-size: 16px;
+    color: var(--text-muted);
+    transition: transform 0.2s;
+    margin-top: 2px;
+  }
+
+  .intel-body {
+    display: none;
+    padding: 0 20px 20px 20px;
+    border-top: 1px solid var(--border-light);
+  }
+
+  .intel-item.open .intel-body {
+    display: block;
+    padding-top: 16px;
+  }
+
+  .intel-item.open .intel-toggle {
+    transform: rotate(90deg);
+  }
+
+  .intel-section-label {
+    font-family: 'Libre Franklin', sans-serif;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-top: 18px;
+    margin-bottom: 8px;
+  }
+
+  .intel-section-label:first-child { margin-top: 0; }
+
+  .intel-body p {
+    font-size: 13.5px;
+    color: var(--text-secondary);
+    line-height: 1.8;
+    margin-bottom: 10px;
+  }
+
+  .intel-body p:last-child { margin-bottom: 0; }
+
+  .source-list {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border-light);
+  }
+
+  .source-item {
+    font-size: 12px;
+    color: var(--text-muted);
+    padding: 3px 0;
+    display: flex;
+    gap: 8px;
+  }
+
+  .source-type {
+    color: var(--text-secondary);
+    font-weight: 500;
+    flex-shrink: 0;
+  }
+
+  /* Funding table */
+  .funding-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    margin-bottom: 16px;
+  }
+
+  .funding-table th {
+    background: var(--ip-dark);
+    padding: 11px 12px;
+    text-align: left;
+    font-family: 'Libre Franklin', sans-serif;
+    font-weight: 600;
+    color: #ffffff;
+    border: 1px solid var(--ip-dark-light);
+    font-size: 11px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+
+  .funding-table td {
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--text-secondary);
+    vertical-align: top;
+  }
+
+  .funding-table tbody tr:nth-child(even) td {
+    background: var(--surface);
+  }
+
+  .funding-table td:first-child { font-weight: 600; color: var(--ip-dark); }
+
+  .editorial-note {
+    padding: 16px 20px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: 0 6px 6px 0;
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.8;
+    margin-bottom: 40px;
+  }
+
+  .editorial-note strong { color: var(--ip-dark); }
+
+  /* Board questions */
+  .board-question {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px 24px;
+    margin-bottom: 14px;
+  }
+
+  .board-question h4 {
+    font-family: 'Libre Franklin', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--accent);
+    margin-bottom: 10px;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+  }
+
+  .board-question .question-text {
+    font-size: 14px;
+    color: var(--ip-dark);
+    line-height: 1.7;
+    margin-bottom: 10px;
+    font-style: italic;
+  }
+
+  .board-question .question-rationale {
+    font-size: 13px;
+    color: var(--text-muted);
+    line-height: 1.7;
+  }
+
+  /* Watch ahead */
+  .watch-item {
+    display: flex;
+    gap: 16px;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--border-light);
+  }
+
+  .watch-item:last-child { border-bottom: none; }
+
+  .watch-date {
+    flex-shrink: 0;
+    width: 110px;
+    font-family: 'Libre Franklin', sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--ip-dark);
+    padding-top: 2px;
+  }
+
+  .watch-content h4 {
+    font-family: 'Libre Franklin', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--ip-dark);
+    margin-bottom: 4px;
+  }
+
+  .watch-content p {
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.6;
+  }
+
+  .watch-signal {
+    font-size: 12px;
+    color: var(--accent);
+    font-weight: 600;
+    margin-top: 4px;
+  }
+
+  /* Exclusions table */
+  .exclusion-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    margin-bottom: 24px;
+  }
+
+  .exclusion-table th {
+    background: var(--ip-dark);
+    padding: 11px 14px;
+    text-align: left;
+    font-family: 'Libre Franklin', sans-serif;
+    font-weight: 600;
+    color: #ffffff;
+    border: 1px solid var(--ip-dark-light);
+    font-size: 11px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+
+  .exclusion-table td {
+    padding: 10px 14px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--text-muted);
+    vertical-align: top;
+    line-height: 1.6;
+  }
+
+  .exclusion-table tbody tr:nth-child(even) td {
+    background: var(--surface);
+  }
+
+  .exclusion-table td:first-child {
+    color: var(--text-secondary);
+    font-weight: 500;
+    width: 35%;
+  }
+
+  /* Footer */
+  .footer {
+    margin-top: 56px;
+    padding-top: 24px;
+    border-top: 2px solid var(--ip-dark);
+    font-size: 12px;
+    color: var(--text-muted);
+    text-align: center;
+    line-height: 1.8;
+    position: relative;
+  }
+
+  .footer::after {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: 0;
+    width: 48px;
+    height: 2px;
+    background: var(--accent);
+  }
+
+  .footer strong {
+    color: var(--text-secondary);
+  }
+
+  /* Expand all button */
+  .expand-all-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 16px;
+    background: var(--ip-dark);
+    border: none;
+    border-radius: 6px;
+    color: #ffffff;
+    font-family: 'Libre Franklin', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-bottom: 20px;
+    transition: background 0.15s ease;
+  }
+
+  .expand-all-btn:hover {
+    background: var(--ip-dark-light);
+  }
+
+  /* Print styles */
+  @media print {
+    .top-bar { position: static; }
+    .expand-all-btn { display: none; }
+    .intel-item.open .intel-body,
+    .intel-body { display: block; padding-top: 16px; }
+    .intel-toggle { display: none; }
+    body { font-size: 11px; }
+    .container { padding: 0 16px 16px; }
+  }
+
+  /* Net Assessment bullet structure */
+  .net-assessment h4 {
+    font-family: 'Libre Franklin', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--ip-dark);
+    margin-top: 22px;
+    margin-bottom: 10px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border-light);
+  }
+
+  .net-assessment h4:first-child { margin-top: 0; }
+
+  .net-assessment ul {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 6px 0;
+  }
+
+  .net-assessment ul li {
+    position: relative;
+    padding-left: 18px;
+    margin-bottom: 10px;
+    font-size: 13.5px;
+    color: var(--text-secondary);
+    line-height: 1.75;
+  }
+
+  .net-assessment ul li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 10px;
+    width: 6px;
+    height: 6px;
+    background: var(--accent);
+    border-radius: 50%;
+  }
+
+  .net-assessment ul li strong { color: var(--ip-dark); }
+
+  .net-assessment .na-source {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-style: italic;
+  }
+
+  /* So-what callout */
+  .so-what {
+    margin-top: 10px;
+    padding: 10px 14px;
+    background: var(--ip-dark);
+    border-radius: 4px;
+    font-size: 12.5px;
+    font-weight: 500;
+    color: #ffffff;
+    line-height: 1.65;
+  }
+
+  .so-what strong {
+    color: var(--accent);
+    font-weight: 700;
+  }
+
+  /* Appendix */
+  .appendix-container {
+    margin-top: 52px;
+    padding: 32px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+  }
+
+  .appendix-header {
+    font-family: 'Libre Franklin', sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: var(--ip-dark);
+    margin-bottom: 28px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid var(--ip-dark);
+    position: relative;
+  }
+
+  .appendix-header::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    width: 48px;
+    height: 2px;
+    background: var(--accent);
+  }
+
+  .appendix-section {
+    margin-bottom: 32px;
+  }
+
+  .appendix-section:last-child { margin-bottom: 0; }
+
+  .appendix-section h4 {
+    font-family: 'Libre Franklin', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--ip-dark);
+    margin-bottom: 14px;
+  }
+
+  .appendix-section p {
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.7;
+    margin-bottom: 10px;
+  }
+
+  .taxonomy-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12.5px;
+    margin-bottom: 16px;
+  }
+
+  .taxonomy-table th {
+    background: var(--ip-dark);
+    padding: 9px 12px;
+    text-align: left;
+    font-family: 'Libre Franklin', sans-serif;
+    font-weight: 600;
+    color: #ffffff;
+    border: 1px solid var(--ip-dark-light);
+    font-size: 10.5px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+
+  .taxonomy-table td {
+    padding: 9px 12px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--text-secondary);
+    vertical-align: top;
+    line-height: 1.55;
+  }
+
+  .taxonomy-table tbody tr:nth-child(even) td {
+    background: var(--surface);
+  }
+
+  .taxonomy-table .coverage-active {
+    color: var(--green);
+    font-weight: 700;
+    font-size: 14px;
+  }
+
+  .taxonomy-table .coverage-monitored {
+    color: var(--text-muted);
+    font-size: 14px;
+  }
+
+  .deepdive-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+
+  .deepdive-group h5 {
+    font-family: 'Libre Franklin', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 10px;
+  }
+
+  .deepdive-group ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .deepdive-group ul li {
+    padding: 8px 12px;
+    background: var(--bg);
+    border: 1px solid var(--border-light);
+    border-radius: 5px;
+    margin-bottom: 6px;
+    font-size: 12.5px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .deepdive-group ul li .dd-arrow {
+    color: var(--accent);
+    font-weight: 700;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+
+  .deepdive-group ul li a {
+    color: var(--ip-dark);
+    font-weight: 600;
+    text-decoration: none;
+    border-bottom: 1px solid var(--accent-border);
+  }
+
+  .deepdive-group ul li a:hover {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+  }
+
+  .deepdive-group ul li .dd-desc {
+    color: var(--text-muted);
+    font-size: 11.5px;
+  }
+
+  .enhancement-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .enhancement-list li {
+    padding: 14px 16px;
+    background: var(--bg);
+    border: 1px solid var(--border-light);
+    border-left: 3px solid var(--accent);
+    border-radius: 0 6px 6px 0;
+    margin-bottom: 10px;
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.65;
+  }
+
+  .enhancement-list li strong {
+    color: var(--ip-dark);
+    display: block;
+    margin-bottom: 4px;
+    font-size: 13px;
+  }
+
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div class="top-bar">
+  <div class="top-bar-inner">
+    <div class="ip-logo">
+      <div class="ip-logo-mark">
+        <div class="ip-triangle"></div>
+        <div class="ip-dot"></div>
+      </div>
+      <span class="ip-wordmark">Insight Partners</span>
+    </div>
+    <span class="doc-classification">Confidential &mdash; Internal Use Only</span>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="header-top">
+      <div class="header-text">
+        <div class="header-label">Board Member Prep Pack</div>
+        <h1>Industry News &amp; Event Intelligence</h1>
+        <div class="header-subtitle">Portfolio Company Intelligence Brief</div>
+      </div>
+      <div class="reco-logo-container">
+        <img src="https://cdn.prod.website-files.com/644fc991ce69ff0d3bdbeb63/6797b48d427a3acb97fd3b55_Logo.svg" alt="Reco" />
+      </div>
+    </div>
+    <div class="header-meta">
+      <span><strong>Intelligence current as of:</strong> Feb 26, 2026, 18:00 UTC</span>
+      <span><strong>Board meeting:</strong> Early March 2026</span>
+      <span><strong>Lookback:</strong> Nov 2025 – Feb 2026</span>
+    </div>
+    <div class="freshness-warning">
+      This brief should be re-verified if the board meeting is delayed beyond March 14, 2026. Key items to re-check: CrowdStrike SGNL/Seraphic close status, ShinyHunters campaign developments, new OAuth breach disclosures, NIST Cyber AI Profile final publication.
+    </div>
+  </div>
+
+  <!-- STATS BAR -->
+  <div class="stats-bar">
+    <div class="stat-chip high-chip"><span class="num">2</span> Active Breach Campaigns</div>
+    <div class="stat-chip"><span class="num">4</span> Competitor Moves</div>
+    <div class="stat-chip"><span class="num">3</span> CrowdStrike M&amp;A</div>
+    <div class="stat-chip"><span class="num">3</span> Regulatory Catalysts</div>
+    <div class="stat-chip"><span class="num">1</span> Identity Mega-Round</div>
+    <div class="stat-chip"><span class="num">1</span> Customer Segment Catalyst</div>
+    <div class="stat-chip"><span class="num">1</span> Partner / Channel Signal</div>
+  </div>
+
+  <div class="legend">
+    &#10003; <strong>Verified</strong> = 2+ independent primary sources &nbsp;&nbsp;|&nbsp;&nbsp; &#9888; <strong>Single Source</strong> = 1 primary source, no contradicting information
+  </div>
+
+  <!-- COMPETITIVE POSITIONING SNAPSHOT -->
+  <div class="section-header">Competitive Positioning Snapshot</div>
+
+  <div class="matrix-container">
+    <p class="matrix-note"><strong>Key Axes:</strong> Pure-Play Depth vs. Platform Breadth × Posture-Only vs. Full SaaS Lifecycle</p>
+    <table class="matrix-table">
+      <thead>
+        <tr>
+          <th></th>
+          <th>Narrow (Posture / Detection)</th>
+          <th>Broad (Discovery → Posture → Identity → ITDR)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Pure-Play Specialist</strong></td>
+          <td>Obsidian Security (threat detection + supply chain + SDK)<br>Nudge Security (discovery + AI governance)</td>
+          <td><strong>Reco</strong> (full lifecycle + AI governance + graph)<br>AppOmni (posture + ZTPM + agentic AI + FedRAMP)</td>
+        </tr>
+        <tr>
+          <td><strong>Platform-Bundled</strong></td>
+          <td>Microsoft MDCA<br>iboss (SASE + SSPM, Jan 2026)</td>
+          <td>CrowdStrike (SSPM + identity [SGNL] + browser [Seraphic] + SIEM)<br>Palo Alto (SSPM + CASB/SASE + EU AI Act compliance)</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="identity-convergence">
+      <strong>Identity Convergence:</strong> Saviynt ($700M, ~$3B — IGA expanding toward SaaS identity)
+    </div>
+    <p class="matrix-note" style="margin-top: 12px;">The SaaS security category is being compressed from two directions: platform vendors assembling bundled stacks from above, and identity governance mega-rounds converging from the side. The strategic question is where Reco builds a moat that neither can replicate — and whether that moat is architectural (identity graph depth), data-driven (network effects from breadth of SaaS telemetry), or velocity-driven (integration speed).</p>
+  </div>
+
+  <!-- NET ASSESSMENT -->
+  <div class="section-header">Net Assessment</div>
+
+  <div class="net-assessment">
+    <h4>Pressure from Above — Platform Bundlers Assembling SaaS Security Stacks</h4>
+    <ul>
+      <li><strong>CrowdStrike</strong> spent <strong>~$1.37B over ~14 months</strong> on three acquisitions: Adaptive Shield $213.7M (closed Nov 2024, rebranded Falcon Shield; 219% YoY growth per Frost &amp; Sullivan Frost Radar), SGNL ~$740M reported (announced Jan 8, 2026), Seraphic ~$420M reported (announced Jan 13, 2026). SGNL and Seraphic had not yet closed as of this writing. <span class="na-source">SEC Filing: CrowdStrike FY2025 10-K; Press Releases: Jan 8 &amp; Jan 13, 2026; Frost &amp; Sullivan Frost Radar SSPM, Oct 2025</span></li>
+      <li><strong>Falcon Flex</strong> credit-based consumption model allows CISOs to add SSPM without new budget approval or RFP — creating invisible pipeline loss for standalone vendors.</li>
+      <li><strong>IANS</strong> data: ~70% of CISOs consolidating into platforms; CrowdStrike #2 anchor vendor (27%) behind Microsoft (49%). <span class="na-source">IANS Security Budget Benchmark Report, 2025</span></li>
+    </ul>
+
+    <h4>Pressure from the Side — Identity Governance Convergence</h4>
+    <ul>
+      <li><strong>Saviynt</strong>'s $700M at ~$3B (Dec 2025) signals IGA vendors — covering human, non-human, and AI agent identities — are expanding toward SaaS identity, competing for the same budget line as Reco's identity graph and ITDR. <span class="na-source">Saviynt Press Release, Dec 9, 2025; KKR Portfolio Company Announcement</span></li>
+    </ul>
+
+    <h4>Pure-Play Competitor Moves</h4>
+    <ul>
+      <li><strong>Obsidian Security</strong> executed a three-phase expansion — GTM hires (Jul 2025), Community SDK + Knowledge Graph + AI Assistant (Nov 2025), SaaS supply chain security (Jan 2026) — directly challenging Reco on integration velocity and graph-based intelligence. <span class="na-source">Obsidian Press Releases: Jul 2025, Nov 4, 2025, Jan 22, 2026</span></li>
+      <li><strong>AppOmni</strong> achieved FedRAMP Moderate ATO (Jul 2025) and shipped AgentGuard (Nov 2025). Thoma Bravo-backed. <span class="na-source">FedRAMP Marketplace, Jul 2025; AppOmni Press Release, Nov 2025</span></li>
+      <li><strong>Nudge Security</strong> raised $22.5M and expanded AI governance (Nov–Dec 2025). <span class="na-source">Nudge Press Release, Nov 18, 2025; HelpNetSecurity, Dec 9, 2025</span></li>
+      <li><strong>Palo Alto Networks</strong> productized EU AI Act compliance in SSPM (Apr 2025). <span class="na-source">Palo Alto SSPM Release Notes, Apr 2025</span></li>
+    </ul>
+
+    <h4>Three Forces Favoring Reco</h4>
+    <ul>
+      <li><strong>Breach urgency:</strong> ShinyHunters SSO vishing (Jan–Feb 2026, 6+ victims: Panera, CarGurus, Figure, Optimizely, Betterment) and OAuth token abuse (Salesloft/Drift → Salesforce, Gainsight → Salesforce, Copilot Studio "CoPhish") are creating board-level demand for SaaS identity visibility and ITDR. <span class="na-source">Company Disclosures; Mandiant/Google Cloud, Feb 2026; GTIG, Aug 2025; Datadog Security Labs, Oct 2025</span></li>
+      <li><strong>Regulatory obligations:</strong> DORA live (19 designated CTPPs), EU AI Act GPAI obligations active, CISA BOD 25-01 mandating federal SaaS baselines, NIST Cyber AI Profile draft forming. <span class="na-source">EU DORA Regulation 2022/2554; EU AI Act Regulation 2024/1689; CISA BOD 25-01, Dec 2024; NIST NISTIR 8596, Dec 2025</span></li>
+      <li><strong>AI agent proliferation:</strong> Generating a new attack surface that assembled-via-M&amp;A platforms cannot yet match. CoPhish and the CISA shadow AI incident demonstrate AI governance is no longer theoretical. <span class="na-source">Datadog Security Labs — CoPhish, Oct 2025; Media Reports — CISA Shadow AI Incident, Jan 2026</span></li>
+    </ul>
+
+    <h4>Market Timing</h4>
+    <ul>
+      <li>Only <strong>~13%</strong> of enterprises use dedicated SSPM (per AppOmni's vendor-produced 2025 survey of 803 security leaders), despite <strong>~33%</strong> stating they need it — early enough for a specialist to win, but the window is defined by how fast platform bundlers convert capital into "good enough" SSPM. <span class="na-source">AppOmni — State of SaaS Security 2025 Report, Jul 2025</span></li>
+    </ul>
+
+    <div class="core-question">
+      <strong>Core strategic question for this board meeting:</strong> Can Reco convert its specialization advantage — and the current breach-driven urgency — into installed base fast enough, over the next 18–24 months (per Forrester integration estimates), before platform bundlers close the capability gap and identity-first mega-rounds absorb the SaaS identity narrative? And is Reco's architectural advantage (identity graph, AI-native platform) durable — or replicable by a well-funded acquirer assembling components?
+    </div>
+  </div>
+
+  <!-- SCENARIO FRAMEWORK -->
+  <div class="section-header">Scenario Framework</div>
+
+  <div class="scenario-grid">
+    <div class="scenario-card">
+      <h4>Scenario A — Platform Absorption (Bear Case)</h4>
+      <p>CrowdStrike successfully integrates Falcon Shield + SGNL + Seraphic into a unified SaaS security offering within 12 months. Falcon Flex pricing bundles SSPM at near-zero marginal cost. Combined with Palo Alto's SSPM + CASB integration and Microsoft's MDCA distribution, standalone SSPM becomes increasingly difficult to sell as a separate line item.</p>
+      <div class="scenario-signal">Signal: Falcon Shield adoption metrics in CrowdStrike earnings; Falcon Flex SSPM attach rates; enterprises declining RFPs.</div>
+    </div>
+    <div class="scenario-card">
+      <h4>Scenario B — Category Validation (Base Case)</h4>
+      <p>SaaS identity breaches sustain urgency. Platform integrations take 18–24 months to mature (per Forrester estimates for acquisitions like Adaptive Shield). Reco's Series B capital and 220+ integration breadth sustain competitive position. Market bifurcates: platforms win "good enough" buyers, pure-plays win depth-seeking enterprises. ~33% of enterprises that need SSPM but haven't adopted create a greenfield opportunity. AI governance provides differentiated positioning.</p>
+      <div class="scenario-signal">Signal: Pipeline conversion on breach-driven inbound; AI governance as a buying trigger in >15% of deals; Reco win rates stable vs. platform vendors.</div>
+    </div>
+    <div class="scenario-card">
+      <h4>Scenario C — AI Governance Breakout (Bull Case)</h4>
+      <p>EU AI Act obligations + shadow AI urgency + agentic AI proliferation create a new buying category that Reco owns. The "SaaS security → AI governance" pivot repositions Reco as the enterprise standard for governing AI agents across SaaS. Identity graph becomes the strategic asset. TAM expands beyond SSPM into the broader AI governance market.</p>
+      <div class="scenario-signal">Signal: AI governance cited as primary buying trigger in >30% of new deals; EU AI Act compliance RFPs naming Reco; strategic partnership with AI/identity platform.</div>
+    </div>
+  </div>
+
+  <!-- DETAILED INTELLIGENCE -->
+  <div class="section-header">Active Threat Campaigns</div>
+
+  <button class="expand-all-btn" onclick="toggleAll()">&#9654; Expand All</button>
+
+  <!-- ShinyHunters -->
+  <div class="intel-item">
+    <div class="intel-header" onclick="toggleItem(this)">
+      <span class="severity-badge severity-high">HIGH</span>
+      <div class="intel-title-block">
+        <div class="intel-title">ShinyHunters SSO Vishing Campaign — 6+ Named Enterprise Victims</div>
+        <div class="intel-meta">
+          <span>Jan–Feb 2026</span>
+          <span class="verified">&#10003; Verified</span>
+          <span>Company Disclosure · Threat Intelligence</span>
+        </div>
+      </div>
+      <span class="intel-toggle">&#9654;</span>
+    </div>
+    <div class="intel-body">
+      <div class="intel-section-label">What Happened</div>
+      <p>ShinyHunters (a threat group that some third-party researchers associate with SCATTERED SPIDER under what has been termed the SLSH alliance) launched a targeted SSO vishing campaign that compromised at least 6 named enterprises: Panera (Jan 2026, incident confirmed, reported data exposure), CarGurus (Feb 2026, employee data accessed), Figure (Feb 2026, personal data exposure), Betterment (Jan 2026), Optimizely (Feb 2026), and a sixth confirmed but unnamed victim. Attack pattern: social engineering → SSO credential theft → lateral SaaS access across connected applications. Mandiant (via Google Cloud) confirmed the campaign is ongoing and likely has additional undisclosed victims.</p>
+
+      <div class="intel-section-label">Why This Matters for Reco</div>
+      <p>This is a live, real-time validation of Reco's core value proposition: SaaS identity visibility and threat detection. The attack vector — SSO credential compromise leading to cross-SaaS lateral movement — is exactly what Reco's identity graph and ITDR are designed to detect and disrupt. Every board member in every Reco-adjacent deal just saw their threat model validated.</p>
+
+      <div class="intel-section-label">Strategic Implication for Reco</div>
+      <p>Breach urgency creates a finite window of heightened CISO attention. The board should push for: (1) a forensic demo capability showing how Reco's graph would have detected the ShinyHunters attack pattern, (2) conversion metrics on breach-driven inbound pipeline, and (3) whether the company is seeing a different buyer profile or ACV in urgency-driven deals.</p>
+
+      <div class="so-what"><strong>So what:</strong> If Reco cannot demonstrate — with forensic specificity — how its identity graph would have detected the ShinyHunters SSO-to-SaaS lateral movement pattern, the breach urgency benefits all SaaS security vendors equally rather than disproportionately favoring Reco.</div>
+
+      <div class="source-list">
+        <div class="source-item"><span class="source-type">Threat Intelligence</span> CrowdStrike — SCATTERED SPIDER TTPs Update, Feb 2026</div>
+        <div class="source-item"><span class="source-type">Company Disclosure</span> Panera — Incident Notification, Jan 2026</div>
+        <div class="source-item"><span class="source-type">Company Disclosure</span> CarGurus — Company-Confirmed Incident, Feb 2026</div>
+        <div class="source-item"><span class="source-type">Threat Intelligence</span> Mandiant/Google Cloud — Campaign Analysis, Feb 2026</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- OAuth Token Abuse -->
+  <div class="intel-item">
+    <div class="intel-header" onclick="toggleItem(this)">
+      <span class="severity-badge severity-high">HIGH</span>
+      <div class="intel-title-block">
+        <div class="intel-title">OAuth Token Abuse Wave — SaaS-to-SaaS Lateral Movement via Compromised Integrations</div>
+        <div class="intel-meta">
+          <span>Aug 2025 – Feb 2026</span>
+          <span class="verified">&#10003; Verified</span>
+          <span>Security Research · Incident Disclosure</span>
+        </div>
+      </div>
+      <span class="intel-toggle">&#9654;</span>
+    </div>
+    <div class="intel-body">
+      <div class="intel-section-label">What Happened</div>
+      <p>Three distinct OAuth token abuse incidents surfaced over this period: (1) Salesloft/Drift OAuth tokens used to access Salesforce customer data (Aug 2025); (2) Gainsight OAuth integration exploited to pivot into Salesforce environments (Nov 2025, detected Nov 19); (3) Microsoft Copilot Studio "CoPhish" technique — Datadog Security Labs demonstrated using AI agents as OAuth consent phishing wrappers, automating credential harvesting at scale (Oct 2025). The CISA shadow AI incident (acting CISA director uploading FOUO documents to public ChatGPT, Jul 2025 — reported Jan 2026) adds a fourth vector: insider misuse of AI SaaS.</p>
+
+      <div class="intel-section-label">Why This Matters for Reco</div>
+      <p>OAuth token abuse represents SaaS-to-SaaS lateral movement — the category of attack that existing network security and endpoint detection fundamentally cannot see. This validates the need for a SaaS-native identity and integration monitoring layer. The CoPhish technique is particularly significant: it demonstrates that AI agents themselves become attack infrastructure, blurring the line between "authorized tool" and "threat vector."</p>
+
+      <div class="intel-section-label">Strategic Implication for Reco</div>
+      <p>The board should assess: (1) Can Reco demonstrate detection of OAuth token abuse patterns with specificity? (2) Is the company's AI governance positioning backed by product capability to detect CoPhish-style agent abuse? (3) Are prospects citing these incidents in evaluations? The move from theoretical AI risk to demonstrated AI-enabled attacks accelerates the urgency for Reco's AI governance capabilities.</p>
+
+      <div class="source-list">
+        <div class="source-item"><span class="source-type">Security Research</span> Google Threat Intelligence Group (GTIG) — Salesloft/Drift OAuth Campaign (UNC6395), Aug 2025</div>
+        <div class="source-item"><span class="source-type">Security Research</span> Kudelski Security — Gainsight OAuth Token Abuse Advisory, Nov 2025</div>
+        <div class="source-item"><span class="source-type">Security Research</span> Datadog Security Labs — Microsoft Copilot Studio CoPhish, Oct 2025</div>
+        <div class="source-item"><span class="source-type">Media Report</span> CISA Shadow AI Policy Incident (reported Jan 2026; activity mid-Jul 2025)</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- COMPETITIVE INTELLIGENCE -->
+  <div class="section-header">Competitive Intelligence</div>
+
+  <!-- CrowdStrike -->
+  <div class="intel-item">
+    <div class="intel-header" onclick="toggleItem(this)">
+      <span class="severity-badge severity-high">HIGH</span>
+      <div class="intel-title-block">
+        <div class="intel-title">CrowdStrike Triple Acquisition — SGNL (~$740M reported), Seraphic (~$420M reported), Adaptive Shield ($213.7M): ~$1.37B SaaS Security Stack Assembly</div>
+        <div class="intel-meta">
+          <span>Nov 2024 – Jan 2026</span>
+          <span class="verified">&#10003; Verified</span>
+          <span>SEC Filing · Company Press Release</span>
+        </div>
+      </div>
+      <span class="intel-toggle">&#9654;</span>
+    </div>
+    <div class="intel-body">
+      <div class="intel-section-label">What Happened</div>
+      <p>CrowdStrike executed three sequential acquisitions to build a comprehensive SaaS security stack: (1) Adaptive Shield for $213.7M in cash consideration net of cash acquired (closed Nov 2024, rebranded as Falcon Shield SSPM); Falcon Shield reported 219% YoY growth in 2025 (per Frost &amp; Sullivan Frost Radar); (2) SGNL for ~$740M (reported by Reuters; announced Jan 8, 2026) for continuous identity authorization and Zero Standing Privileges; (3) Seraphic (announced Jan 13, 2026) for browser-layer security. Total reported spend: ~$1.37B across three deals over ~14 months (Nov 2024 – Jan 2026). SGNL and Seraphic prices are media-reported (Reuters, SecurityWeek), not company-confirmed. SGNL and Seraphic had not yet closed as of this writing.</p>
+
+      <div class="intel-section-label">Why This Matters for Reco</div>
+      <p>CrowdStrike is the most dangerous competitive threat because of Falcon Flex — a credit-based consumption model where enterprises pre-commit to a dollar amount and draw down modules as needed. A CISO with an existing Falcon contract can add SSPM without new budget approval, without an RFP, and without evaluating standalone vendors. This creates "invisible pipeline loss" — deals Reco never enters. IANS benchmark data shows CrowdStrike is the #2 consolidation anchor vendor (27% of enterprises) behind only Microsoft (49%).</p>
+
+      <div class="intel-section-label">Strategic Implication for Reco</div>
+      <p>The board should understand: (1) What percentage of Reco's target accounts have existing Falcon contracts? (2) How many recent lost deals were "losses to platform renewal" rather than competitive evaluations? (3) At what point does CrowdStrike's assembled stack reach "good enough" depth? Forrester estimates at least 18–24 months for complete integration of acquisitions like these — that window is Reco's opportunity.</p>
+
+      <div class="so-what"><strong>So what:</strong> At ~$1.37B deployed, CrowdStrike has spent more than 16× Reco's total funding assembling a competing stack. The strategic question is not whether CrowdStrike's stack will be "good enough" — it's <em>when</em> — and whether Reco has converted enough installed base before that happens.</div>
+
+      <div class="source-list">
+        <div class="source-item"><span class="source-type">SEC Filing</span> CrowdStrike — FY2025 10-K, Adaptive Shield Acquisition</div>
+        <div class="source-item"><span class="source-type">Company Press Release</span> CrowdStrike — SGNL Acquisition, Jan 8, 2026</div>
+        <div class="source-item"><span class="source-type">Company Press Release</span> CrowdStrike — Seraphic Acquisition, Jan 13, 2026</div>
+        <div class="source-item"><span class="source-type">Industry Research</span> IANS — Security Budget Benchmark Report, 2025</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Saviynt -->
+  <div class="intel-item">
+    <div class="intel-header" onclick="toggleItem(this)">
+      <span class="severity-badge severity-high">HIGH</span>
+      <div class="intel-title-block">
+        <div class="intel-title">Saviynt Raises $700M at ~$3B Valuation — Identity Governance Converges on SaaS Identity</div>
+        <div class="intel-meta">
+          <span>Dec 9, 2025</span>
+          <span class="verified">&#10003; Verified</span>
+          <span>Company Press Release · Investor Disclosure</span>
+        </div>
+      </div>
+      <span class="intel-toggle">&#9654;</span>
+    </div>
+    <div class="intel-body">
+      <div class="intel-section-label">What Happened</div>
+      <p>Saviynt closed $700M in growth equity led by KKR, valuing the company at approximately $3B. Saviynt is an identity governance and administration (IGA) platform covering human, non-human, and AI agent identity lifecycle management. The company is expanding its SaaS identity governance capabilities, covering the same use cases that overlap with Reco's identity graph — particularly non-human identity and AI agent governance.</p>
+
+      <div class="intel-section-label">Why This Matters for Reco</div>
+      <p>Saviynt's raise signals that identity governance is the foundation layer for AI-era security — and that the market believes IGA platforms will expand to cover SaaS identity use cases. If Saviynt's SaaS identity governance capabilities mature, they compete for the same CISO budget line as Reco's identity graph and ITDR. Saviynt has $700M and a large, well-funded enterprise sales organization; Reco has $85M total funding.</p>
+
+      <div class="intel-section-label">Strategic Implication for Reco</div>
+      <p>The board must make a strategic call: Is Reco's identity graph a complement to IGA platforms (partnership opportunity, co-sell distribution) or a competitor (budget conflict)? If the former, the $700M behind Saviynt becomes a distribution channel. If the latter, it's an asymmetric fight. The 12-month roadmap needs a clear answer.</p>
+
+      <div class="so-what"><strong>So what:</strong> The 12-month roadmap must answer whether Reco's identity graph is a complement to IGA platforms (partnership = distribution channel) or a competitor (budget conflict = asymmetric fight at $85M vs. $700M).</div>
+
+      <div class="source-list">
+        <div class="source-item"><span class="source-type">Company Press Release</span> Saviynt — $700M Growth Round, Dec 9, 2025</div>
+        <div class="source-item"><span class="source-type">Investor Disclosure</span> KKR — Portfolio Company Announcement</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Obsidian -->
+  <div class="intel-item">
+    <div class="intel-header" onclick="toggleItem(this)">
+      <span class="severity-badge severity-medium">MEDIUM</span>
+      <div class="intel-title-block">
+        <div class="intel-title">Obsidian Security — Rapid Three-Phase Expansion Directly Challenges Reco Differentiation</div>
+        <div class="intel-meta">
+          <span>Jul 2025 – Jan 2026</span>
+          <span class="verified">&#10003; Verified</span>
+          <span>Company Press Release · Product Announcement</span>
+        </div>
+      </div>
+      <span class="intel-toggle">&#9654;</span>
+    </div>
+    <div class="intel-body">
+      <div class="intel-section-label">What Happened</div>
+      <p>Obsidian executed three coordinated moves: (1) GTM leadership expansion — including VP GTM Strategy Alison Tierney, Field CTO Corey Elinburg, VP Solutions Engineering Brian McHenry, VP Revenue Marketing Tina Lei, and Mid-Market lead Tyler Mihevc (Jul 2025); (2) Product triple-launch — Community SDK (crowdsourced SaaS integrations), Unified Knowledge Graph, and AI-powered Security Assistant (Nov 2025); (3) End-to-end SaaS supply chain security covering OAuth connections and third-party integrations (Jan 22, 2026). This is a coherent build-to-scale playbook.</p>
+
+      <div class="intel-section-label">Why This Matters for Reco</div>
+      <p>Obsidian's Community SDK is the most direct challenge to Reco's SaaS App Factory integration moat. If Obsidian can crowdsource integrations via a community model, they could outpace Reco's claimed "2 new integrations per week" without proportional R&D investment. The Unified Knowledge Graph directly mirrors Reco's identity graph differentiation. The GTM hires signal intention to scale aggressively.</p>
+
+      <div class="intel-section-label">Strategic Implication for Reco</div>
+      <p>The board should evaluate: At what point does an open-ecosystem (SDK) approach outpace a proprietary integration factory? Is Reco's App Factory a genuine architectural advantage, or a resource-intensive process that doesn't scale against community-driven models? Also: Obsidian hasn't raised since 2022 — are they pre-raise or pre-acquisition?</p>
+
+      <div class="source-list">
+        <div class="source-item"><span class="source-type">Company Press Release</span> Obsidian Security — GTM Leadership Expansion, Jul 2025</div>
+        <div class="source-item"><span class="source-type">Product Announcement</span> Obsidian Security — Community SDK + Knowledge Graph + AI Assistant, Nov 2025</div>
+        <div class="source-item"><span class="source-type">Product Announcement</span> Obsidian Security — SaaS Supply Chain Security, Jan 22, 2026</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- AppOmni -->
+  <div class="intel-item">
+    <div class="intel-header" onclick="toggleItem(this)">
+      <span class="severity-badge severity-medium">MEDIUM</span>
+      <div class="intel-title-block">
+        <div class="intel-title">AppOmni — FedRAMP ATO + AgentGuard: First-Mover in Two Segments Reco Cannot Yet Address</div>
+        <div class="intel-meta">
+          <span>Jul–Nov 2025</span>
+          <span class="verified">&#10003; Verified</span>
+          <span>Company Press Release · Government Database</span>
+        </div>
+      </div>
+      <span class="intel-toggle">&#9654;</span>
+    </div>
+    <div class="intel-body">
+      <div class="intel-section-label">What Happened</div>
+      <p>AppOmni achieved FedRAMP Moderate ATO (Jul 2025), becoming the first SSPM vendor authorized for federal civilian deployment. In November 2025, AppOmni launched AgentGuard — a product specifically designed for agentic AI security, covering AI agent identity, access permissions, and behavioral monitoring. AppOmni also offers its Zero Trust Posture Management (ZTPM) framework (introduced May 2024) for continuous SaaS security baseline enforcement. Thoma Bravo-backed.</p>
+
+      <div class="intel-section-label">Why This Matters for Reco</div>
+      <p>FedRAMP creates a segment lock-out: Reco cannot sell into FCEB agencies without authorization, and BOD 25-01 creates mandatory SaaS security requirements across the federal estate. AgentGuard positions AppOmni in the agentic AI security conversation alongside Reco. With Thoma Bravo backing and no new round needed, AppOmni is operating from a position of capital efficiency.</p>
+
+      <div class="intel-section-label">Strategic Implication for Reco</div>
+      <p>Two questions for the board: (1) Does Reco have a FedRAMP timeline, and if not, what revenue is being explicitly forfeited in federal and regulated segments? (2) How does Reco's AI governance breadth compare to AppOmni's AgentGuard specificity? Is breadth (Reco) or depth (AppOmni) more compelling to buyers?</p>
+
+      <div class="source-list">
+        <div class="source-item"><span class="source-type">Government Database</span> FedRAMP Marketplace — AppOmni Moderate ATO, Jul 2025</div>
+        <div class="source-item"><span class="source-type">Company Press Release</span> AppOmni — AgentGuard Launch, Nov 2025</div>
+        <div class="source-item"><span class="source-type">Company Press Release</span> AppOmni — ZTPM Framework, May 2024</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Nudge -->
+  <div class="intel-item">
+    <div class="intel-header" onclick="toggleItem(this)">
+      <span class="severity-badge severity-medium">MEDIUM</span>
+      <div class="intel-title-block">
+        <div class="intel-title">Nudge Security — $22.5M Series A + AI Governance Expansion: Discovery-First Competitor Funded</div>
+        <div class="intel-meta">
+          <span>Nov–Dec 2025</span>
+          <span class="verified">&#10003; Verified</span>
+          <span>Company Press Release · Industry Publication</span>
+        </div>
+      </div>
+      <span class="intel-toggle">&#9654;</span>
+    </div>
+    <div class="intel-body">
+      <div class="intel-section-label">What Happened</div>
+      <p>Nudge Security raised a $22.5M Series A led by Cerberus Ventures (Nov 2025), with Ballistic Ventures, Forgepoint Capital, and Squadra Ventures. In December 2025, Nudge expanded with AI governance capabilities focused on AI data security risks.</p>
+
+      <div class="intel-section-label">Why This Matters for Reco</div>
+      <p>Nudge competes on the "discovery + shadow SaaS/AI" axis — the entry point that leads to broader platform adoption. With fresh capital and AI governance expansion, Nudge is better positioned to compete for the "land with discovery, expand to governance" motion. Cyber-specialist investor profile signals strong category conviction.</p>
+
+      <div class="intel-section-label">Strategic Implication for Reco</div>
+      <p>Nudge's lighter-weight, discovery-first approach can win in organizations not ready for full SSPM. The risk: Nudge lands in accounts first and expands before Reco gets evaluated. The board should understand whether Reco's discovery capabilities are sold as a standalone entry point or only as part of the full platform.</p>
+
+      <div class="source-list">
+        <div class="source-item"><span class="source-type">Company Press Release</span> Nudge Security — $22.5M Series A, Nov 18, 2025</div>
+        <div class="source-item"><span class="source-type">Industry Publication</span> HelpNetSecurity — Nudge AI Governance Expansion, Dec 9, 2025</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- REGULATORY & MARKET CONTEXT -->
+  <div class="section-header">Regulatory &amp; Market Context</div>
+
+  <!-- CISA BOD 25-01 -->
+  <div class="intel-item">
+    <div class="intel-header" onclick="toggleItem(this)">
+      <span class="severity-badge severity-watch">WATCH</span>
+      <div class="intel-title-block">
+        <div class="intel-title">CISA BOD 25-01: Federal SaaS Configuration Baselines Become Mandatory</div>
+        <div class="intel-meta">
+          <span>Dec 2024</span>
+          <span class="verified">&#10003; Verified</span>
+          <span>Government Agency</span>
+        </div>
+      </div>
+      <span class="intel-toggle">&#9654;</span>
+    </div>
+    <div class="intel-body">
+      <p>Issued December 2024, BOD 25-01 requires federal agencies to identify cloud tenants, deploy automated assessment tools, and align configurations to SCuBA secure baselines (M365 at issuance; Google Workspace baselines anticipated). Creates demand tailwind in federal markets — but AppOmni's FedRAMP ATO captures this first. Reco cannot sell into FCEB agencies without FedRAMP authorization.</p>
+      <div class="source-list">
+        <div class="source-item"><span class="source-type">Government Agency</span> CISA — BOD 25-01, Dec 17, 2024</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DORA -->
+  <div class="intel-item">
+    <div class="intel-header" onclick="toggleItem(this)">
+      <span class="severity-badge severity-watch">WATCH</span>
+      <div class="intel-title-block">
+        <div class="intel-title">EU DORA — Live Since January 17, 2025; 19 Critical ICT Providers Designated</div>
+        <div class="intel-meta">
+          <span>Live since Jan 2025</span>
+          <span class="verified">&#10003; Verified</span>
+          <span>Regulatory Body</span>
+        </div>
+      </div>
+      <span class="intel-toggle">&#9654;</span>
+    </div>
+    <div class="intel-body">
+      <p>DORA is fully applicable to EU financial entities, requiring formalized ICT risk management, incident reporting, and third-party risk controls — including SaaS vendors. On November 18, 2025, the ESAs published the first list of 19 designated Critical ICT Third-Party Providers (including AWS, Google Cloud, Microsoft, SAP, Oracle). Financial services firms must demonstrate operational resilience across their SaaS estate — a direct demand driver. DORA-driven buyers represent a distinct cohort with longer procurement cycles and specific compliance artifact requirements.</p>
+      <div class="source-list">
+        <div class="source-item"><span class="source-type">Regulatory Body</span> EU DORA — Regulation 2022/2554</div>
+        <div class="source-item"><span class="source-type">Regulatory Body</span> EBA — ESAs Designate CTPPs, Nov 18, 2025</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- EU AI Act -->
+  <div class="intel-item">
+    <div class="intel-header" onclick="toggleItem(this)">
+      <span class="severity-badge severity-watch">WATCH</span>
+      <div class="intel-title-block">
+        <div class="intel-title">EU AI Act — Phased Obligations Underway; Full Applicability August 2026</div>
+        <div class="intel-meta">
+          <span>Phased through Aug 2026</span>
+          <span class="verified">&#10003; Verified</span>
+          <span>Regulatory Body · International Organization</span>
+        </div>
+      </div>
+      <span class="intel-toggle">&#9654;</span>
+    </div>
+    <div class="intel-body">
+      <p>Prohibited practices and AI literacy obligations live since February 2, 2025. Governance and GPAI rules from August 2, 2025. Full applicability August 2, 2026. Creates demand for shadow AI discovery, AI agent governance, and usage monitoring. WEF's Global Cybersecurity Outlook 2026 reports organizations nearly doubled AI security assessment from 37% to 64% — regulatory pressure is translating into procurement activity. Palo Alto has already productized EU AI Act compliance (Apr 2025) — Reco needs to match or exceed this.</p>
+      <div class="source-list">
+        <div class="source-item"><span class="source-type">Regulatory Body</span> EU AI Act — Regulation 2024/1689</div>
+        <div class="source-item"><span class="source-type">Regulatory Body</span> European Commission — AI Act Timeline</div>
+        <div class="source-item"><span class="source-type">International Organization</span> WEF — Global Cybersecurity Outlook 2026, Jan 12, 2026</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- NIST -->
+  <div class="intel-item">
+    <div class="intel-header" onclick="toggleItem(this)">
+      <span class="severity-badge severity-watch">WATCH</span>
+      <div class="intel-title-block">
+        <div class="intel-title">NIST "Cyber AI Profile" (NISTIR 8596) Draft Published — Governance Reference Artifact Emerging</div>
+        <div class="intel-meta">
+          <span>Dec 2025</span>
+          <span class="verified">&#10003; Verified</span>
+          <span>Standards Body</span>
+        </div>
+      </div>
+      <span class="intel-toggle">&#9654;</span>
+    </div>
+    <div class="intel-body">
+      <p>NIST released the preliminary draft of NISTIR 8596 (Cybersecurity Framework Profile for AI) on December 16, 2025. Comment period closed January 30, 2026. Covers: Securing AI System Components, Conducting AI-Enabled Cyber Defense, Thwarting AI-Enabled Cyber Attacks. Likely to become a reference governance artifact for U.S. enterprise "secure AI" programs. Reco should consider publishing a capability mapping to the final profile — a low-cost, high-signal positioning move that demonstrates governance readiness ahead of competitors.</p>
+      <div class="source-list">
+        <div class="source-item"><span class="source-type">Standards Body</span> NIST — Preliminary Draft NISTIR 8596, Dec 16, 2025</div>
+        <div class="source-item"><span class="source-type">Standards Body</span> NCCoE — Workshop & Comment Period</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Google/Wiz -->
+  <div class="intel-item">
+    <div class="intel-header" onclick="toggleItem(this)">
+      <span class="severity-badge severity-watch">WATCH</span>
+      <div class="intel-title-block">
+        <div class="intel-title">Google/Wiz $32B Acquisition Nearing Close — Platform-First Buying Pressure Intensifies</div>
+        <div class="intel-meta">
+          <span>Mar 2025 – Feb 2026</span>
+          <span class="verified">&#10003; Verified</span>
+          <span>Company Press Release · Industry Publication</span>
+        </div>
+      </div>
+      <span class="intel-toggle">&#9654;</span>
+    </div>
+    <div class="intel-body">
+      <p>Google announced definitive agreement for $32B all-cash (Mar 2025). DOJ cleared (Nov 2025). EU Commission approved unconditionally (Feb 2026). Not yet confirmed closed. Accelerates "platform-first" buying psychology across enterprise security. A $32B outcome re-prices security assets and signals that standalone vendors with strong growth can command premium valuations — relevant context for Reco's strategic optionality and for understanding how acquirers value category-defining security companies.</p>
+      <div class="source-list">
+        <div class="source-item"><span class="source-type">Company Press Release</span> Google — Agreement to Acquire Wiz, Mar 18, 2025</div>
+        <div class="source-item"><span class="source-type">Industry Publication</span> TechCrunch — DOJ Clears Google-Wiz, Nov 5, 2025</div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- PARTNER / CHANNEL -->
+  <div class="intel-item">
+    <div class="intel-header" onclick="toggleItem(this)">
+      <span class="severity-badge severity-watch">WATCH</span>
+      <div class="intel-title-block">
+        <div class="intel-title">Reco Technology Partner Ecosystem — Google/Wiz Acquisition Creates Partnership Uncertainty</div>
+        <div class="intel-meta">
+          <span>Mar 2025 – Feb 2026</span>
+          <span style="color: var(--medium); font-weight: 500;">&#9888; Single Source</span>
+          <span>Company Website · Company Press Release</span>
+        </div>
+      </div>
+      <span class="intel-toggle">&#9654;</span>
+    </div>
+    <div class="intel-body">
+      <div class="intel-section-label">What Happened</div>
+      <p>Reco publicly lists Wiz as a named technology partner alongside AWS, Palo Alto Networks, Tines, and Torq (per Reco's CRN 2025 Partner Program Guide listing and re:Configure Partner Program, Mar 2025). Separately, Workday Ventures joined Reco's Series B (Feb 2026) and Workday expanded its Agent Partner Network to over 50 partners (Sep 2025), creating a potential distribution and co-development channel for Reco's AI governance capabilities. Google's pending $32B acquisition of Wiz — now past DOJ and EU clearance — raises a question about the durability of Reco's Wiz technology partnership once Wiz becomes a Google subsidiary.</p>
+
+      <div class="intel-section-label">Why This Matters for Reco</div>
+      <p>Wiz is one of Reco's five named technology partners. Post-announcement, Wiz leadership has committed to remaining multicloud and partner-integrated, but industry analysts note that partner go-to-market dynamics may recalibrate when a partner becomes a subsidiary of a direct cloud competitor. Canalys assessed that the deal "will redefine Google Cloud's and Wiz's relationships with many of their key partners" and that "competitors are unlikely to continue offering the same level of investment and visibility." Separately, the Workday Ventures investment and Agent Partner Network expansion represent an emerging distribution opportunity — Workday's over 50 agent partners need SaaS security governance for the AI agents they deploy.</p>
+
+      <div class="intel-section-label">Strategic Implication for Reco</div>
+      <p>The board should assess: (1) What is the current commercial value of the Wiz technology partnership (joint customers, integration usage, co-sell pipeline)? (2) Has Reco had post-announcement conversations with Wiz about partnership continuity? (3) Is the Workday Ventures relationship being developed into a co-sell or marketplace distribution channel beyond the investment itself?</p>
+
+      <div class="source-list">
+        <div class="source-item"><span class="source-type">Company Website</span> Reco — re:Configure Partner Program / CRN 2025 Partner Program Guide, Mar 2025</div>
+        <div class="source-item"><span class="source-type">Company Press Release</span> Workday — Agent Partner Network Expansion, Sep 16, 2025</div>
+        <div class="source-item"><span class="source-type">Industry Analysis</span> Canalys — "Google Cloud buying Wiz will redefine relationships," Mar 20, 2025</div>
+      </div>
+    </div>
+  </div>
+
+    <!-- FUNDING TABLE -->
+  <div class="section-header">Funding Environment Snapshot</div>
+
+  <table class="funding-table">
+    <thead>
+      <tr>
+        <th>Company</th>
+        <th>Round</th>
+        <th>Amount</th>
+        <th>Valuation</th>
+        <th>Date</th>
+        <th>Signal for Reco</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Saviynt</td>
+        <td>Growth (KKR-led)</td>
+        <td>$700M</td>
+        <td>~$3B</td>
+        <td>Dec 9, 2025</td>
+        <td>Identity vendors massively capitalized; convergence pressure on SaaS identity</td>
+      </tr>
+      <tr>
+        <td>CrowdStrike</td>
+        <td>M&A spree</td>
+        <td>~$1.37B (reported)</td>
+        <td>Public ($95B+)</td>
+        <td>Nov 2024 – Jan 2026</td>
+        <td>Infinite SSPM subsidy capacity; full-stack via acquisition</td>
+      </tr>
+      <tr>
+        <td>Upwind Security</td>
+        <td>Series B</td>
+        <td>$250M</td>
+        <td>~$1.5B</td>
+        <td>Jan 26, 2026</td>
+        <td>Adjacent cloud security consolidating; "fewer vendors" preference</td>
+      </tr>
+      <tr>
+        <td>Reco</td>
+        <td>Series B</td>
+        <td>$30M</td>
+        <td>Undisclosed</td>
+        <td>Feb 10, 2026</td>
+        <td>Fresh capital; Workday/TIAA strategic signal; order-of-magnitude gap vs. platforms</td>
+      </tr>
+      <tr>
+        <td>Nudge Security</td>
+        <td>Series A</td>
+        <td>$22.5M</td>
+        <td>Undisclosed</td>
+        <td>Nov 18, 2025</td>
+        <td>Cyber-specialist investors; discovery-first competitor funded</td>
+      </tr>
+      <tr>
+        <td>Obsidian Security</td>
+        <td>Series C (last)</td>
+        <td>$90M</td>
+        <td>Undisclosed</td>
+        <td>Apr 2022</td>
+        <td>No new round in 3+ years; scaling efficiently or pre-raise</td>
+      </tr>
+      <tr>
+        <td>AppOmni</td>
+        <td>Series C+ (last)</td>
+        <td>$70M+</td>
+        <td>Undisclosed</td>
+        <td>Jun 2022</td>
+        <td>Thoma Bravo-backed; no new round — similar signal</td>
+      </tr>
+      <tr>
+        <td>iboss</td>
+        <td>Product launch</td>
+        <td>—</td>
+        <td>—</td>
+        <td>Jan 22, 2026</td>
+        <td>SASE vendor adds SSPM — "good-enough" availability expanding</td>
+      </tr>
+      <tr>
+        <td>Wing Security</td>
+        <td>Seed + Series A (last)</td>
+        <td>$26M combined</td>
+        <td>Undisclosed</td>
+        <td>Mar 2022</td>
+        <td>No new funding in 3+ years — potential capital constraint or acquisition candidate</td>
+      </tr>
+      <tr>
+        <td>Valence Security</td>
+        <td>Series A (last)</td>
+        <td>$25M</td>
+        <td>Undisclosed</td>
+        <td>Oct 2022</td>
+        <td>No new funding in 3+ years — similar concern</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="editorial-note">
+    <strong>Editorial note:</strong> The capital disparity is the defining structural feature of this competitive landscape. CrowdStrike spent ~$1.37B (reported) on three acquisitions over ~14 months — more than 16× Reco's total funding. Saviynt raised $700M in a single round — more than 8× Reco's total. What this capital enables is concrete: CrowdStrike can subsidize SSPM at zero margin within Falcon Flex renewals; Saviynt can aggressively expand into SaaS identity governance with a large, well-funded enterprise sales organization. Reco's $85M must fund the transition from "fast-growing startup" to "enterprise-grade platform" — which means every dollar of GTM spend must be surgically precise, and the product architecture must create defensibility that capital alone cannot replicate. The AppOmni survey finding that only 13% of enterprises currently use a dedicated SSPM solution (despite ~33% stating they need one) suggests the market is still early enough for a well-positioned specialist to win — but the window is defined by how fast platform bundlers convert their capital into "good enough" SSPM. The absence of new funding for Wing and Valence (both 3+ years) signals potential acquisition candidates or growth challenges — reducing the competitive field but also signaling category maturation.
+  </div>
+
+  <!-- BOARD QUESTIONS -->
+  <div class="section-header">Questions for the Board Discussion</div>
+
+  <div class="board-question">
+    <h4>Question 1 — Invisible Pipeline Loss</h4>
+    <div class="question-text">"What percentage of our lost deals in the last two quarters were competitive losses to a platform vendor where SSPM was added to an existing contract renewal — and how many deals did we never even enter because no standalone RFP was issued? What percentage of our target accounts have existing CrowdStrike Falcon contracts?"</div>
+    <div class="question-rationale">Surfaces the pipeline loss that win/loss data doesn't capture. If buyers add SSPM to platform renewals without evaluating standalone vendors, Reco's TAM is shrinking invisibly. The Falcon Flex drawdown model makes this particularly acute — a CISO can add SSPM without new budget approval or an RFP.</div>
+  </div>
+
+  <div class="board-question">
+    <h4>Question 2 — Identity Governance Strategic Fork</h4>
+    <div class="question-text">"Saviynt's $700M raise positions identity governance as the foundation for AI-era security. Where does Reco's identity graph roadmap go — are we building toward identity governance use cases, or partnering with IGA platforms? Is our identity graph a complement (partnership opportunity) or a competitor (budget conflict)? What's the 12-month plan?"</div>
+    <div class="question-rationale">Forces a strategic choice. If Reco's identity graph competes with IGA platforms for the same budget line, it's bringing $85M to a $700M fight. If it complements them, there's a partnership and co-sell opportunity that could accelerate distribution.</div>
+  </div>
+
+  <div class="board-question">
+    <h4>Question 3 — Breach-Driven Demand Conversion</h4>
+    <div class="question-text">"The ShinyHunters SSO campaign and the OAuth token abuse wave are creating acute urgency for SaaS identity security. Can we demonstrate, with specificity, how Reco's identity graph and ITDR would have detected or disrupted the attack pattern used against Panera, CarGurus, and Figure? What's the conversion rate on breach-driven inbound vs. our core outbound pipeline — and are we seeing a different buyer profile or ACV in breach-driven deals?"</div>
+    <div class="question-rationale">Tests whether Reco is converting external urgency into pipeline and revenue — or whether the demand catalyst is benefiting all competitors equally. The specificity question matters: can Reco show a prospect exactly how the ShinyHunters attack would have been caught?</div>
+  </div>
+
+  <div class="board-question">
+    <h4>Question 4 — AI Governance Revenue Signal</h4>
+    <div class="question-text">"Of deals closed in the last two quarters, how many cited 'AI governance' or 'shadow AI discovery' as the primary buying trigger versus traditional SSPM — and what is the ACV difference between those buyer profiles?"</div>
+    <div class="question-rationale">Tests whether AI governance positioning is translating into revenue or remains a marketing narrative. If AI governance deals are higher ACV and growing as a share of pipeline, the "AI Governance Breakout" scenario is materializing. If not, the positioning may need to be backed by more concrete product capabilities.</div>
+  </div>
+
+  <div class="board-question">
+    <h4>Question 5 — Integration Moat Durability</h4>
+    <div class="question-text">"Our SaaS App Factory claims 2 new integrations per week. Obsidian just launched a Community SDK that crowdsources integrations. What is our velocity relative to Obsidian's model over the next 12 months, and at what point does their open-ecosystem approach outpace ours?"</div>
+    <div class="question-rationale">Tests whether the integration moat is durable or whether an open-ecosystem approach could erode it. Reveals if the SaaS App Factory is a genuine architectural advantage or a resource-intensive process that doesn't scale against a community-driven model.</div>
+  </div>
+
+  <div class="board-question">
+    <h4>Question 6 — FedRAMP Strategic Trade-off</h4>
+    <div class="question-text">"AppOmni achieved FedRAMP ATO in July 2025. Do we have a FedRAMP timeline, and if not, what is the revenue we're explicitly choosing to forgo in federal and regulated segments — and is that defensible given CISA BOD 25-01?"</div>
+    <div class="question-rationale">Forces a concrete trade-off discussion. FedRAMP is expensive and slow (12–18 months), but BOD 25-01 creates mandatory SaaS security requirements across the federal civilian executive branch. If Reco has no FedRAMP plan, this segment is conceded to AppOmni — and that should be a deliberate, quantified decision.</div>
+  </div>
+
+  <!-- WATCH AHEAD -->
+  <div class="section-header">Watch Ahead — Next 90 Days</div>
+
+  <div class="watch-item">
+    <div class="watch-date">Q1 2026</div>
+    <div class="watch-content">
+      <h4>CrowdStrike SGNL &amp; Seraphic Acquisitions Close</h4>
+      <p>Integration milestones will signal how fast CrowdStrike's bundled stack becomes real in competitive deals.</p>
+      <div class="watch-signal">Signal: Early integration demos or joint product announcements at RSA; Falcon Flex pricing changes bundling SSPM + identity.</div>
+    </div>
+  </div>
+
+  <div class="watch-item">
+    <div class="watch-date">Mar 2026</div>
+    <div class="watch-content">
+      <h4>CrowdStrike FY2026 Q4 Earnings</h4>
+      <p>May disclose Falcon Shield module adoption metrics — first quantitative signal of platform SSPM adoption at scale.</p>
+      <div class="watch-signal">Signal: Falcon Shield mentioned as top-5 module by adoption or revenue contribution.</div>
+    </div>
+  </div>
+
+  <div class="watch-item">
+    <div class="watch-date">Q1 2026</div>
+    <div class="watch-content">
+      <h4>Google/Wiz Deal Close</h4>
+      <p>Formal close triggers integration planning and signals hyperscaler security consolidation is real.</p>
+      <div class="watch-signal">Signal: Post-close announcements about Wiz multi-cloud commitment and any SaaS security expansion.</div>
+    </div>
+  </div>
+
+  <div class="watch-item">
+    <div class="watch-date">H1 2026</div>
+    <div class="watch-content">
+      <h4>NIST Cyber AI Profile (NISTIR 8596) — Final Publication</h4>
+      <p>Will become a procurement reference artifact for U.S. enterprise AI security programs.</p>
+      <div class="watch-signal">Signal: Which vendors publish capability mappings first — early mapping is a low-cost positioning advantage.</div>
+    </div>
+  </div>
+
+  <div class="watch-item">
+    <div class="watch-date">Apr 28 – May 1</div>
+    <div class="watch-content">
+      <h4>RSA Conference 2026</h4>
+      <p>Key venue for competitive product announcements. Expect CrowdStrike, AppOmni, Obsidian, and Wing to make SaaS/AI security announcements.</p>
+      <div class="watch-signal">Signal: Platform vendors announcing SSPM capabilities that close the depth gap with pure-plays; Obsidian SDK adoption metrics.</div>
+    </div>
+  </div>
+
+  <div class="watch-item">
+    <div class="watch-date">H1 2026</div>
+    <div class="watch-content">
+      <h4>Obsidian Security Potential Fundraise</h4>
+      <p>Scaling "ahead of growth funding" since 2022. A new round signals independence; absence may signal acquisition discussions.</p>
+      <div class="watch-signal">Signal: Series D (bullish for category, bearish for Reco) or acquisition (reduces field, validates absorption thesis).</div>
+    </div>
+  </div>
+
+  <div class="watch-item">
+    <div class="watch-date">Ongoing</div>
+    <div class="watch-content">
+      <h4>ShinyHunters &amp; OAuth Campaign Developments</h4>
+      <p>Additional victims may emerge, sustaining board-level urgency. SEC 8-K filings from publicly traded victims may create disclosure-driven demand.</p>
+      <div class="watch-signal">Signal: New named victims; attribution/arrest developments; SEC enforcement actions related to SaaS breach disclosure.</div>
+    </div>
+  </div>
+
+  <div class="watch-item">
+    <div class="watch-date">Aug 2, 2026</div>
+    <div class="watch-content">
+      <h4>EU AI Act — Full Applicability</h4>
+      <p>Buyer urgency for AI governance will increase. Preparation starts 6+ months ahead.</p>
+      <div class="watch-signal">Signal: RFPs citing EU AI Act compliance as a requirement — if Reco sees these, the "AI Governance Breakout" scenario is materializing.</div>
+    </div>
+  </div>
+
+  <div class="watch-item">
+    <div class="watch-date">Rolling 2026</div>
+    <div class="watch-content">
+      <h4>CISA BOD 25-01 Compliance Deadlines</h4>
+      <p>Federal agencies must demonstrate SCuBA baseline compliance. Creates procurement urgency for FedRAMP-authorized SSPM.</p>
+      <div class="watch-signal">Signal: Whether Reco initiates FedRAMP. If not, this segment is conceded to AppOmni.</div>
+    </div>
+  </div>
+
+  <!-- WHAT WE DIDN'T INCLUDE -->
+  <div class="section-header">What We Didn't Include</div>
+
+  <table class="exclusion-table">
+    <thead>
+      <tr>
+        <th>Item Evaluated</th>
+        <th>Reason for Exclusion</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Reco's Series B ($30M, Feb 2026)</td>
+        <td>The board already knows. Referenced in funding table for context only.</td>
+      </tr>
+      <tr>
+        <td>Reco's AI Agent Governance (Dec 2025)</td>
+        <td>The board already knows. Referenced in competitive context only.</td>
+      </tr>
+      <tr>
+        <td>Obsidian 2025 SaaS Threat Report</td>
+        <td>Vendor-produced; "300% SaaS breach surge" is self-reported, not independently validated.</td>
+      </tr>
+      <tr>
+        <td>Spin.AI SSPM expansion to 25 apps</td>
+        <td>Not competitively material to Reco (220+ apps). Different tier.</td>
+      </tr>
+      <tr>
+        <td>Valence Security MCP server</td>
+        <td>Niche capability. No new funding, no material launches. Quiet — may signal stagnation.</td>
+      </tr>
+      <tr>
+        <td>Netskope IPO (Sep 2025, ~$992M net proceeds, ~$7.3B valuation at pricing)</td>
+        <td>Macro context only. SSPM is a module within broader SSE — not a direct competitive move.</td>
+      </tr>
+      <tr>
+        <td>Grip Security, DoControl activity</td>
+        <td>No material announcements in lookback period. Absence of news is itself a signal.</td>
+      </tr>
+      <tr>
+        <td>Competitor executive changes</td>
+        <td>Deep research found no qualifying CEO/CRO/CTO/CPO changes at any direct competitor (Sep 2025 – Feb 2026). Leadership stability across the set.</td>
+      </tr>
+      <tr>
+        <td>Generic SaaS security TAM forecasts</td>
+        <td>Analyst estimates vary widely. No analytical value for a board member who knows the market. Specific buyer behavior data (IANS, AppOmni, WEF) cited in the Net Assessment is more reliable.</td>
+      </tr>
+      <tr>
+        <td>General macro / interest rate environment</td>
+        <td>No material change beyond what the board tracks at portfolio level.</td>
+      </tr>
+    </tbody>
+  </table>
+
+
+  <!-- APPENDIX -->
+  <div class="appendix-container">
+    <div class="appendix-header">Appendix: Coverage Framework &amp; Future Enhancements</div>
+
+    <!-- A. Coverage Taxonomy -->
+    <div class="appendix-section">
+      <h4>A. Coverage Taxonomy</h4>
+      <p>The following event taxonomy was applied for this proof-of-concept. Categories marked <span style="color: var(--green); font-weight: 700;">●</span> had material items surfaced; categories marked <span style="color: var(--text-muted);">○</span> were monitored but returned no material items in this lookback period.</p>
+      <table class="taxonomy-table">
+        <thead>
+          <tr>
+            <th>Category</th>
+            <th>Coverage</th>
+            <th>Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Competitor activity</strong></td>
+            <td class="coverage-active">●</td>
+            <td>Funding, M&amp;A, product launches, GTM expansion</td>
+          </tr>
+          <tr>
+            <td><strong>Partner / channel events</strong></td>
+            <td class="coverage-active">●</td>
+            <td>Technology partner ownership changes, strategic investor ecosystem signals</td>
+          </tr>
+          <tr>
+            <td><strong>Regulatory developments</strong></td>
+            <td class="coverage-active">●</td>
+            <td>DORA, EU AI Act, CISA BOD 25-01, NIST 8596</td>
+          </tr>
+          <tr>
+            <td><strong>Market structure shifts</strong></td>
+            <td class="coverage-active">●</td>
+            <td>Platform consolidation, hyperscaler M&amp;A (Google/Wiz)</td>
+          </tr>
+          <tr>
+            <td><strong>Customer-segment news</strong></td>
+            <td class="coverage-monitored">○</td>
+            <td>No material items specific to Reco's target verticals in this period. Future iterations should monitor SaaS adoption and security incident trends in financial services, healthcare, and technology — Reco's primary ICP verticals.</td>
+          </tr>
+          <tr>
+            <td><strong>Macro / economic signals</strong></td>
+            <td class="coverage-monitored">○</td>
+            <td>No material change beyond portfolio-level tracking. IANS reports average security budget growth fell to ~4% in 2025 (vs. 8% in 2024), reinforcing the consolidation pressure described in the Net Assessment.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- B. Strategic Deep-Dive Links -->
+    <div class="appendix-section">
+      <h4>B. Strategic Deep-Dive Links</h4>
+      <p>Curated primary sources for board members who want to go deeper on specific topics. Each link opens the original source document or publication.</p>
+
+      <div class="deepdive-grid">
+        <div class="deepdive-group">
+          <h5>Competitive Landscape</h5>
+          <ul>
+            <li><span class="dd-arrow">→</span> <div><a href="https://www.sec.gov/Archives/edgar/data/1535527/000153552725000009/crwd-20250131.htm" target="_blank">CrowdStrike FY2025 10-K</a> <span class="dd-desc">— Adaptive Shield acquisition financials ($213.7M net consideration)</span></div></li>
+            <li><span class="dd-arrow">→</span> <div><a href="https://www.crowdstrike.com/en-us/press-releases/crowdstrike-to-acquire-sgnl-to-transform-identity-security-for-ai-era/" target="_blank">CrowdStrike — SGNL Acquisition</a> <span class="dd-desc">— Identity security for AI era; ~$740M reported (Reuters)</span></div></li>
+            <li><span class="dd-arrow">→</span> <div><a href="https://www.crowdstrike.com/en-us/press-releases/crowdstrike-to-acquire-seraphic-security/" target="_blank">CrowdStrike — Seraphic Acquisition</a> <span class="dd-desc">— Browser-layer security; ~$420M reported</span></div></li>
+            <li><span class="dd-arrow">→</span> <div><a href="https://www.obsidiansecurity.com/news/obsidian-closes-the-saas-security-coverage-and-intelligence-gap" target="_blank">Obsidian — Community SDK + Knowledge Graph</a> <span class="dd-desc">— Nov 2025 triple product launch challenging Reco's integration moat</span></div></li>
+            <li><span class="dd-arrow">→</span> <div><a href="https://www.prnewswire.com/news-releases/saviynt-raises-700m-at-approximately-3b-valuation-in-kkr-led-round-to-establish-identity-security-as-the-foundation-for-the-ai-era-302636194.html" target="_blank">Saviynt — $700M Growth Round</a> <span class="dd-desc">— KKR-led; IGA expanding toward SaaS identity governance</span></div></li>
+            <li><span class="dd-arrow">→</span> <div><a href="https://www.iansresearch.com/resources/all-blogs/post/security-blog/2025/09/18/how-cisos-are-using-platforms-and-mssps-to-stretch-security-budgets" target="_blank">IANS — Platform Consolidation Data</a> <span class="dd-desc">— 70% CISOs consolidating; Microsoft 49%, CrowdStrike 27% anchor vendors</span></div></li>
+          </ul>
+        </div>
+
+        <div class="deepdive-group">
+          <h5>Threat Intelligence</h5>
+          <ul>
+            <li><span class="dd-arrow">→</span> <div><a href="https://www.securityweek.com/shinyhunters-branded-extortion-activity-expands-escalates/" target="_blank">SecurityWeek — ShinyHunters Campaign</a> <span class="dd-desc">— SSO vishing campaign analysis; 6+ enterprise victims</span></div></li>
+            <li><span class="dd-arrow">→</span> <div><a href="https://securitylabs.datadoghq.com/articles/cophish-using-microsoft-copilot-studio-as-a-wrapper/" target="_blank">Datadog Security Labs — CoPhish</a> <span class="dd-desc">— AI agents as OAuth consent phishing wrappers via Copilot Studio</span></div></li>
+            <li><span class="dd-arrow">→</span> <div><a href="https://appomni.com/reports/state-of-saas-security/" target="_blank">AppOmni — State of SaaS Security 2025</a> <span class="dd-desc">— 803 security leaders surveyed; 13% use SSPM, 33% say they need it</span></div></li>
+          </ul>
+        </div>
+
+        <div class="deepdive-group">
+          <h5>Regulatory &amp; Governance</h5>
+          <ul>
+            <li><span class="dd-arrow">→</span> <div><a href="https://www.cisa.gov/news-events/directives/bod-25-01-implementation-guidance-implementing-secure-practices-cloud-services" target="_blank">CISA — BOD 25-01 Implementation Guidance</a> <span class="dd-desc">— Federal SaaS configuration baselines; SCuBA requirements</span></div></li>
+            <li><span class="dd-arrow">→</span> <div><a href="https://www.nccoe.nist.gov/publications/csf-profile/nist-ir-8596-ipd-cybersecurity-framework-profile-artificial-intelligence" target="_blank">NIST — NISTIR 8596 Draft (Cyber AI Profile)</a> <span class="dd-desc">— Cybersecurity Framework Profile for AI; comment period closed Jan 30, 2026</span></div></li>
+            <li><span class="dd-arrow">→</span> <div><a href="https://digital-strategy.ec.europa.eu/en/policies/regulatory-framework-ai" target="_blank">European Commission — AI Act Timeline</a> <span class="dd-desc">— Phased obligations through Aug 2026; prohibited practices live since Feb 2025</span></div></li>
+            <li><span class="dd-arrow">→</span> <div><a href="https://www.weforum.org/publications/global-cybersecurity-outlook-2026/in-full/executive-summary-6efae97d74/" target="_blank">WEF — Global Cybersecurity Outlook 2026</a> <span class="dd-desc">— AI security assessment nearly doubled: 37% → 64%</span></div></li>
+            <li><span class="dd-arrow">→</span> <div><a href="https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/digital-operational-resilience-act-dora" target="_blank">ESMA — DORA Overview</a> <span class="dd-desc">— Live since Jan 17, 2025; 19 CTPPs designated Nov 2025</span></div></li>
+          </ul>
+        </div>
+
+        <div class="deepdive-group">
+          <h5>Market &amp; Funding</h5>
+          <ul>
+            <li><span class="dd-arrow">→</span> <div><a href="https://cloud.google.com/blog/products/identity-security/google-announces-agreement-acquire-wiz" target="_blank">Google — Agreement to Acquire Wiz</a> <span class="dd-desc">— $32B all-cash; DOJ cleared Nov 2025, EU approved Feb 2026</span></div></li>
+            <li><span class="dd-arrow">→</span> <div><a href="https://canalys.com/insights/google-cloud-buying-wiz-will-redefine-relationships" target="_blank">Canalys — Google/Wiz Partner Ecosystem Impact</a> <span class="dd-desc">— "Will redefine relationships with many of their key partners"</span></div></li>
+            <li><span class="dd-arrow">→</span> <div><a href="https://www.reco.ai/blog/reco-raises-30m-b-round-for-a-total-of-85m-to-meet-rapidly-growing-demand-for-saas-ai-security-among-enterprises" target="_blank">Reco — Series B Announcement</a> <span class="dd-desc">— $30M; Workday Ventures, TIAA Ventures as new strategic investors</span></div></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- C. Possible Ideas for Enhancements (Not Exhaustive) -->
+    <div class="appendix-section">
+      <h4>C. Possible Ideas for Enhancements (Not Exhaustive)</h4>
+      <ul class="enhancement-list">
+        <li>
+          <strong>Temporal Framing</strong>
+          Tag each item as <em>New This Quarter</em>, <em>Ongoing / Escalated</em>, or <em>Resolved Since Last Meeting</em>. Allows board members who have seen prior briefs to immediately identify what changed — reducing re-reading of known context and surfacing escalation patterns across meetings.
+        </li>
+        <li>
+          <strong>Cross-Portfolio Intelligence</strong>
+          At scale across Insight Partners' 500+ portfolio companies, flag when an external event impacts multiple portfolio companies simultaneously. From this brief alone: the ShinyHunters campaign may affect other portfolio companies with SSO-dependent SaaS architectures; CrowdStrike's M&amp;A spree impacts any portfolio company competing with or selling alongside CrowdStrike modules; DORA and EU AI Act obligations apply across the portfolio's EU-exposed companies. Cross-portfolio tagging transforms company-level intelligence into portfolio-level situational awareness.
+        </li>
+        <li>
+          <strong>Board Member Personalization</strong>
+          Where a board member's known priorities are available (e.g., focused on M&amp;A readiness, or de-prioritizing a product line), weight severity ranking and item selection accordingly. A board member focused on international expansion would see DORA and EU AI Act items elevated; one focused on competitive positioning would see CrowdStrike and Obsidian items prioritized.
+        </li>
+        <li>
+          <strong>Source Expansion</strong>
+          This brief relied on publicly available sources: SEC filings, company press releases, government databases, security research publications, and credible industry media. Production enhancements could include: patent and trademark filings (early signal of competitor product direction), job postings (hiring patterns as leading indicators of GTM or product expansion), app marketplace listings (new integrations on Salesforce AppExchange, AWS Marketplace), earnings call transcripts (for public competitors such as CrowdStrike and Palo Alto Networks), and licensed analyst reports (Gartner, Forrester, IDC positioning data).
+        </li>
+        <li>
+          <strong>Source Confidence Tiering</strong>
+          Systematically tier sources by independence: (1) <em>Primary independent</em> — SEC filings, government databases, court records; (2) <em>Independent reporting</em> — credentialed journalists with named sources; (3) <em>Vendor-produced</em> — company press releases, vendor-commissioned surveys and analyst reports. This brief noted vendor-produced sources where applicable (e.g., AppOmni survey, Frost &amp; Sullivan / CrowdStrike growth figure) but a systematic tiering would further increase board member trust in the output.
+        </li>
+      </ul>
+    </div>
+  </div>
+
+    <!-- FOOTER -->
+  <div class="footer">
+    <img src="https://cdn.prod.website-files.com/644fc991ce69ff0d3bdbeb63/6797b48d427a3acb97fd3b55_Logo.svg" alt="Reco" style="height: 22px; margin-bottom: 12px; opacity: 0.5;" /><br>
+    Prepared by <strong>Amplify</strong> for <strong>Insight Partners</strong><br>
+    Component 1: Industry News &amp; Event Intelligence &nbsp;|&nbsp; Portfolio Company: Reco<br>
+    Confidential — Internal Use Only
+  </div>
+
+</div>
+
+<script>
+function toggleItem(header) {
+  const item = header.closest('.intel-item');
+  item.classList.toggle('open');
+}
+
+function toggleAll() {
+  const items = document.querySelectorAll('.intel-item');
+  const btn = document.querySelector('.expand-all-btn');
+  const allOpen = Array.from(items).every(item => item.classList.contains('open'));
+
+  items.forEach(item => {
+    if (allOpen) {
+      item.classList.remove('open');
+    } else {
+      item.classList.add('open');
+    }
+  });
+
+  btn.innerHTML = allOpen ? '&#9654; Expand All' : '&#9660; Collapse All';
+}
+</script>
+
+
+
+<!-- ============================================================ -->
+<!-- APPENDIX: INDEPENDENT FACT-CHECK — Injected via string manipulation -->
+<!-- ============================================================ -->
+
+<style>
+.fact-check-appendix {
+  max-width: 920px;
+  margin: 64px auto 0;
+  padding: 32px 24px 0;
+  border-top: 2px solid var(--border);
+}
+.fact-check-appendix .appendix-title {
+  font-family: 'Libre Franklin', 'Inter', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  color: var(--ip-dark);
+  margin-bottom: 8px;
+  position: relative;
+  padding-bottom: 10px;
+}
+.fact-check-appendix .appendix-title::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 48px;
+  height: 2px;
+  background: var(--accent);
+}
+.fact-check-appendix .appendix-subtitle {
+  font-family: 'Libre Franklin', sans-serif;
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+  line-height: 1.5;
+}
+.fact-check-appendix .appendix-meta {
+  font-family: 'Inter', sans-serif;
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 24px;
+}
+.fact-check-summary-box {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 28px;
+  flex-wrap: wrap;
+}
+.fact-check-stat {
+  background: var(--surface);
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  padding: 14px 20px;
+  text-align: center;
+  min-width: 120px;
+  flex: 1;
+}
+.fact-check-stat .stat-number {
+  font-family: 'Libre Franklin', sans-serif;
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--ip-dark);
+  line-height: 1.1;
+}
+.fact-check-stat .stat-label {
+  font-family: 'Inter', sans-serif;
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-top: 4px;
+}
+.fact-check-stat.confirmed .stat-number { color: var(--green); }
+.fact-check-stat.caveat .stat-number { color: var(--medium); }
+.fact-check-stat.failed .stat-number { color: var(--high); }
+
+.fc-category-header {
+  font-family: 'Libre Franklin', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ip-dark);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  margin-top: 32px;
+  margin-bottom: 12px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.fc-table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  margin-bottom: 8px;
+  font-family: 'Inter', sans-serif;
+  font-size: 12.5px;
+}
+.fc-table colgroup .col-claim { width: 38%; }
+.fc-table colgroup .col-status { width: 12%; }
+.fc-table colgroup .col-result { width: 14%; }
+.fc-table colgroup .col-notes { width: 36%; }
+.fc-table th {
+  background: var(--ip-dark);
+  color: #ffffff;
+  font-family: 'Libre Franklin', sans-serif;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  padding: 10px 12px;
+  text-align: left;
+  border: none;
+}
+.fc-table th:first-child { border-radius: 6px 0 0 0; }
+.fc-table th:last-child { border-radius: 0 6px 0 0; }
+.fc-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border-light);
+  color: var(--text);
+  vertical-align: top;
+  line-height: 1.45;
+}
+.fc-table tr:last-child td {
+  border-bottom: none;
+}
+.fc-table tr:nth-child(even) td {
+  background: var(--surface);
+}
+.fc-table .fc-claim { overflow-wrap: break-word; word-wrap: break-word; }
+.fc-table .fc-result {
+  white-space: nowrap;
+  font-weight: 600;
+}
+.fc-table .fc-notes {
+  font-size: 11.5px;
+  color: var(--text-secondary);
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+}
+
+.fc-confirmed { color: var(--green); }
+.fc-caveat { color: var(--medium); }
+.fc-failed { color: var(--high); }
+
+.fc-footer-notes {
+  margin-top: 24px;
+  padding: 16px 20px;
+  background: var(--surface);
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  font-family: 'Inter', sans-serif;
+  font-size: 11.5px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+.fc-footer-notes strong {
+  color: var(--text);
+}
+.fc-footer-notes ul {
+  margin: 8px 0 0 0;
+  padding-left: 18px;
+}
+.fc-footer-notes li {
+  margin-bottom: 6px;
+}
+</style>
+
+<div class="fact-check-appendix">
+
+  <div class="appendix-title">Appendix: Independent Fact-Check</div>
+  <div class="appendix-subtitle">Automated verification of material claims against independent public sources</div>
+  <div class="appendix-meta">Conducted: Feb 26, 2026 &nbsp;|&nbsp; Method: Cross-referenced against SEC filings, company press releases, government databases, credentialed media, and security research publications &nbsp;|&nbsp; 37 material claims checked</div>
+
+  <div class="fact-check-summary-box">
+    <div class="fact-check-stat confirmed">
+      <div class="stat-number">33</div>
+      <div class="stat-label">Fully Confirmed</div>
+    </div>
+    <div class="fact-check-stat caveat">
+      <div class="stat-number">4</div>
+      <div class="stat-label">Confirmed w/ Caveats</div>
+    </div>
+    <div class="fact-check-stat failed">
+      <div class="stat-number">0</div>
+      <div class="stat-label">Incorrect / Contradicted</div>
+    </div>
+  </div>
+
+  <!-- ACTIVE THREAT CAMPAIGNS -->
+  <div class="fc-category-header">Active Threat Campaigns</div>
+  <table class="fc-table">
+    <colgroup><col class="col-claim"><col class="col-status"><col class="col-result"><col class="col-notes"></colgroup>
+    <thead><tr><th>Claim</th><th>Doc Status</th><th>Fact-Check</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr>
+        <td class="fc-claim">ShinyHunters SSO vishing campaign compromised 6+ enterprises: Panera, CarGurus, Figure, Optimizely, Betterment (Jan–Feb 2026)</td>
+        <td>✓ Verified</td>
+        <td class="fc-result fc-confirmed">✅ Confirmed</td>
+        <td class="fc-notes">All five named victims independently confirmed via ZeroFox, TechRadar, BleepingComputer. Campaign pattern matches description.</td>
+      </tr>
+      <tr>
+        <td class="fc-claim">ShinyHunters associated with SCATTERED SPIDER under 'SLSH alliance'</td>
+        <td>✓ Verified</td>
+        <td class="fc-result fc-confirmed">✅ Confirmed</td>
+        <td class="fc-notes">Third-party threat intel sources confirm. Document correctly qualifies as 'some third-party researchers associate.'</td>
+      </tr>
+      <tr>
+        <td class="fc-claim">Mandiant/Google Cloud confirmed campaign is ongoing with likely additional undisclosed victims</td>
+        <td>✓ Verified</td>
+        <td class="fc-result fc-confirmed">✅ Confirmed</td>
+        <td class="fc-notes">Mandiant/Google Cloud campaign analysis from Feb 2026 corroborated by multiple outlets.</td>
+      </tr>
+      <tr>
+        <td class="fc-claim">Salesloft/Drift OAuth tokens used to access Salesforce customer data (Aug 2025)</td>
+        <td>✓ Verified</td>
+        <td class="fc-result fc-confirmed">✅ Confirmed</td>
+        <td class="fc-notes">Confirmed via TechRadar and GTIG (UNC6395 attribution). Campaign window Aug 8–18, 2025.</td>
+      </tr>
+      <tr>
+        <td class="fc-claim">Gainsight OAuth integration exploited to pivot into Salesforce (Nov 2025, detected Nov 19)</td>
+        <td>✓ Verified</td>
+        <td class="fc-result fc-confirmed">✅ Confirmed</td>
+        <td class="fc-notes">Gainsight blog confirms: token validation Oct 22, exploitation Nov 16–19, Salesforce detected Nov 19.</td>
+      </tr>
+      <tr>
+        <td class="fc-claim">Datadog Security Labs 'CoPhish' technique — Copilot Studio as OAuth consent phishing wrapper (Oct 2025)</td>
+        <td>✓ Verified</td>
+        <td class="fc-result fc-confirmed">✅ Confirmed</td>
+        <td class="fc-notes">Datadog Security Labs article dated Oct 20, 2025 (updated Oct 28). Technique and description match exactly.</td>
+      </tr>
+      <tr>
+        <td class="fc-claim">CISA shadow AI incident: acting director uploading FOUO documents to public ChatGPT (Jul 2025, reported Jan 2026)</td>
+        <td>✓ Verified</td>
+        <td class="fc-result fc-caveat">⚠️ Mostly Confirmed</td>
+        <td class="fc-notes">Confirmed via Politico, TechCrunch, Yahoo News. Individual was Madhu Gottumukkala. Minor nuance: some sources report flagging in early Aug 2025 vs. Jul 2025.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- COMPETITIVE INTELLIGENCE — CROWDSTRIKE -->
+  <div class="fc-category-header">Competitive Intelligence — CrowdStrike</div>
+  <table class="fc-table">
+    <colgroup><col class="col-claim"><col class="col-status"><col class="col-result"><col class="col-notes"></colgroup>
+    <thead><tr><th>Claim</th><th>Doc Status</th><th>Fact-Check</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr>
+        <td class="fc-claim">CrowdStrike acquired Adaptive Shield for $213.7M in cash (net of cash acquired), closed Nov 2024</td>
+        <td>✓ Verified</td>
+        <td class="fc-result fc-confirmed">✅ Confirmed</td>
+        <td class="fc-notes">SEC 10-K filing confirms $213.7M cash net + $0.7M replacement equity awards. Closed Nov 20, 2024.</td>
+      </tr>
+      <tr>
+        <td class="fc-claim">Adaptive Shield rebranded as 'Falcon Shield'</td>
+        <td>✓ Verified</td>
+        <td class="fc-result fc-caveat">⚠️ Partially Confirmed</td>
+        <td class="fc-notes">'Falcon Shield' appears in later CrowdStrike marketing/blog materials and Frost &amp; Sullivan reports, but original press release/SEC filing refers to 'integrated SaaS protection' — not 'Falcon Shield.'</td>
+      </tr>
+      <tr>
+        <td class="fc-claim">Falcon Shield reported 219% YoY growth per Frost &amp; Sullivan Frost Radar (Oct 2025)</td>
+        <td>✓ Verified</td>
+        <td class="fc-result fc-caveat">⚠️ Confirmed w/ Caveat</td>
+        <td class="fc-notes">CrowdStrike blog (Oct 27, 2025) cites Frost &amp; Sullivan reporting 'over 219% YoY growth.' Note: Frost &amp; Sullivan was engaged by CrowdStrike — vendor-associated analyst figure.</td>
+      </tr>
+      <tr>
+        <td class="fc-claim">SGNL acquisition ~$740M (announced Jan 8, 2026)</td>
+        <td>✓ Verified</td>
+        <td class="fc-result fc-confirmed">✅ Confirmed</td>
+        <td class="fc-notes">CrowdStrike press release confirms Jan 8, 2026. ~$740M reported by Reuters/Investing.com. Document correctly notes price is media-reported.</td>
+      </tr>
+      <tr>
+        <td class="fc-claim">Seraphic acquisition ~$420M (announced Jan 13, 2026)</td>
+        <td>✓ Verified</td>
+        <td class="fc-result fc-confirmed">✅ Confirmed</td>
+        <td class="fc-notes">CrowdStrike press release confirms Jan 13, 2026. ~$420M reported by Technobezz/SecurityWeek. Document correctly notes price is media-reported.</td>
+      </tr>
+      <tr>
+        <td class="fc-claim">Total ~$1.37B across three deals over ~14 months (Nov 2024 – Jan 2026)</td>
+        <td>✓ Verified</td>
+        <td class="fc-result fc-confirmed">✅ Confirmed</td>
+        <td class="fc-notes">$213.7M + ~$740M + ~$420M = ~$1.37B. Timeframe Nov 2024 to Jan 2026 is ~14 months. Math and timeline check out.</td>
+      </tr>
+      <tr>
+        <td class="fc-claim">IANS data: ~70% of CISOs consolidating into platforms; CrowdStrike #2 anchor vendor (27%) behind Microsoft (49%)</td>
+        <td>✓ Verified</td>
+        <td class="fc-result fc-confirmed">✅ Confirmed</td>
+        <td class="fc-notes">IANS Research 2025 Benchmark confirms: ~70% consolidating, Microsoft 49%, CrowdStrike 27%, Palo Alto 15%.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- COMPETITIVE INTELLIGENCE — SAVIYNT -->
+  <div class="fc-category-header">Competitive Intelligence — Saviynt</div>
+  <table class="fc-table">
+    <colgroup><col class="col-claim"><col class="col-status"><col class="col-result"><col class="col-notes"></colgroup>
+    <thead><tr><th>Claim</th><th>Doc Status</th><th>Fact-Check</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr>
+        <td class="fc-claim">Saviynt raised $700M at ~$3B valuation, led by KKR (Dec 9, 2025)</td>
+        <td>✓ Verified</td>
+        <td class="fc-result fc-confirmed">✅ Confirmed</td>
+        <td class="fc-notes">Saviynt press release and Yahoo Finance confirm all details. Additional investors: Sixth Street Growth, TenEleven, Carrick Capital.</td>
+      </tr>
+      <tr>
+        <td class="fc-claim">Saviynt covers human, non-human, and AI agent identity lifecycle management</td>
+        <td>✓ Verified</td>
+        <td class="fc-result fc-confirmed">✅ Confirmed</td>
+        <td class="fc-notes">Saviynt press release explicitly describes coverage of human, non-human (machine), and AI-agent identities.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- COMPETITIVE INTELLIGENCE — OBSIDIAN, APPOMNI, NUDGE, OTHER -->
+  <div class="fc-category-header">Competitive Intelligence — Pure-Play Competitors</div>
+  <table class="fc-table">
+    <colgroup><col class="col-claim"><col class="col-status"><col class="col-result"><col class="col-notes"></colgroup>
+    <thead><tr><th>Claim</th><th>Doc Status</th><th>Fact-Check</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr>
+        <td class="fc-claim">Obsidian three-phase expansion: GTM hires (Jul 2025), Community SDK + Knowledge Graph + AI Assistant (Nov 2025), SaaS supply chain security (Jan 22, 2026)</td>
+        <td>✓ Verified</td>
+        <td class="fc-result fc-confirmed">✅ Confirmed</td>
+        <td class="fc-notes">All three phases confirmed via Obsidian press releases and blog posts. Knowledge Graph blog Nov 4, 2025; supply chain Jan 22, 2026.</td>
+      </tr>
+      <tr>
+        <td class="fc-claim">Obsidian last raised Series C ($90M) in Apr 2022 — no new round in 3+ years</td>
+        <td>✓ Verified</td>
+        <td class="fc-result fc-confirmed">✅ Confirmed</td>
+        <td class="fc-notes">No evidence of a new funding round since April 2022 found in any public source.</td>
+      </tr>
+      <tr>
+        <td class="fc-claim">AppOmni achieved FedRAMP Moderate ATO (Jul 2025) — first SSPM vendor for federal civilian deployment</td>
+        <td>✓ Verified</td>
+        <td class="fc-result fc-confirmed">✅ Confirmed</td>
+        <td class="fc-notes">AppOmni press release Jul 9, 2025 confirms. 'First SSPM vendor' is AppOmni's positioning — no contradicting evidence found.</td>
+      </tr>
+      <tr>
+        <td class="fc-claim">AppOmni launched AgentGuard for agentic AI security (Nov 2025)</td>
+        <td>✓ Verified</td>
+        <td class="fc-result fc-confirmed">✅ Confirmed</td>
+        <td class="fc-notes">AppOmni press release Nov 19, 2025 confirms. Specifically for ServiceNow Now Assist AI agents.</td>
+      </tr>
+      <tr>
+        <td class="fc-claim">AppOmni ZTPM framework introduced May 2024</td>
+        <td>✓ Verified</td>
+        <td class="fc-result fc-confirmed">✅ Confirmed</td>
+        <td class="fc-notes">Referenced in AppOmni materials. No contradicting information found.</td>
+      </tr>
+      <tr>
+        <td class="fc-claim">Nudge Security raised $22.5M Series A led by Cerberus Ventures (Nov 2025)</td>
+        <td>✓ Verified</td>
+        <td class="fc-result fc-confirmed">✅ Confirmed</td>
+        <td class="fc-notes">Nudge press release confirms all details including Ballistic Ventures, Forgepoint Capital, Squadra Ventures.</td>
+      </tr>
+      <tr>
+        <td class="fc-claim">Nudge expanded AI governance capabilities (Dec 2025)</td>
+        <td>✓ Verified</td>
+        <td class="fc-result fc-confirmed">✅ Confirmed</td>
+        <td class="fc-notes">Nudge press release Dec 9, 2025 confirms AI security governance platform expansion.</td>
+      </tr>
+      <tr>
+        <td class="fc-claim">Palo Alto Networks productized EU AI Act compliance in SSPM (Apr 2025)</td>
+        <td>✓ Verified</td>
+        <td class="fc-result fc-confirmed">✅ Confirmed</td>
+        <td class="fc-notes">Palo Alto SSPM release notes for April 2025 confirm EU AI Act and NIST AI RMF compliance posture standards.</td>
+      </tr>
+      <tr>
+        <td class="fc-claim">iboss launched SSPM as part of SASE platform (Jan 22, 2026)</td>
+        <td>✓ Verified</td>
+        <td class="fc-result fc-confirmed">✅ Confirmed</td>
+        <td class="fc-notes">iboss PRNewswire release Jan 22, 2026 confirms AI-powered SSPM within Zero Trust SASE platform.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- REGULATORY & MARKET CONTEXT -->
+  <div class="fc-category-header">Regulatory &amp; Market Context</div>
+  <table class="fc-table">
+    <colgroup><col class="col-claim"><col class="col-status"><col class="col-result"><col class="col-notes"></colgroup>
+    <thead><tr><th>Claim</th><th>Doc Status</th><th>Fact-Check</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr>
+        <td class="fc-claim">CISA BOD 25-01 issued December 2024, mandating federal SaaS baselines (SCuBA); M365 at issuance</td>
+        <td>✓ Verified</td>
+        <td class="fc-result fc-confirmed">✅ Confirmed</td>
+        <td class="fc-notes">CISA official page confirms BOD 25-01 issued Dec 17, 2024. M365 baselines finalized at issuance.</td>
+      </tr>
+      <tr>
+        <td class="fc-claim">EU DORA live since January 17, 2025; 19 CTPPs designated by ESAs (Nov 18, 2025)</td>
+        <td>✓ Verified</td>
+        <td class="fc-result fc-confirmed">✅ Confirmed</td>
+        <td class="fc-notes">EBA/EIOPA/ESMA confirm DORA applicable Jan 17, 2025. ESAs published 19 CTPPs on Nov 18, 2025. Named providers confirmed.</td>
+      </tr>
+      <tr>
+        <td class="fc-claim">EU AI Act: prohibited practices live Feb 2, 2025; GPAI obligations Aug 2, 2025; full applicability Aug 2, 2026</td>
+        <td>✓ Verified</td>
+        <td class="fc-result fc-confirmed">✅ Confirmed</td>
+        <td class="fc-notes">European Commission AI Act timeline confirms all three dates exactly.</td>
+      </tr>
+      <tr>
+        <td class="fc-claim">NIST NISTIR 8596 preliminary draft published Dec 16, 2025; comment period closed Jan 30, 2026</td>
+        <td>✓ Verified</td>
+        <td class="fc-result fc-confirmed">✅ Confirmed</td>
+        <td class="fc-notes">NIST CSRC page confirms: Initial Preliminary Draft Dec 16, 2025; comments due Jan 30, 2026 (now closed).</td>
+      </tr>
+      <tr>
+        <td class="fc-claim">WEF Global Cybersecurity Outlook 2026: AI security assessment nearly doubled from 37% to 64%</td>
+        <td>✓ Verified</td>
+        <td class="fc-result fc-confirmed">✅ Confirmed</td>
+        <td class="fc-notes">WEF report executive summary confirms: share of organizations assessing AI tool security rose from 37% to 64%.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- MARKET & M&A -->
+  <div class="fc-category-header">Market, M&amp;A &amp; Funding</div>
+  <table class="fc-table">
+    <colgroup><col class="col-claim"><col class="col-status"><col class="col-result"><col class="col-notes"></colgroup>
+    <thead><tr><th>Claim</th><th>Doc Status</th><th>Fact-Check</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr>
+        <td class="fc-claim">Google announced $32B all-cash acquisition of Wiz (Mar 18, 2025); DOJ cleared (Nov 2025); EU approved unconditionally (Feb 2026)</td>
+        <td>✓ Verified</td>
+        <td class="fc-result fc-confirmed">✅ Confirmed</td>
+        <td class="fc-notes">Google blog confirms Mar 18, 2025. DOJ clearance Nov 5, 2025. EU unconditional approval Feb 2026. Not yet closed — document correctly states this.</td>
+      </tr>
+      <tr>
+        <td class="fc-claim">Reco Series B: $30M, Feb 10, 2026; Workday Ventures and TIAA Ventures; $85M total funding</td>
+        <td>Referenced</td>
+        <td class="fc-result fc-confirmed">✅ Confirmed</td>
+        <td class="fc-notes">Reco blog and SecurityWeek confirm: $30M Series B, Feb 10, 2026, led by Zeev Ventures. Total raised: $85M.</td>
+      </tr>
+      <tr>
+        <td class="fc-claim">Upwind Security Series B: $250M at ~$1.5B valuation (Jan 26, 2026)</td>
+        <td>Referenced</td>
+        <td class="fc-result fc-confirmed">✅ Confirmed</td>
+        <td class="fc-notes">TechCrunch and SecurityWeek confirm: $250M Series B, ~$1.5B valuation, led by Bessemer Venture Partners.</td>
+      </tr>
+      <tr>
+        <td class="fc-claim">Only ~13% of enterprises use dedicated SSPM; ~33% state they need it (AppOmni 2025 survey, 803 respondents)</td>
+        <td>✓ Verified</td>
+        <td class="fc-result fc-caveat">⚠️ Confirmed — Vendor-Produced</td>
+        <td class="fc-notes">AppOmni press release confirms: 13% use SSPM, ~33% need it, 803 respondents. Document correctly notes this is vendor-produced.</td>
+      </tr>
+      <tr>
+        <td class="fc-claim">IANS: average security budget growth fell to ~4% in 2025 (vs. 8% in 2024)</td>
+        <td>Referenced</td>
+        <td class="fc-result fc-confirmed">✅ Confirmed</td>
+        <td class="fc-notes">IANS 2025 Security Budget Benchmark Report confirms ~4% average budget growth, down from ~8% in 2024.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- PARTNER & CHANNEL -->
+  <div class="fc-category-header">Partner &amp; Channel</div>
+  <table class="fc-table">
+    <colgroup><col class="col-claim"><col class="col-status"><col class="col-result"><col class="col-notes"></colgroup>
+    <thead><tr><th>Claim</th><th>Doc Status</th><th>Fact-Check</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr>
+        <td class="fc-claim">Workday Agent Partner Network expanded to over 50 partners (Sep 2025)</td>
+        <td>⚠ Single Source</td>
+        <td class="fc-result fc-confirmed">✅ Confirmed</td>
+        <td class="fc-notes">Workday newsroom Sep 16, 2025 confirms: 50+ partners, 4x growth since June 2025 launch.</td>
+      </tr>
+      <tr>
+        <td class="fc-claim">Canalys: Google/Wiz deal 'will redefine relationships with many of their key partners'</td>
+        <td>⚠ Single Source</td>
+        <td class="fc-result fc-confirmed">✅ Confirmed</td>
+        <td class="fc-notes">Canalys analysis Mar 20, 2025 confirmed. Quote and characterization are accurate.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- FOOTER NOTES -->
+  <div class="fc-footer-notes">
+    <strong>Methodology &amp; Caveats</strong>
+    <ul>
+      <li>37 material claims were extracted and verified against independent public sources including SEC filings, company press releases, government databases (CISA, FedRAMP, NIST, European Commission, ESAs), credentialed media (Reuters, TechCrunch, SecurityWeek, BleepingComputer), and security research publications (Datadog Security Labs, GTIG, ZeroFox).</li>
+      <li><strong>No claims were found to be incorrect or contradicted.</strong> Four claims carry minor caveats related to branding terminology, vendor-associated analyst figures, or minor timeline nuances — none of which affect the strategic conclusions drawn in the brief.</li>
+      <li>The document's own source-confidence framework (✓ Verified = 2+ independent sources; ⚠ Single Source = 1 primary source) was found to be appropriately applied throughout.</li>
+      <li>Vendor-produced data (AppOmni survey, Frost &amp; Sullivan / CrowdStrike growth figure) is correctly disclosed as such in the original document.</li>
+    </ul>
+  </div>
+
+</div>
+
+
+</body>
+</html>
