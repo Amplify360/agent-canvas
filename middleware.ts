@@ -11,6 +11,7 @@ import { NextResponse, type NextFetchEvent, type NextRequest } from 'next/server
 const unauthenticatedPaths = [
   '/login',
   '/api/auth/(.*)', // Auth endpoints
+  '/api/preview/(.*)', // Public preview links (token-gated, no auth)
 ];
 
 // E2E-only route that renders the app with in-memory mocks.
