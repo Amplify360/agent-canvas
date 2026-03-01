@@ -28,6 +28,48 @@ function hasOwn(obj: object, key: string): boolean {
   return Object.prototype.hasOwnProperty.call(obj, key);
 }
 
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function deepEqual(a: unknown, b: unknown): boolean {
+  if (Object.is(a, b)) {
+    return true;
+  }
+
+  if (Array.isArray(a) && Array.isArray(b)) {
+    if (a.length !== b.length) {
+      return false;
+    }
+    for (let i = 0; i < a.length; i += 1) {
+      if (!deepEqual(a[i], b[i])) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  if (isPlainObject(a) && isPlainObject(b)) {
+    const aKeys = Object.keys(a).sort();
+    const bKeys = Object.keys(b).sort();
+    if (aKeys.length !== bKeys.length) {
+      return false;
+    }
+
+    for (let i = 0; i < aKeys.length; i += 1) {
+      if (aKeys[i] !== bKeys[i]) {
+        return false;
+      }
+      if (!deepEqual(a[aKeys[i]], b[bKeys[i]])) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  return false;
+}
+
 function pickDefinedLegacyValues(
   values: Partial<LegacyAgentFieldSubset>
 ): Partial<LegacyAgentFieldSubset> {
@@ -144,7 +186,5 @@ export function isAgentModelMigrated(agent: Doc<"agents">): boolean {
   }
 
   const expectedFieldValues = mergeFieldValuesWithLegacy(agent.fieldValues, agent);
-  return (
-    JSON.stringify(expectedFieldValues) === JSON.stringify(agent.fieldValues)
-  );
+  return deepEqual(expectedFieldValues, agent.fieldValues);
 }

@@ -1,11 +1,12 @@
 import { v } from "convex/values";
 import { internalMutation, internalQuery } from "./_generated/server";
 import { Doc, Id } from "./_generated/dataModel";
+import { MutationCtx, QueryCtx } from "./_generated/server";
 import { AGENT_MODEL_VERSION } from "../shared/agentModel";
 import { hydrateAgentReadModel, isAgentModelMigrated } from "./lib/agentModel";
 
 type MigrationCandidate = Doc<"agents">;
-type DbCtx = { db: any };
+type DbCtx = QueryCtx | MutationCtx;
 
 async function getCanvasIdsForOrg(
   ctx: DbCtx,
@@ -17,11 +18,11 @@ async function getCanvasIdsForOrg(
 
   const canvases = await ctx.db
     .query("canvases")
-    .withIndex("by_org", (q: any) => q.eq("workosOrgId", workosOrgId))
-    .filter((q: any) => q.eq(q.field("deletedAt"), undefined))
+    .withIndex("by_org", (q) => q.eq("workosOrgId", workosOrgId))
+    .filter((q) => q.eq(q.field("deletedAt"), undefined))
     .collect();
 
-  return new Set(canvases.map((canvas: Doc<"canvases">) => canvas._id));
+  return new Set(canvases.map((canvas) => canvas._id));
 }
 
 async function listMigrationCandidates(
@@ -31,7 +32,7 @@ async function listMigrationCandidates(
   const allowedCanvasIds = await getCanvasIdsForOrg(ctx, workosOrgId);
   const agents = await ctx.db.query("agents").collect();
 
-  return agents.filter((agent: Doc<"agents">) => {
+  return agents.filter((agent) => {
     if (agent.deletedAt) {
       return false;
     }
