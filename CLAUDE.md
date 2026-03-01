@@ -74,8 +74,12 @@ pnpm test:all
 - **Prod:** https://canvas.amplify360.ai (from `main` branch)
 
 **Backend (Convex)** - requires manual `npx convex deploy`:
-- **Dev** (`expert-narwhal-281`): Used locally and by dev frontend
-- **Prod** (`quaint-bee-380`): Used by prod frontend
+- **Main Project `agent-canvas`**
+  - **Dev** (`expert-narwhal-281`): Used locally and by dev frontend
+  - **Prod** (`quaint-bee-380`): Used by prod frontend
+- **Lab Project `agent-canvas-lab` (persistent staging/lab backend)**
+  - **Dev** (`opulent-camel-519`): Optional schema/dev testing for lab project
+  - **Prod** (`fortunate-hummingbird-653`): Long-lived backend for `canvas-lab.amplify360.ai`
 
 ### Convex MCP Selectors
 
@@ -84,7 +88,7 @@ The `status` tool always returns `ownDev` — ignore it; the selector passed per
 Selectors are `{kind}:base64(json)` where the JSON is:
 ```json
 {"projectDir": "/abs/path/to/project", "deployment": {"kind": "ownDev"}}
-{"projectDir": "/abs/path/to/project", "deployment": {"kind": "previewName", "previewName": "lab"}}
+{"projectDir": "/abs/path/to/project", "deployment": {"kind": "prod"}}
 ```
 
 Generate: `echo -n '{...}' | base64`. Machine-specific encoded values for this install are in `MEMORY.md`.
@@ -95,21 +99,27 @@ Generate: `echo -n '{...}' | base64`. Machine-specific encoded values for this i
 
 **Key Learnings:**
 
-1. **Lab is a preview deployment, not a dev deployment**
-   - `npx convex dev` only works with dev deployments
-   - `npx convex dev` will OVERWRITE .env.local and revert to dev deployment
-   - NEVER use `npx convex dev` when working with lab backend
+1. **Lab is now a dedicated Convex project**
+   - Project: `andreas-cambitsis/agent-canvas-lab`
+   - Shared, persistent lab backend: `prod:fortunate-hummingbird-653`
+   - Preview deployments are no longer used for lab
 
 2. **Local Development with Lab Backend**
    - Use `.env.local.lab` config (swap with `cp .env.local.lab .env.local`)
-   - The Next.js app will connect to lab backend
-   - BUT: Schema changes won't auto-deploy to lab
+   - The Next.js app connects to lab prod deployment (`fortunate-hummingbird-653`)
+   - Keep `.env.local.dev` for main project day-to-day development
 
 3. **Deploying Schema to Lab Backend**
    - Vercel does NOT deploy Convex — it only builds the Next.js frontend
-   - **Solution**: `npx convex deploy --preview-name lab --yes` (CLI auth is sufficient, no deploy key needed)
+   - Deploy Convex schema/functions to lab with:
+     - `npx convex dev --configure=existing --team andreas-cambitsis --project agent-canvas-lab --once --typecheck disable` (rebind project locally when needed)
+     - `npx convex deploy --yes --typecheck disable` (push to lab prod)
 
-4. **Swappable Environment Files**
+4. **Required Lab Convex Environment Variables**
+   - Set on both lab dev/prod deployments: `WORKOS_CLIENT_ID`, `WORKOS_API_KEY`, `SUPER_ADMIN_EMAILS`
+   - Optional but recommended where used: `WORKOS_WEBHOOK_SECRET`, `MCP_ADMIN_TOKEN`
+
+5. **Swappable Environment Files**
    ```bash
    # Switch to lab backend
    cp .env.local.lab .env.local
@@ -119,12 +129,12 @@ Generate: `echo -n '{...}' | base64`. Machine-specific encoded values for this i
    cp .env.local.dev .env.local
    ```
 
-5. **Testing Lab Features Locally**
-   - Deploy schema: `npx convex deploy --preview-name lab --yes`
+6. **Testing Lab Features Locally**
+   - Deploy schema: `npx convex deploy --yes --typecheck disable` (while bound to `agent-canvas-lab`)
    - Then run local server with `.env.local.lab`
    - Alternatively: Use dev backend locally for faster iteration
 
-**TL;DR**: Deploy Convex to lab with `npx convex deploy --preview-name lab --yes`, then test on canvas-lab.amplify360.ai or locally with `.env.local.lab`.
+**TL;DR**: Lab uses dedicated project `agent-canvas-lab` with persistent deployment `prod:fortunate-hummingbird-653`. Deploy with `npx convex deploy --yes --typecheck disable`, then test on `canvas-lab.amplify360.ai` or locally with `.env.local.lab`.
 
 ## Admin Batch Tools
 
