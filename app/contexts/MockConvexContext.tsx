@@ -12,6 +12,7 @@ import React, { createContext, useContext, useMemo, useRef, useState, type React
 import type { Canvas } from '@/types/canvas';
 import type { Agent } from '@/types/agent';
 import type { VoteType } from '@/types/validationConstants';
+import { getAgentCategory } from '@/utils/agentModel';
 
 type MockOrgMembership = {
   orgId: string;
@@ -150,7 +151,7 @@ export function MockConvexProvider({
         for (const agent of state.agents) {
           if (!canvasIds.has(String(agent.canvasId))) continue;
           if (agent.deletedAt) continue;
-          const category = safeString(agent.category).trim();
+          const category = safeString(getAgentCategory(agent)).trim();
           if (category) categories.add(category);
         }
         return Array.from(categories).sort(byString);

@@ -5,6 +5,7 @@ import { requireAuth, requireOrgAccess, hasOrgAccess } from "./lib/auth";
 import { getAgentSnapshot, getCanvasWithAccess, recordHistory } from "./lib/helpers";
 import { validateSlug, validateTitle } from "./lib/validation";
 import { CHANGE_TYPE } from "./lib/validators";
+import { hydrateAgentReadModel } from "./lib/agentModel";
 
 /**
  * Generate a unique slug in the target org by appending -copy, -copy-2, etc.
@@ -345,20 +346,25 @@ export const copyToOrgs = mutation({
     const results: Array<{ orgId: string; canvasId: string; slug: string }> = [];
 
     // Extract agent data once (optimization: avoid repeated property access in loop)
-    const agentDataToCopy = sourceAgents.map((agent) => ({
-      name: agent.name,
-      objective: agent.objective,
-      description: agent.description,
-      tools: agent.tools,
-      journeySteps: agent.journeySteps,
-      demoLink: agent.demoLink,
-      videoLink: agent.videoLink,
-      metrics: agent.metrics,
-      category: agent.category,
-      status: agent.status,
-      phase: agent.phase,
-      agentOrder: agent.agentOrder,
-    }));
+    const agentDataToCopy = sourceAgents.map((agent) => {
+      const hydratedAgent = hydrateAgentReadModel(agent);
+      return {
+        name: hydratedAgent.name,
+        objective: hydratedAgent.objective,
+        description: hydratedAgent.description,
+        tools: hydratedAgent.tools,
+        journeySteps: hydratedAgent.journeySteps,
+        demoLink: hydratedAgent.demoLink,
+        videoLink: hydratedAgent.videoLink,
+        metrics: hydratedAgent.metrics,
+        category: hydratedAgent.category,
+        status: hydratedAgent.status,
+        fieldValues: hydratedAgent.fieldValues,
+        modelVersion: hydratedAgent.modelVersion,
+        phase: hydratedAgent.phase,
+        agentOrder: hydratedAgent.agentOrder,
+      };
+    });
 
     // Copy to each target org
     for (const targetOrgId of targetOrgIds) {

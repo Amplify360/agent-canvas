@@ -12,6 +12,7 @@ import { Agent } from '@/types/agent';
 import { getToolDisplay } from '@/utils/config';
 import { getAgentStatusConfig } from '@/types/validationConstants';
 import { Icon } from '@/components/ui/Icon';
+import { getAgentLegacyFields } from '@/utils/agentModel';
 
 interface DockViewProps {
   agents: Agent[];
@@ -60,7 +61,8 @@ export function DockView({ agents, onAgentClick }: DockViewProps) {
       {/* Flat dock - all agents as compact icons */}
       <div className="dock-view__track">
         {agents.map((agent, index) => {
-          const statusConfig = getAgentStatusConfig(agent.status);
+          const resolvedFields = getAgentLegacyFields(agent);
+          const statusConfig = getAgentStatusConfig(resolvedFields.status);
           const isSelected = selectedAgentId === agent._id;
 
           return (
@@ -83,7 +85,7 @@ export function DockView({ agents, onAgentClick }: DockViewProps) {
                 {agent.name}
               </span>
               <div className="dock-item__tools-compact">
-                {agent.tools.slice(0, 3).map((tool: string) => {
+                {(resolvedFields.tools || []).slice(0, 3).map((tool: string) => {
                   const toolDisplay = getToolDisplay(tool);
                   return (
                     <span
@@ -101,7 +103,8 @@ export function DockView({ agents, onAgentClick }: DockViewProps) {
 
       {/* Carousel - expanded view of selected agent */}
       {selectedAgent && (() => {
-        const selectedStatusConfig = getAgentStatusConfig(selectedAgent.status);
+        const selectedFields = getAgentLegacyFields(selectedAgent);
+        const selectedStatusConfig = getAgentStatusConfig(selectedFields.status);
         return (
         <div className="dock-carousel">
           <button
@@ -141,12 +144,12 @@ export function DockView({ agents, onAgentClick }: DockViewProps) {
 
             <h3 className="dock-carousel__name">{selectedAgent.name}</h3>
 
-            {selectedAgent.objective && (
-              <p className="dock-carousel__objective">{selectedAgent.objective}</p>
+            {selectedFields.objective && (
+              <p className="dock-carousel__objective">{selectedFields.objective}</p>
             )}
 
             <div className="dock-carousel__tools">
-              {selectedAgent.tools.map((tool: string) => {
+              {(selectedFields.tools || []).map((tool: string) => {
                 const toolDisplay = getToolDisplay(tool);
                 return (
                   <span

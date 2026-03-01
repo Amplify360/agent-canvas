@@ -64,6 +64,26 @@ agents:
     });
   });
 
+  it('parses extension fields into fieldValues', () => {
+    const yamlText = `
+documentTitle: Example Canvas
+agents:
+  - name: Lead Qualifier
+    phase: Sales
+    fields:
+      confidenceBand: high
+      customScore: 87
+    `.trim();
+
+    const result = parseYaml(yamlText);
+
+    expect(result.agents).toHaveLength(1);
+    expect(result.agents[0].fieldValues).toMatchObject({
+      confidenceBand: 'high',
+      customScore: 87,
+    });
+  });
+
   it('prepares import with unique slug generation', () => {
     const yamlText = `
 documentTitle: Example Canvas
@@ -219,6 +239,7 @@ describe('YAML export', () => {
 
     const yaml = exportToYaml('Test Canvas', agents);
 
+    expect(yaml).toContain('specVersion: 2');
     expect(yaml).toContain('documentTitle: Test Canvas');
     expect(yaml).toContain('name: Agent 1');
     expect(yaml).toContain('objective: First objective');
@@ -240,6 +261,24 @@ describe('YAML export', () => {
     expect(yaml).not.toContain('description:');
     expect(yaml).not.toContain('metrics:');
     expect(yaml).not.toContain('category:');
+  });
+
+  it('exports extension fields under fields key', () => {
+    const agents: Agent[] = [
+      mockAgent({
+        name: 'Extensible Agent',
+        fieldValues: {
+          confidenceBand: 'high',
+          rolloutWindow: 'Q2',
+        },
+      }),
+    ];
+
+    const yaml = exportToYaml('Extensible', agents);
+
+    expect(yaml).toContain('fields:');
+    expect(yaml).toContain('confidenceBand: high');
+    expect(yaml).toContain('rolloutWindow: Q2');
   });
 
   it('maintains phase ordering using canvas phaseOrder', () => {

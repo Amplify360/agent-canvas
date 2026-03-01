@@ -18,6 +18,11 @@ import {
   validatePhase,
 } from "./lib/validation";
 import { agentFieldValidators, agentInputValidator, agentUpdateValidator, CHANGE_TYPE } from "./lib/validators";
+import {
+  hydrateAgentReadModel,
+  normalizeAgentCreateInput,
+  normalizeAgentUpdatePatch,
+} from "./lib/agentModel";
 
 /**
  * List all agents for a canvas (excludes soft-deleted)
@@ -34,8 +39,10 @@ export const list = query({
       .filter((q) => q.eq(q.field("deletedAt"), undefined))
       .collect();
 
+    const hydratedAgents = agents.map(hydrateAgentReadModel);
+
     // Sort by agentOrder (phase ordering is determined by canvas.phases)
-    return agents.sort((a, b) => a.agentOrder - b.agentOrder);
+    return hydratedAgents.sort((a, b) => a.agentOrder - b.agentOrder);
   },
 });
 
@@ -47,7 +54,7 @@ export const get = query({
   handler: async (ctx, { agentId }) => {
     const auth = await requireAuth(ctx);
     const { agent } = await getAgentWithAccess(ctx, auth, agentId);
-    return agent;
+    return hydrateAgentReadModel(agent);
   },
 });
 
@@ -69,17 +76,19 @@ export const create = mutation({
     metrics: agentFieldValidators.metrics,
     category: v.optional(v.string()),
     status: agentFieldValidators.status,
+    fieldValues: agentFieldValidators.fieldValues,
   },
   handler: async (ctx, args) => {
     const auth = await requireAuth(ctx);
     await getCanvasWithAccess(ctx, auth, args.canvasId);
 
-    validateAgentData(args);
+    const normalizedArgs = normalizeAgentCreateInput(args);
+    validateAgentData(normalizedArgs);
 
     const now = Date.now();
 
     const agentId = await ctx.db.insert("agents", {
-      ...args,
+      ...normalizedArgs,
       createdBy: auth.workosUserId,
       updatedBy: auth.workosUserId,
       createdAt: now,
@@ -103,22 +112,46 @@ export const update = mutation({
   handler: async (ctx, { agentId, ...updates }) => {
     const auth = await requireAuth(ctx);
     const { agent } = await getAgentWithAccess(ctx, auth, agentId);
+    const normalizedUpdates = normalizeAgentUpdatePatch(agent, updates);
 
     // Validate provided fields
-    if (updates.name !== undefined) validateAgentName(updates.name);
-    if (updates.phase !== undefined) validatePhase(updates.phase);
-    if (updates.objective !== undefined) validateObjective(updates.objective);
-    if (updates.description !== undefined) validateDescription(updates.description);
-    validateMetrics(updates.metrics);
-    validateOptionalUrl(updates.demoLink, "demoLink");
-    validateOptionalUrl(updates.videoLink, "videoLink");
+    if (typeof normalizedUpdates.name === "string") {
+      validateAgentName(normalizedUpdates.name);
+    }
+    if (typeof normalizedUpdates.phase === "string") {
+      validatePhase(normalizedUpdates.phase);
+    }
+    if (typeof normalizedUpdates.objective === "string") {
+      validateObjective(normalizedUpdates.objective);
+    }
+    if (typeof normalizedUpdates.description === "string") {
+      validateDescription(normalizedUpdates.description);
+    }
+    validateMetrics(normalizedUpdates.metrics as {
+      numberOfUsers?: number;
+      timesUsed?: number;
+      timeSaved?: number;
+      roi?: number;
+    } | undefined);
+    validateOptionalUrl(
+      typeof normalizedUpdates.demoLink === "string"
+        ? normalizedUpdates.demoLink
+        : undefined,
+      "demoLink"
+    );
+    validateOptionalUrl(
+      typeof normalizedUpdates.videoLink === "string"
+        ? normalizedUpdates.videoLink
+        : undefined,
+      "videoLink"
+    );
 
     const now = Date.now();
     const previousData = getAgentSnapshot(agent);
 
     // Filter out undefined values from updates
     const definedUpdates = Object.fromEntries(
-      Object.entries(updates).filter(([_, v]) => v !== undefined)
+      Object.entries(normalizedUpdates).filter(([_, v]) => v !== undefined)
     );
 
     await ctx.db.patch(agentId, {
@@ -251,8 +284,10 @@ export const bulkCreate = mutation({
     const auth = await requireAuth(ctx);
     const canvas = await getCanvasWithAccess(ctx, auth, canvasId);
 
+    const normalizedAgents = agents.map((agent) => normalizeAgentCreateInput(agent));
+
     // Validate all agents before inserting any
-    agents.forEach(validateAgentData);
+    normalizedAgents.forEach(validateAgentData);
 
     const now = Date.now();
     const createdIds: Id<"agents">[] = [];
@@ -260,7 +295,7 @@ export const bulkCreate = mutation({
     // Extract unique phases and categories from agents
     const newPhases = new Set<string>();
     const newCategories = new Set<string>();
-    for (const agent of agents) {
+    for (const agent of normalizedAgents) {
       newPhases.add(agent.phase);
       if (agent.category) newCategories.add(agent.category);
     }
@@ -281,7 +316,7 @@ export const bulkCreate = mutation({
       });
     }
 
-    for (const agentData of agents) {
+    for (const agentData of normalizedAgents) {
       const agentId = await ctx.db.insert("agents", {
         canvasId,
         ...agentData,
@@ -314,8 +349,10 @@ export const bulkReplace = mutation({
     const auth = await requireAuth(ctx);
     await getCanvasWithAccess(ctx, auth, canvasId);
 
+    const normalizedAgents = agents.map((agent) => normalizeAgentCreateInput(agent));
+
     // Validate all agents before making any changes
-    agents.forEach(validateAgentData);
+    normalizedAgents.forEach(validateAgentData);
 
     const now = Date.now();
 
@@ -324,7 +361,7 @@ export const bulkReplace = mutation({
     const newCategories: string[] = [];
     const seenPhases = new Set<string>();
     const seenCategories = new Set<string>();
-    for (const agent of agents) {
+    for (const agent of normalizedAgents) {
       if (!seenPhases.has(agent.phase)) {
         seenPhases.add(agent.phase);
         newPhases.push(agent.phase);
@@ -364,7 +401,7 @@ export const bulkReplace = mutation({
 
     // Create new agents
     const createdIds: Id<"agents">[] = [];
-    for (const agentData of agents) {
+    for (const agentData of normalizedAgents) {
       const agentId = await ctx.db.insert("agents", {
         canvasId,
         ...agentData,
@@ -411,8 +448,9 @@ export const getDistinctCategories = query({
         .collect();
 
       for (const agent of agents) {
-        if (agent.category && agent.category.trim()) {
-          categories.add(agent.category.trim());
+        const hydratedAgent = hydrateAgentReadModel(agent);
+        if (hydratedAgent.category && hydratedAgent.category.trim()) {
+          categories.add(hydratedAgent.category.trim());
         }
       }
     }
