@@ -5,6 +5,12 @@
 import * as yaml from 'js-yaml';
 import { Agent, AgentFormData } from '@/types/agent';
 import { VALIDATION_CONSTANTS, AGENT_STATUS, AgentStatus } from '@/types/validationConstants';
+import {
+  buildLegacyFieldsFromFieldValues,
+  getExtensionFieldValues,
+  mergeFieldValuesWithLegacy,
+  parseYamlFields,
+} from '../../shared/agentModel';
 
 /**
  * Valid status values for validation
@@ -41,9 +47,11 @@ interface YamlAgent {
   };
   category?: string;
   status?: string;
+  fields?: Record<string, unknown>;
 }
 
 interface YamlDocument {
+  specVersion?: number;
   documentTitle?: string;
   agents?: YamlAgent[];
 }
@@ -155,14 +163,7 @@ function yamlToConvexAgents(yamlDoc: YamlDocument): YamlConversionResult {
     if (timeSaved !== undefined) metrics.timeSaved = timeSaved;
     if (roi !== undefined) metrics.roi = roi;
 
-    // Track category for canvas-level storage
-    const category = agent.category?.trim() || undefined;
-    if (category) categoriesSet.add(category);
-
-    agents.push({
-      phase,
-      agentOrder: agent.agentOrder ?? 0,
-      name: agent.name.trim(),
+    const legacyFields = {
       objective: agent.objective?.trim() || undefined,
       description: agent.description?.trim() || undefined,
       tools: Array.isArray(agent.tools) ? agent.tools : [],
@@ -170,8 +171,34 @@ function yamlToConvexAgents(yamlDoc: YamlDocument): YamlConversionResult {
       demoLink: agent.demoLink?.trim() || undefined,
       videoLink: agent.videoLink?.trim() || undefined,
       metrics: Object.keys(metrics).length > 0 ? metrics : undefined,
-      category,
+      category: agent.category?.trim() || undefined,
       status: parseStatus(agent.status),
+    };
+
+    const fieldValues = mergeFieldValuesWithLegacy(
+      parseYamlFields(agent.fields),
+      legacyFields
+    );
+    const resolvedLegacyFields = buildLegacyFieldsFromFieldValues(fieldValues);
+
+    // Track category for canvas-level storage
+    const category = resolvedLegacyFields.category?.trim() || undefined;
+    if (category) categoriesSet.add(category);
+
+    agents.push({
+      phase,
+      agentOrder: agent.agentOrder ?? 0,
+      name: agent.name.trim(),
+      objective: resolvedLegacyFields.objective,
+      description: resolvedLegacyFields.description,
+      tools: resolvedLegacyFields.tools || [],
+      journeySteps: resolvedLegacyFields.journeySteps || [],
+      demoLink: resolvedLegacyFields.demoLink,
+      videoLink: resolvedLegacyFields.videoLink,
+      metrics: resolvedLegacyFields.metrics,
+      category,
+      status: parseStatus(resolvedLegacyFields.status),
+      fieldValues,
     });
   }
 
@@ -287,34 +314,43 @@ function agentsToYamlDoc(title: string, agents: Agent[], phaseOrder?: string[]):
   });
 
   const yamlAgents: YamlAgent[] = sortedAgents.map((agent): YamlAgent => {
+    const fieldValues = mergeFieldValuesWithLegacy(agent.fieldValues, agent);
+    const resolvedLegacyFields = buildLegacyFieldsFromFieldValues(fieldValues);
+
     const yamlAgent: YamlAgent = {
       name: agent.name,
       phase: agent.phase,
       agentOrder: agent.agentOrder,
     };
 
-    if (agent.objective) yamlAgent.objective = agent.objective;
-    if (agent.description) yamlAgent.description = agent.description;
-    if (agent.tools?.length) yamlAgent.tools = agent.tools;
-    if (agent.journeySteps?.length) yamlAgent.journeySteps = agent.journeySteps;
-    if (agent.demoLink) yamlAgent.demoLink = agent.demoLink;
-    if (agent.videoLink) yamlAgent.videoLink = agent.videoLink;
+    if (resolvedLegacyFields.objective) yamlAgent.objective = resolvedLegacyFields.objective;
+    if (resolvedLegacyFields.description) yamlAgent.description = resolvedLegacyFields.description;
+    if (resolvedLegacyFields.tools?.length) yamlAgent.tools = resolvedLegacyFields.tools;
+    if (resolvedLegacyFields.journeySteps?.length) yamlAgent.journeySteps = resolvedLegacyFields.journeySteps;
+    if (resolvedLegacyFields.demoLink) yamlAgent.demoLink = resolvedLegacyFields.demoLink;
+    if (resolvedLegacyFields.videoLink) yamlAgent.videoLink = resolvedLegacyFields.videoLink;
 
-    if (agent.metrics && Object.keys(agent.metrics).length > 0) {
+    if (resolvedLegacyFields.metrics && Object.keys(resolvedLegacyFields.metrics).length > 0) {
       yamlAgent.metrics = {};
-      if (agent.metrics.numberOfUsers !== undefined) yamlAgent.metrics.numberOfUsers = agent.metrics.numberOfUsers;
-      if (agent.metrics.timesUsed !== undefined) yamlAgent.metrics.timesUsed = agent.metrics.timesUsed;
-      if (agent.metrics.timeSaved !== undefined) yamlAgent.metrics.timeSaved = agent.metrics.timeSaved;
-      if (agent.metrics.roi !== undefined) yamlAgent.metrics.roi = agent.metrics.roi;
+      if (resolvedLegacyFields.metrics.numberOfUsers !== undefined) yamlAgent.metrics.numberOfUsers = resolvedLegacyFields.metrics.numberOfUsers;
+      if (resolvedLegacyFields.metrics.timesUsed !== undefined) yamlAgent.metrics.timesUsed = resolvedLegacyFields.metrics.timesUsed;
+      if (resolvedLegacyFields.metrics.timeSaved !== undefined) yamlAgent.metrics.timeSaved = resolvedLegacyFields.metrics.timeSaved;
+      if (resolvedLegacyFields.metrics.roi !== undefined) yamlAgent.metrics.roi = resolvedLegacyFields.metrics.roi;
     }
 
-    if (agent.category) yamlAgent.category = agent.category;
-    if (agent.status) yamlAgent.status = agent.status;
+    if (resolvedLegacyFields.category) yamlAgent.category = resolvedLegacyFields.category;
+    if (resolvedLegacyFields.status) yamlAgent.status = resolvedLegacyFields.status;
+
+    const extensionFields = getExtensionFieldValues(fieldValues);
+    if (Object.keys(extensionFields).length > 0) {
+      yamlAgent.fields = extensionFields;
+    }
 
     return yamlAgent;
   });
 
   return {
+    specVersion: 2,
     documentTitle: title,
     agents: yamlAgents,
   };

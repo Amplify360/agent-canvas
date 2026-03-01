@@ -11,6 +11,7 @@ import { getToolDisplay, getToolColorClass } from '@/utils/config';
 import { formatCurrency } from '@/utils/formatting';
 import { Icon } from '@/components/ui/Icon';
 import { getAgentStatusConfig } from '@/types/validationConstants';
+import { getAgentLegacyFields } from '@/utils/agentModel';
 import { useEscapeKey } from '@/hooks/useEscapeKey';
 import { useBodyScrollLock } from '@/hooks/useBodyScrollLock';
 
@@ -37,8 +38,9 @@ export function QuickLookPanel({
 
   if (!agent) return null;
 
-  const statusConfig = getAgentStatusConfig(agent.status);
-  const metrics = agent.metrics || {};
+  const resolvedFields = getAgentLegacyFields(agent);
+  const statusConfig = getAgentStatusConfig(resolvedFields.status);
+  const metrics = resolvedFields.metrics || {};
 
   return (
     <div
@@ -62,10 +64,10 @@ export function QuickLookPanel({
             </span>
             <h2 className="quick-look-panel__name">{agent.name}</h2>
             <div className="quick-look-panel__meta">
-              {agent.category && (
+              {resolvedFields.category && (
                 <span className="quick-look-panel__category">
                   <Icon name="folder" />
-                  {agent.category}
+                  {resolvedFields.category}
                 </span>
               )}
               {agent.phase && (
@@ -95,36 +97,36 @@ export function QuickLookPanel({
         {/* Body */}
         <div className="quick-look-panel__body">
           {/* Objective */}
-          {agent.objective && (
+          {resolvedFields.objective && (
             <section className="quick-look-panel__section">
               <h3 className="quick-look-panel__section-title">
                 <Icon name="target" />
                 Objective
               </h3>
-              <p className="quick-look-panel__objective">{agent.objective}</p>
+              <p className="quick-look-panel__objective">{resolvedFields.objective}</p>
             </section>
           )}
 
           {/* Description */}
-          {agent.description && (
+          {resolvedFields.description && (
             <section className="quick-look-panel__section">
               <h3 className="quick-look-panel__section-title">
                 <Icon name="file-text" />
                 Description
               </h3>
-              <p className="quick-look-panel__description">{agent.description}</p>
+              <p className="quick-look-panel__description">{resolvedFields.description}</p>
             </section>
           )}
 
           {/* Tools / Capabilities */}
-          {agent.tools && agent.tools.length > 0 && (
+          {resolvedFields.tools && resolvedFields.tools.length > 0 && (
             <section className="quick-look-panel__section">
               <h3 className="quick-look-panel__section-title">
                 <Icon name="wrench" />
                 Capabilities
               </h3>
               <div className="quick-look-panel__tools">
-                {agent.tools.map((tool) => {
+                {resolvedFields.tools.map((tool) => {
                   const toolDisplay = getToolDisplay(tool);
                   const colorClass = getToolColorClass(toolDisplay.color);
                   return (
@@ -143,14 +145,14 @@ export function QuickLookPanel({
           )}
 
           {/* Journey Steps */}
-          {agent.journeySteps && agent.journeySteps.length > 0 && (
+          {resolvedFields.journeySteps && resolvedFields.journeySteps.length > 0 && (
             <section className="quick-look-panel__section">
               <h3 className="quick-look-panel__section-title">
                 <Icon name="route" />
                 Journey Steps
               </h3>
               <div className="quick-look-panel__journey">
-                {agent.journeySteps.map((step, idx) => (
+                {resolvedFields.journeySteps.map((step, idx) => (
                   <div key={idx} className="quick-look-panel__journey-step">
                     <span className="quick-look-panel__journey-step-number">{idx + 1}</span>
                     <span className="quick-look-panel__journey-step-text">{step}</span>
@@ -210,16 +212,16 @@ export function QuickLookPanel({
           )}
 
           {/* Links */}
-          {(agent.demoLink || agent.videoLink) && (
+          {(resolvedFields.demoLink || resolvedFields.videoLink) && (
             <section className="quick-look-panel__section">
               <h3 className="quick-look-panel__section-title">
                 <Icon name="link" />
                 Resources
               </h3>
               <div className="quick-look-panel__links">
-                {agent.demoLink && (
+                {resolvedFields.demoLink && (
                   <a
-                    href={agent.demoLink}
+                    href={resolvedFields.demoLink}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="quick-look-panel__link"
@@ -228,9 +230,9 @@ export function QuickLookPanel({
                     <span>View Demo</span>
                   </a>
                 )}
-                {agent.videoLink && (
+                {resolvedFields.videoLink && (
                   <a
-                    href={agent.videoLink}
+                    href={resolvedFields.videoLink}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="quick-look-panel__link"

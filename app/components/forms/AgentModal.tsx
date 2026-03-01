@@ -15,9 +15,11 @@ import { useQuery, useCanQuery } from '@/hooks/useConvex';
 import { validateAgentForm } from '@/utils/validation';
 import { getAvailableTools, getToolDisplay, DEFAULT_PHASE } from '@/utils/config';
 import { AGENT_STATUS, AGENT_STATUS_OPTIONS, AgentStatus } from '@/types/validationConstants';
+import { getAgentFieldValues, getAgentLegacyFields } from '@/utils/agentModel';
 import { Icon } from '@/components/ui/Icon';
 import { Tooltip } from '@/components/ui/Tooltip';
 import { api } from '../../../convex/_generated/api';
+import { mergeFieldValuesWithLegacy } from '../../../shared/agentModel';
 
 interface AgentModalProps {
   isOpen: boolean;
@@ -63,6 +65,7 @@ function getEmptyAgentFormData(defaults?: AgentCreateDefaults): AgentFormData {
     metrics: {},
     category: '',
     status: AGENT_STATUS.IDEA,
+    fieldValues: {},
     phase: DEFAULT_PHASE,
     agentOrder: 0,
     ...defaults,
@@ -96,17 +99,19 @@ export function AgentModal({ isOpen, onClose, agent, defaults }: AgentModalProps
   // Load agent data when editing
   useEffect(() => {
     if (agent) {
+      const resolvedFields = getAgentLegacyFields(agent);
       setFormData({
         name: agent.name,
-        objective: agent.objective || '',
-        description: agent.description || '',
-        tools: agent.tools || [],
-        journeySteps: agent.journeySteps || [],
-        demoLink: agent.demoLink || '',
-        videoLink: agent.videoLink || '',
-        metrics: agent.metrics || {},
-        category: agent.category || '',
-        status: agent.status || AGENT_STATUS.IDEA,
+        objective: resolvedFields.objective || '',
+        description: resolvedFields.description || '',
+        tools: resolvedFields.tools || [],
+        journeySteps: resolvedFields.journeySteps || [],
+        demoLink: resolvedFields.demoLink || '',
+        videoLink: resolvedFields.videoLink || '',
+        metrics: resolvedFields.metrics || {},
+        category: resolvedFields.category || '',
+        status: (resolvedFields.status as AgentStatus | undefined) || AGENT_STATUS.IDEA,
+        fieldValues: getAgentFieldValues(agent),
         phase: agent.phase,
         agentOrder: agent.agentOrder,
       });
@@ -136,7 +141,12 @@ export function AgentModal({ isOpen, onClose, agent, defaults }: AgentModalProps
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const validationErrors = validateAgentForm(formData);
+    const submissionData: AgentFormData = {
+      ...formData,
+      fieldValues: mergeFieldValuesWithLegacy(formData.fieldValues, formData),
+    };
+
+    const validationErrors = validateAgentForm(submissionData);
     if (validationErrors.length > 0) {
       const errorMap: Record<string, string> = {};
       validationErrors.forEach((err) => {
@@ -150,9 +160,9 @@ export function AgentModal({ isOpen, onClose, agent, defaults }: AgentModalProps
     await executeOperation(
       async () => {
         if (agent) {
-          await updateAgent(agent._id, formData);
+          await updateAgent(agent._id, submissionData);
         } else {
-          await createAgent(formData);
+          await createAgent(submissionData);
         }
       },
       {

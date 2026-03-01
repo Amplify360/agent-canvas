@@ -64,6 +64,9 @@ export default defineSchema({
         v.literal("shelved")
       )
     ),
+    // Canonical extensible values for non-core fields and future model growth
+    fieldValues: v.optional(v.record(v.string(), v.any())),
+    modelVersion: v.optional(v.number()),
     // payload removed - we're Convex-native, no need for round-trip fidelity
     deletedAt: v.optional(v.number()), // Soft delete timestamp
     createdBy: v.string(),
@@ -71,6 +74,52 @@ export default defineSchema({
     createdAt: v.number(),
     updatedAt: v.number(),
   }).index("by_canvas", ["canvasId"]),
+
+  // Optional org-level field definitions for extensible agent attributes
+  agentFieldDefinitions: defineTable({
+    workosOrgId: v.string(),
+    key: v.string(), // Stable key used in agents.fieldValues
+    label: v.string(),
+    kind: v.union(
+      v.literal("text"),
+      v.literal("longText"),
+      v.literal("stringList"),
+      v.literal("url"),
+      v.literal("object"),
+      v.literal("enum")
+    ),
+    section: v.union(
+      v.literal("basic"),
+      v.literal("details"),
+      v.literal("capabilities"),
+      v.literal("journey"),
+      v.literal("metrics")
+    ),
+    description: v.optional(v.string()),
+    isCore: v.optional(v.boolean()),
+    isRequired: v.optional(v.boolean()),
+    isGroupable: v.optional(v.boolean()),
+    isFilterable: v.optional(v.boolean()),
+    isIndicatorEligible: v.optional(v.boolean()),
+    options: v.optional(
+      v.array(
+        v.object({
+          value: v.string(),
+          label: v.string(),
+          color: v.optional(v.string()),
+          icon: v.optional(v.string()),
+          shortLabel: v.optional(v.string()),
+        })
+      )
+    ),
+    archivedAt: v.optional(v.number()),
+    createdBy: v.string(),
+    updatedBy: v.string(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_org", ["workosOrgId"])
+    .index("by_org_key", ["workosOrgId", "key"]),
 
   // Audit trail for agent changes
   agentHistory: defineTable({

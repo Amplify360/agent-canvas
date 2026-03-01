@@ -6,11 +6,17 @@
  */
 
 import { Doc } from '../../convex/_generated/dataModel';
+import type { AgentFieldValues as SharedAgentFieldValues } from '../../shared/agentModel';
 
 /**
  * Agent document type - derived from Convex schema
  */
 export type Agent = Doc<"agents">;
+
+/**
+ * Canonical extensible field map for agent metadata.
+ */
+export type AgentFieldValues = SharedAgentFieldValues;
 
 /**
  * Agent metrics - extracted from Agent type
@@ -34,7 +40,7 @@ export interface AgentGroup {
 export type AgentFormData = Pick<
   Agent,
   'name' | 'objective' | 'description' | 'tools' | 'journeySteps' |
-  'demoLink' | 'videoLink' | 'metrics' | 'category' | 'status' |
+  'demoLink' | 'videoLink' | 'metrics' | 'category' | 'status' | 'fieldValues' |
   'phase' | 'agentOrder'
 >;
 

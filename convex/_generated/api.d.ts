@@ -9,18 +9,22 @@
  */
 
 import type * as agentComments from "../agentComments.js";
+import type * as agentFieldDefinitions from "../agentFieldDefinitions.js";
 import type * as agentHistory from "../agentHistory.js";
+import type * as agentModelMigrations from "../agentModelMigrations.js";
 import type * as agentVotes from "../agentVotes.js";
 import type * as agents from "../agents.js";
 import type * as canvases from "../canvases.js";
 import type * as crons from "../crons.js";
 import type * as files from "../files.js";
 import type * as http from "../http.js";
+import type * as lib_agentModel from "../lib/agentModel.js";
 import type * as lib_auth from "../lib/auth.js";
 import type * as lib_helpers from "../lib/helpers.js";
 import type * as lib_membershipSync from "../lib/membershipSync.js";
 import type * as lib_validation from "../lib/validation.js";
 import type * as lib_validators from "../lib/validators.js";
+import type * as lib_workosApi from "../lib/workosApi.js";
 import type * as orgMemberships from "../orgMemberships.js";
 import type * as orgSettings from "../orgSettings.js";
 
@@ -32,18 +36,22 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   agentComments: typeof agentComments;
+  agentFieldDefinitions: typeof agentFieldDefinitions;
   agentHistory: typeof agentHistory;
+  agentModelMigrations: typeof agentModelMigrations;
   agentVotes: typeof agentVotes;
   agents: typeof agents;
   canvases: typeof canvases;
   crons: typeof crons;
   files: typeof files;
   http: typeof http;
+  "lib/agentModel": typeof lib_agentModel;
   "lib/auth": typeof lib_auth;
   "lib/helpers": typeof lib_helpers;
   "lib/membershipSync": typeof lib_membershipSync;
   "lib/validation": typeof lib_validation;
   "lib/validators": typeof lib_validators;
+  "lib/workosApi": typeof lib_workosApi;
   orgMemberships: typeof orgMemberships;
   orgSettings: typeof orgSettings;
 }>;

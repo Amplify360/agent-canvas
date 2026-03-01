@@ -4,6 +4,7 @@
 
 import { Agent, AgentGroup } from '@/types/agent';
 import { TAG_TYPES, TAG_TYPE_ID, DEFAULT_GROUPING_TAG, DEFAULT_CATEGORY, DEFAULT_PHASE, SECTION_COLOR_PALETTE, getTagValue, isValidTagTypeId } from './config';
+import { getAgentCategory, getAgentStatus } from './agentModel';
 
 /**
  * Sort index for items not found in the ordering array.
@@ -17,9 +18,9 @@ const UNKNOWN_ORDER_INDEX = Number.MAX_SAFE_INTEGER;
  */
 export function getAgentTagValue(agent: Agent, tagType: string): string | undefined {
   const tagValueMap: Record<string, string | undefined> = {
-    [TAG_TYPE_ID.CATEGORY]: agent.category,
+    [TAG_TYPE_ID.CATEGORY]: getAgentCategory(agent),
     [TAG_TYPE_ID.PHASE]: agent.phase,
-    [TAG_TYPE_ID.STATUS]: agent.status,
+    [TAG_TYPE_ID.STATUS]: getAgentStatus(agent),
   };
   return tagValueMap[tagType];
 }
@@ -170,4 +171,3 @@ export function filterAgents(agents: Agent[], filters: Record<string, string[]>)
     return true;
   });
 }
-

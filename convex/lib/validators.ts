@@ -73,6 +73,8 @@ export const statusValidator = v.optional(
 /**
  * Shared validator components for agent fields
  */
+export const fieldValuesValidator = v.optional(v.record(v.string(), v.any()));
+
 export const agentFieldValidators = {
   // Required fields
   phase: v.string(),
@@ -98,6 +100,7 @@ export const agentFieldValidators = {
   ),
   category: v.optional(v.string()),
   status: statusValidator,
+  fieldValues: fieldValuesValidator,
 } as const;
 
 /**
@@ -123,4 +126,5 @@ export const agentUpdateValidator = {
   metrics: agentFieldValidators.metrics,
   category: agentFieldValidators.category,
   status: agentFieldValidators.status,
+  fieldValues: agentFieldValidators.fieldValues,
 };
