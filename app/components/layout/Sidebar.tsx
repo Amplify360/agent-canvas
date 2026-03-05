@@ -9,7 +9,7 @@ import { useAuth, useIsOrgAdmin, useCurrentOrg } from '@/contexts/AuthContext';
 import { useAgents } from '@/contexts/AgentContext';
 import { useCanvas } from '@/contexts/CanvasContext';
 import { useAppState } from '@/contexts/AppStateContext';
-import { useAction, useQuery } from '@/hooks/useConvex';
+import { useAction, useConvex, useQuery } from '@/hooks/useConvex';
 import { api } from '../../../convex/_generated/api';
 import { useResizable } from '@/hooks/useResizable';
 import { useClickOutside } from '@/hooks/useClickOutside';
@@ -24,6 +24,7 @@ import { Tooltip } from '../ui/Tooltip';
 import { THEMES, SYSTEM_THEME_OPTION, THEME_VALUES } from '@/constants/themes';
 import { copyTextToClipboard } from '@/utils/clipboard';
 import { exportToYaml, slugifyTitle } from '@/utils/yaml';
+import { Id } from '../../../convex/_generated/dataModel';
 
 const SIDEBAR_MIN_WIDTH = 180;
 const SIDEBAR_MAX_WIDTH = 400;
@@ -36,13 +37,14 @@ interface CanvasMenuState {
 
 // Context menu dimensions for viewport boundary calculations
 const MENU_WIDTH = 150;
-const MENU_HEIGHT = 152; // 4 items
+const MENU_HEIGHT = 190; // 5 items
 const VIEWPORT_PADDING = 8;
 
 export function Sidebar() {
   const { user, userOrgs, currentOrgId, setCurrentOrgId, signOut } = useAuth();
-  const { canvases, currentCanvasId, currentCanvas, setCurrentCanvasId, createCanvas, deleteCanvas } = useCanvas();
+  const { canvases, currentCanvasId, setCurrentCanvasId, createCanvas, deleteCanvas } = useCanvas();
   const { agents, isLoading: isAgentsLoading } = useAgents();
+  const convex = useConvex();
   const { isSidebarCollapsed, toggleSidebar, showToast, sidebarWidth, setSidebarWidth, themePreference, setThemePreference } = useAppState();
 
   const { isDragging, resizeHandleProps } = useResizable({
@@ -140,7 +142,7 @@ export function Sidebar() {
     setCanvasMenu({ canvasId, x, y });
   };
 
-  const handleMenuAction = async (action: 'rename' | 'delete' | 'share' | 'copy') => {
+  const handleMenuAction = async (action: 'rename' | 'delete' | 'share' | 'copy' | 'export') => {
     if (!canvasMenu) return;
     const canvas = canvases.find((c) => c._id === canvasMenu.canvasId);
     if (!canvas) return;
@@ -155,6 +157,8 @@ export function Sidebar() {
       const url = `${window.location.origin}/c/${canvas._id}`;
       const ok = await copyTextToClipboard(url);
       showToast(ok ? 'Link copied to clipboard' : 'Failed to copy link', ok ? 'success' : 'error');
+    } else if (action === 'export') {
+      await handleExportYaml(canvas._id);
     }
     setCanvasMenu(null);
   };
@@ -194,19 +198,32 @@ export function Sidebar() {
     }
   };
 
-  const handleExportYaml = () => {
-    if (!currentCanvas) {
-      showToast('No canvas selected', 'error');
-      return;
-    }
-    if (isAgentsLoading) {
-      showToast('Agents are still loading. Please try again in a moment.', 'info');
+  const handleExportYaml = async (canvasId: string) => {
+    const canvas = canvases.find((c) => c._id === canvasId);
+    if (!canvas) {
+      showToast('Canvas not found', 'error');
       return;
     }
 
+    let agentsToExport = agents;
+    if (canvasId === currentCanvasId) {
+      if (isAgentsLoading) {
+        showToast('Agents are still loading. Please try again in a moment.', 'info');
+        return;
+      }
+    } else {
+      try {
+        agentsToExport = await convex.query(api.agents.list, { canvasId: canvasId as Id<"canvases"> });
+      } catch (error) {
+        console.error('Failed to load agents for YAML export:', error);
+        showToast('Failed to export YAML', 'error');
+        return;
+      }
+    }
+
     try {
-      const yamlText = exportToYaml(currentCanvas.title, agents, currentCanvas.phases);
-      const filename = `${slugifyTitle(currentCanvas.title)}.yaml`;
+      const yamlText = exportToYaml(canvas.title, agentsToExport, canvas.phases);
+      const filename = `${slugifyTitle(canvas.title)}.yaml`;
       const blob = new Blob([yamlText], { type: 'text/yaml;charset=utf-8' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -320,17 +337,6 @@ export function Sidebar() {
                 >
                   <Icon name="plus" />
                   <span>New canvas</span>
-                </button>
-                <button
-                  className="sidebar__dropdown-item"
-                  onClick={() => {
-                    handleExportYaml();
-                    setCanvasActionsOpen(false);
-                  }}
-                  disabled={!currentCanvas || isAgentsLoading}
-                >
-                  <Icon name="download" />
-                  <span>Export as YAML</span>
                 </button>
                 <button
                   className="sidebar__dropdown-item"
@@ -511,6 +517,13 @@ export function Sidebar() {
           >
             <Icon name="share-2" />
             <span>Copy link</span>
+          </button>
+          <button
+            className="context-menu__item"
+            onClick={() => handleMenuAction('export')}
+          >
+            <Icon name="download" />
+            <span>Export as YAML</span>
           </button>
           <Tooltip
             content="You need access to other organizations to copy"
