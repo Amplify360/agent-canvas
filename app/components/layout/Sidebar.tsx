@@ -6,6 +6,7 @@
 
 import React, { useState, useRef, useCallback } from 'react';
 import { useAuth, useIsOrgAdmin, useCurrentOrg } from '@/contexts/AuthContext';
+import { useAgents } from '@/contexts/AgentContext';
 import { useCanvas } from '@/contexts/CanvasContext';
 import { useAppState } from '@/contexts/AppStateContext';
 import { useAction, useQuery } from '@/hooks/useConvex';
@@ -22,6 +23,7 @@ import { MembersWidget } from '../org/MembersWidget';
 import { Tooltip } from '../ui/Tooltip';
 import { THEMES, SYSTEM_THEME_OPTION, THEME_VALUES } from '@/constants/themes';
 import { copyTextToClipboard } from '@/utils/clipboard';
+import { exportToYaml, slugifyTitle } from '@/utils/yaml';
 
 const SIDEBAR_MIN_WIDTH = 180;
 const SIDEBAR_MAX_WIDTH = 400;
@@ -39,7 +41,8 @@ const VIEWPORT_PADDING = 8;
 
 export function Sidebar() {
   const { user, userOrgs, currentOrgId, setCurrentOrgId, signOut } = useAuth();
-  const { canvases, currentCanvasId, setCurrentCanvasId, createCanvas, deleteCanvas } = useCanvas();
+  const { canvases, currentCanvasId, currentCanvas, setCurrentCanvasId, createCanvas, deleteCanvas } = useCanvas();
+  const { agents } = useAgents();
   const { isSidebarCollapsed, toggleSidebar, showToast, sidebarWidth, setSidebarWidth, themePreference, setThemePreference } = useAppState();
 
   const { isDragging, resizeHandleProps } = useResizable({
@@ -191,6 +194,31 @@ export function Sidebar() {
     }
   };
 
+  const handleExportYaml = () => {
+    if (!currentCanvas) {
+      showToast('No canvas selected', 'error');
+      return;
+    }
+
+    try {
+      const yamlText = exportToYaml(currentCanvas.title, agents, currentCanvas.phases);
+      const filename = `${slugifyTitle(currentCanvas.title)}.yaml`;
+      const blob = new Blob([yamlText], { type: 'text/yaml;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      showToast('Canvas exported to YAML', 'success');
+    } catch (error) {
+      console.error('Failed to export YAML:', error);
+      showToast('Failed to export YAML', 'error');
+    }
+  };
+
   return (
     <>
       <aside
@@ -288,6 +316,17 @@ export function Sidebar() {
                 >
                   <Icon name="plus" />
                   <span>New canvas</span>
+                </button>
+                <button
+                  className="sidebar__dropdown-item"
+                  onClick={() => {
+                    handleExportYaml();
+                    setCanvasActionsOpen(false);
+                  }}
+                  disabled={!currentCanvas}
+                >
+                  <Icon name="download" />
+                  <span>Export as YAML</span>
                 </button>
                 <button
                   className="sidebar__dropdown-item"
