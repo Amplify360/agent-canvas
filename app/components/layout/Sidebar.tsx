@@ -42,7 +42,7 @@ const VIEWPORT_PADDING = 8;
 export function Sidebar() {
   const { user, userOrgs, currentOrgId, setCurrentOrgId, signOut } = useAuth();
   const { canvases, currentCanvasId, currentCanvas, setCurrentCanvasId, createCanvas, deleteCanvas } = useCanvas();
-  const { agents } = useAgents();
+  const { agents, isLoading: isAgentsLoading } = useAgents();
   const { isSidebarCollapsed, toggleSidebar, showToast, sidebarWidth, setSidebarWidth, themePreference, setThemePreference } = useAppState();
 
   const { isDragging, resizeHandleProps } = useResizable({
@@ -199,6 +199,10 @@ export function Sidebar() {
       showToast('No canvas selected', 'error');
       return;
     }
+    if (isAgentsLoading) {
+      showToast('Agents are still loading. Please try again in a moment.', 'info');
+      return;
+    }
 
     try {
       const yamlText = exportToYaml(currentCanvas.title, agents, currentCanvas.phases);
@@ -323,7 +327,7 @@ export function Sidebar() {
                     handleExportYaml();
                     setCanvasActionsOpen(false);
                   }}
-                  disabled={!currentCanvas}
+                  disabled={!currentCanvas || isAgentsLoading}
                 >
                   <Icon name="download" />
                   <span>Export as YAML</span>
