@@ -203,8 +203,8 @@ export function ImportYamlModal({ isOpen, onClose, onSuccess }: ImportYamlModalP
         {/* Help Text */}
         <div className="alert alert--info u-mt-4">
           <p style={{ margin: 0 }}>
-            <strong>Legacy YAML Import:</strong> This is a one-way import. The YAML file will be
-            converted to Convex-native storage. All future editing happens in the app.
+            <strong>YAML Import:</strong> YAML is converted to Convex-native storage for in-app editing.
+            Use Export as YAML to download the current canvas in the same schema.
           </p>
         </div>
       </div>
