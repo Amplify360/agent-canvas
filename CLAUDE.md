@@ -64,6 +64,7 @@ pnpm test:all
 | Minor fixes (typos, <3 files) | Commit to `dev` → PR to `main` |
 | Features (3+ files, new functionality, behavior changes) | Feature branch off `dev` → PR to `dev` → merge. Promote to `main` only when instructed. |
 
+**Lab branch:** `lab` is a separate long-lived experimentation branch. It drives the dedicated lab frontend/backend and is used to ship fast, adventurous changes without blocking `dev`. Successful lab work is reimplemented properly on `dev` and only reaches `main` through the normal `dev -> main` promotion flow.
 **Wait for explicit instruction before merging PRs.**
 **Before merging: verify target branch and ancestry match the workflow above.**
 
@@ -72,10 +73,14 @@ pnpm test:all
 **Frontend (Vercel)** - auto-deploys on push:
 - **Dev:** https://canvas-dev.amplify360.ai (from `dev` branch)
 - **Prod:** https://canvas.amplify360.ai (from `main` branch)
+- **Lab:** https://canvas-lab.amplify360.ai (from `lab` branch via separate Vercel project `agentcanvas-app-lab`)
 
 **Backend (Convex)** - requires manual `npx convex deploy`:
-- **Dev** (`expert-narwhal-281`): Used locally and by dev frontend
-- **Prod** (`quaint-bee-380`): Used by prod frontend
+- **Main project `agent-canvas`**
+  - **Dev** (`expert-narwhal-281`): Used locally and by the `dev` frontend
+  - **Prod** (`quaint-bee-380`): Used by the `main` frontend
+- **Lab project `agent-canvas-lab`**
+  - **Prod** (`fortunate-hummingbird-653`): Long-lived backend for `canvas-lab.amplify360.ai`
 
 ### Convex MCP Selectors
 
@@ -84,7 +89,7 @@ The `status` tool always returns `ownDev` — ignore it; the selector passed per
 Selectors are `{kind}:base64(json)` where the JSON is:
 ```json
 {"projectDir": "/abs/path/to/project", "deployment": {"kind": "ownDev"}}
-{"projectDir": "/abs/path/to/project", "deployment": {"kind": "previewName", "previewName": "lab"}}
+{"projectDir": "/abs/path/to/project", "deployment": {"kind": "prod"}}
 ```
 
 Generate: `echo -n '{...}' | base64`. Machine-specific encoded values for this install are in `MEMORY.md`.
@@ -95,36 +100,40 @@ Generate: `echo -n '{...}' | base64`. Machine-specific encoded values for this i
 
 **Key Learnings:**
 
-1. **Lab is a preview deployment, not a dev deployment**
-   - `npx convex dev` only works with dev deployments
-   - `npx convex dev` will OVERWRITE .env.local and revert to dev deployment
-   - NEVER use `npx convex dev` when working with lab backend
+1. **Lab is a dedicated project now**
+   - Vercel project: `agentcanvas-app-lab`
+   - Convex project: `agent-canvas-lab`
+   - Persistent lab deployment: `prod:fortunate-hummingbird-653`
+   - Preview deployments are not the lab strategy anymore because preview environments are cleaned up automatically
 
-2. **Local Development with Lab Backend**
-   - Use `.env.local.lab` config (swap with `cp .env.local.lab .env.local`)
-   - The Next.js app will connect to lab backend
-   - BUT: Schema changes won't auto-deploy to lab
+2. **Branch/environment pairing**
+   - `lab` branch drives the dedicated lab frontend project
+   - `dev` branch drives the shared development frontend
+   - `main` branch drives production
+   - Lab work is intentionally disposable/iterative; clean implementations belong on `dev`
 
-3. **Deploying Schema to Lab Backend**
-   - Vercel does NOT deploy Convex — it only builds the Next.js frontend
-   - **Solution**: `npx convex deploy --preview-name lab --yes` (CLI auth is sufficient, no deploy key needed)
+3. **Vercel and Convex are separate deploy steps**
+   - Pushing `lab` only deploys the frontend to `agentcanvas-app-lab`
+   - Vercel does not deploy Convex
+   - Any Convex schema/function changes for lab must be deployed manually to `agent-canvas-lab`
 
-4. **Swappable Environment Files**
-   ```bash
-   # Switch to lab backend
-   cp .env.local.lab .env.local
-   pnpm dev
+4. **Local development against lab**
+   - Point `.env.local` at the lab Vercel/Convex values before running `pnpm dev`
+   - This repo does not commit `.env.local.lab` / `.env.local.dev`; keep those as local, unstaged convenience copies if you want quick swapping
+   - `npx convex dev` is for the main dev project only; do not use it as a shortcut for the lab backend
 
-   # Switch back to dev
-   cp .env.local.dev .env.local
-   ```
+5. **Deploying to the lab Convex project**
+   - Authenticate the Convex CLI against the `agent-canvas-lab` project
+   - Prefer explicit targeting for lab CLI work
+   - For inspection commands (`logs`, `data`, `function-spec`), use `--deployment-name fortunate-hummingbird-653`
+   - For deploys, use `CONVEX_DEPLOYMENT=prod:fortunate-hummingbird-653 npx convex deploy --yes`
+   - Required runtime env on the lab Convex deployment includes the WorkOS settings used by auth and any admin tokens used by internal tools
 
-5. **Testing Lab Features Locally**
-   - Deploy schema: `npx convex deploy --preview-name lab --yes`
-   - Then run local server with `.env.local.lab`
-   - Alternatively: Use dev backend locally for faster iteration
+6. **Manual Vercel commands from this repo**
+   - `.vercel/project.json` in this checkout is linked to `agentcanvas-app-v2`
+   - `vercel` commands run here target the main app unless you temporarily relink or use a separate temp directory linked to `agentcanvas-app-lab`
 
-**TL;DR**: Deploy Convex to lab with `npx convex deploy --preview-name lab --yes`, then test on canvas-lab.amplify360.ai or locally with `.env.local.lab`.
+**TL;DR**: Lab is a permanent branch + permanent Vercel project + permanent Convex project. Use `lab` for fast experiments, deploy its frontend through `agentcanvas-app-lab`, deploy its backend separately to `fortunate-hummingbird-653`, prefer explicit deployment targeting for CLI work, then reimplement validated work on `dev`.
 
 ## Admin Batch Tools
 
