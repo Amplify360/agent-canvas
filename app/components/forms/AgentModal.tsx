@@ -15,6 +15,7 @@ import { useQuery, useCanQuery } from '@/hooks/useConvex';
 import { validateAgentForm } from '@/utils/validation';
 import { getAvailableTools, getToolDisplay, DEFAULT_PHASE } from '@/utils/config';
 import { AGENT_STATUS, AGENT_STATUS_OPTIONS, AgentStatus } from '@/types/validationConstants';
+import { buildAgentMutationInput, getAgentCoreFields } from '@/utils/agentModel';
 import { Icon } from '@/components/ui/Icon';
 import { Tooltip } from '@/components/ui/Tooltip';
 import { api } from '../../../convex/_generated/api';
@@ -63,6 +64,7 @@ function getEmptyAgentFormData(defaults?: AgentCreateDefaults): AgentFormData {
     metrics: {},
     category: '',
     status: AGENT_STATUS.IDEA,
+    fieldValues: {},
     phase: DEFAULT_PHASE,
     agentOrder: 0,
     ...defaults,
@@ -96,17 +98,19 @@ export function AgentModal({ isOpen, onClose, agent, defaults }: AgentModalProps
   // Load agent data when editing
   useEffect(() => {
     if (agent) {
+      const coreFields = getAgentCoreFields(agent);
       setFormData({
         name: agent.name,
-        objective: agent.objective || '',
-        description: agent.description || '',
-        tools: agent.tools || [],
-        journeySteps: agent.journeySteps || [],
-        demoLink: agent.demoLink || '',
-        videoLink: agent.videoLink || '',
-        metrics: agent.metrics || {},
-        category: agent.category || '',
-        status: agent.status || AGENT_STATUS.IDEA,
+        objective: coreFields.objective || '',
+        description: coreFields.description || '',
+        tools: coreFields.tools,
+        journeySteps: coreFields.journeySteps,
+        demoLink: coreFields.demoLink || '',
+        videoLink: coreFields.videoLink || '',
+        metrics: coreFields.metrics || {},
+        category: coreFields.category || '',
+        status: coreFields.status || AGENT_STATUS.IDEA,
+        fieldValues: agent.fieldValues || {},
         phase: agent.phase,
         agentOrder: agent.agentOrder,
       });
@@ -149,10 +153,11 @@ export function AgentModal({ isOpen, onClose, agent, defaults }: AgentModalProps
 
     await executeOperation(
       async () => {
+        const mutationInput = buildAgentMutationInput(formData);
         if (agent) {
-          await updateAgent(agent._id, formData);
+          await updateAgent(agent._id, mutationInput);
         } else {
-          await createAgent(formData);
+          await createAgent(mutationInput);
         }
       },
       {

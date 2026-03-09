@@ -20,6 +20,7 @@ export default defineSchema({
     slug: v.string(), // Document name/identifier
     phases: v.optional(v.array(v.string())), // Ordered phase names (optional for legacy data)
     categories: v.optional(v.array(v.string())), // Ordered category names (optional for legacy data)
+    compactIndicators: v.optional(v.array(v.string())), // Deprecated UI preference stored on some legacy canvases
     deletedAt: v.optional(v.number()), // Soft delete timestamp
     createdBy: v.string(), // WorkOS user ID
     updatedBy: v.string(),
@@ -37,10 +38,11 @@ export default defineSchema({
     phaseOrder: v.optional(v.number()), // DEPRECATED: Legacy field, kept for existing data
     agentOrder: v.number(), // Sort order within phase
     name: v.string(),
+    // Deprecated runtime fields kept only until the migration window is complete.
     objective: v.optional(v.string()),
     description: v.optional(v.string()),
-    tools: v.array(v.string()), // Tool names
-    journeySteps: v.array(v.string()),
+    tools: v.optional(v.array(v.string())),
+    journeySteps: v.optional(v.array(v.string())),
     demoLink: v.optional(v.string()),
     videoLink: v.optional(v.string()),
     metrics: v.optional(
@@ -51,9 +53,9 @@ export default defineSchema({
         roi: v.optional(v.number()), // integer currency
       })
     ),
-    // Fixed tag fields for grouping and filtering (same across all orgs)
-    category: v.optional(v.string()), // Visual grouping: "Recruitment", "Onboarding", etc.
-    department: v.optional(v.string()), // DEPRECATED: Legacy field, use category instead
+    category: v.optional(v.string()),
+    department: v.optional(v.string()),
+    ownerId: v.optional(v.string()),
     status: v.optional(
       v.union(
         v.literal("idea"),
@@ -64,6 +66,8 @@ export default defineSchema({
         v.literal("shelved")
       )
     ),
+    fieldValues: v.optional(v.record(v.string(), v.any())),
+    modelVersion: v.optional(v.number()),
     // payload removed - we're Convex-native, no need for round-trip fidelity
     deletedAt: v.optional(v.number()), // Soft delete timestamp
     createdBy: v.string(),

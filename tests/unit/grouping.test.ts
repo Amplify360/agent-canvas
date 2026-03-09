@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { groupAgentsByTag, GroupAgentsOptions, filterAgents, getAgentTagValue, getAgentTagValueWithDefault } from '@/utils/grouping';
 import { Agent } from '@/types/agent';
 import { Id } from '../../convex/_generated/dataModel';
+import { buildAgentFieldValues } from '../../shared/agentModel';
+import { getAgentStatus } from '../../app/utils/agentModel';
 
 /**
  * Create a mock agent for testing
@@ -9,6 +11,18 @@ import { Id } from '../../convex/_generated/dataModel';
 const NOW = 1_700_000_000_000;
 let agentIdCounter = 0;
 function mockAgent(overrides: Partial<Agent> = {}): Agent {
+  const fieldValues = buildAgentFieldValues({
+    objective: overrides.objective as string | undefined,
+    description: overrides.description as string | undefined,
+    tools: Array.isArray(overrides.tools) ? overrides.tools : [],
+    journeySteps: Array.isArray(overrides.journeySteps) ? overrides.journeySteps : [],
+    demoLink: overrides.demoLink as string | undefined,
+    videoLink: overrides.videoLink as string | undefined,
+    metrics: overrides.metrics,
+    category: overrides.category as string | undefined,
+    status: overrides.status as any,
+  });
+
   agentIdCounter += 1;
   return {
     _id: `agent-${agentIdCounter}` as Id<"agents">,
@@ -17,8 +31,8 @@ function mockAgent(overrides: Partial<Agent> = {}): Agent {
     phase: 'Phase 1',
     agentOrder: 0,
     name: 'Test Agent',
-    tools: [],
-    journeySteps: [],
+    fieldValues,
+    modelVersion: 2,
     createdBy: 'user-1',
     updatedBy: 'user-1',
     createdAt: NOW,
@@ -166,7 +180,7 @@ describe('filterAgents', () => {
     const result = filterAgents(agents, { status: ['live'] });
 
     expect(result).toHaveLength(2);
-    expect(result.every(a => a.status === 'live')).toBe(true);
+    expect(result.every(a => getAgentStatus(a) === 'live')).toBe(true);
   });
 
   it('filters by multiple tag types', () => {
