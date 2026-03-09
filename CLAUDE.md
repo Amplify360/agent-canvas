@@ -356,5 +356,5 @@ Common issues:
 ## Related Files
 
 - `.env.example` - Environment variable template
-- `docs/DEPLOYMENT_GUIDE.md` - Vercel deployment instructions
-- `docs/VERCEL_PROJECTS.md` - Project IDs and URLs
+- `docs/README.md` - Documentation map
+- `docs/DEPLOYMENT_GUIDE.md` - Deployment commands, project mapping, and Vercel/Convex targeting
