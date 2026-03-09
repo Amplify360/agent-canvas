@@ -1,6 +1,6 @@
 # Test Suite
 
-AgentCanvas is now **Convex-native**. YAML is supported for **legacy import and export**.
+AgentCanvas is now **Convex-native**. YAML import/export is covered in unit tests.
 
 ## Tests
 

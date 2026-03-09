@@ -4,6 +4,10 @@
  */
 
 import { VALIDATION_CONSTANTS } from "../../app/types/validationConstants";
+import {
+  AgentFieldValues,
+  readAgentCoreFields,
+} from "../../shared/agentModel";
 
 /**
  * Validate metric value is non-negative
@@ -155,17 +159,16 @@ export function validateOptionalUrl(
 export function validateAgentData(data: Record<string, unknown>): void {
   if (typeof data.name === 'string') validateAgentName(data.name);
   if (typeof data.phase === 'string') validatePhase(data.phase);
-  if (typeof data.objective === 'string') validateObjective(data.objective);
-  if (typeof data.description === 'string') validateDescription(data.description);
-  if (data.metrics && typeof data.metrics === 'object') {
-    validateMetrics(data.metrics as {
-      numberOfUsers?: number;
-      timesUsed?: number;
-      timeSaved?: number;
-      roi?: number;
-    });
+  if (data.fieldValues && typeof data.fieldValues === 'object') {
+    validateAgentFieldValues(data.fieldValues as AgentFieldValues);
   }
-  if (typeof data.demoLink === 'string') validateOptionalUrl(data.demoLink, "demoLink");
-  if (typeof data.videoLink === 'string') validateOptionalUrl(data.videoLink, "videoLink");
 }
 
+export function validateAgentFieldValues(fieldValues: AgentFieldValues): void {
+  const coreFields = readAgentCoreFields(fieldValues);
+  validateObjective(coreFields.objective);
+  validateDescription(coreFields.description);
+  validateMetrics(coreFields.metrics);
+  validateOptionalUrl(coreFields.demoLink, "demoLink");
+  validateOptionalUrl(coreFields.videoLink, "videoLink");
+}

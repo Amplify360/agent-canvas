@@ -6,6 +6,11 @@
  */
 
 import { Doc } from '../../convex/_generated/dataModel';
+import type {
+  AgentCoreFields as SharedAgentCoreFields,
+  AgentFieldValues as SharedAgentFieldValues,
+  AgentMetricsValue,
+} from '../../shared/agentModel';
 
 /**
  * Agent document type - derived from Convex schema
@@ -15,7 +20,18 @@ export type Agent = Doc<"agents">;
 /**
  * Agent metrics - extracted from Agent type
  */
-export type AgentMetrics = NonNullable<Agent['metrics']>;
+export type AgentMetrics = AgentMetricsValue;
+
+export type AgentFieldValues = SharedAgentFieldValues;
+
+export type AgentCoreFields = SharedAgentCoreFields;
+
+export interface AgentMutationInput {
+  name: string;
+  phase: string;
+  agentOrder: number;
+  fieldValues: AgentFieldValues;
+}
 
 /**
  * UI grouping structure (not stored in database)
@@ -31,15 +47,15 @@ export interface AgentGroup {
 /**
  * Form data for creating/editing agents (subset of Agent fields)
  */
-export type AgentFormData = Pick<
-  Agent,
-  'name' | 'objective' | 'description' | 'tools' | 'journeySteps' |
-  'demoLink' | 'videoLink' | 'metrics' | 'category' | 'status' |
-  'phase' | 'agentOrder'
->;
+export type AgentFormData = AgentCoreFields &
+  Pick<AgentMutationInput, 'name' | 'phase' | 'agentOrder'> & {
+    fieldValues: AgentFieldValues;
+  };
 
 /**
  * Allowed defaults when opening the "New Agent" modal from UI context.
  * Keep this narrow so we don't accidentally prefill fields we don't intend to.
  */
-export type AgentCreateDefaults = Partial<Pick<AgentFormData, 'phase' | 'category' | 'status'>>;
+export type AgentCreateDefaults = Partial<
+  Pick<AgentFormData, 'phase' | 'category' | 'status'>
+>;

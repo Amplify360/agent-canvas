@@ -9,6 +9,11 @@ import {
 } from '@/utils/yaml';
 import { Agent } from '@/types/agent';
 import { Id } from '../../convex/_generated/dataModel';
+import {
+  AGENT_MODEL_VERSION,
+  buildAgentFieldValues,
+  readAgentCoreFields,
+} from '../../shared/agentModel';
 
 function readDanucemFixture(): string {
   return fs.readFileSync(
@@ -17,8 +22,12 @@ function readDanucemFixture(): string {
   );
 }
 
+function coreFields(agent: { fieldValues: Record<string, unknown> }) {
+  return readAgentCoreFields(agent.fieldValues);
+}
+
 describe('YAML import', () => {
-  it('parses YAML and converts agents to Convex format', () => {
+  it('parses YAML and converts agents to canonical format', () => {
     const yamlText = `
 documentTitle: Example Canvas
 agents:
@@ -41,6 +50,8 @@ agents:
     `.trim();
 
     const result = parseYaml(yamlText);
+    const firstAgent = coreFields(result.agents[0]);
+    const secondAgent = coreFields(result.agents[1]);
 
     expect(result.title).toBe('Example Canvas');
     expect(result.agents).toHaveLength(2);
@@ -50,6 +61,8 @@ agents:
       phase: 'Sales',
       agentOrder: 0,
       name: 'Lead Qualifier',
+    });
+    expect(firstAgent).toMatchObject({
       objective: 'Qualify leads',
       tools: ['CRM'],
       journeySteps: ['Step 1'],
@@ -61,6 +74,27 @@ agents:
       phase: 'Support',
       agentOrder: 0,
       name: 'Triage Bot',
+    });
+    expect(secondAgent.tools).toEqual([]);
+  });
+
+  it('parses extension fields into fieldValues', () => {
+    const yamlText = `
+documentTitle: Example Canvas
+agents:
+  - name: Lead Qualifier
+    phase: Sales
+    fields:
+      confidenceBand: high
+      customScore: 87
+    `.trim();
+
+    const result = parseYaml(yamlText);
+
+    expect(result.agents).toHaveLength(1);
+    expect(result.agents[0].fieldValues).toMatchObject({
+      confidenceBand: 'high',
+      customScore: 87,
     });
   });
 
@@ -143,7 +177,7 @@ agents:
     const result = parseYaml(yamlText);
 
     expect(result.agents).toHaveLength(1);
-    expect(result.agents[0].status).toBeUndefined();
+    expect(coreFields(result.agents[0]).status).toBeUndefined();
   });
 
   it('parses valid status values', () => {
@@ -161,8 +195,8 @@ agents:
     const result = parseYaml(yamlText);
 
     expect(result.agents).toHaveLength(2);
-    expect(result.agents[0].status).toBe('live');
-    expect(result.agents[1].status).toBe('idea');
+    expect(coreFields(result.agents[0]).status).toBe('live');
+    expect(coreFields(result.agents[1]).status).toBe('idea');
   });
 });
 
@@ -181,15 +215,18 @@ describe('slug utilities', () => {
 });
 
 describe('YAML export', () => {
-  const mockAgent = (overrides: Partial<Agent> = {}): Agent => ({
+  const mockAgent = (
+    overrides: Partial<Agent> = {},
+    fieldValueOverrides: Record<string, unknown> = {}
+  ): Agent => ({
     _id: 'test-id' as Id<"agents">,
     _creationTime: Date.now(),
     canvasId: 'canvas-id' as Id<"canvases">,
     phase: 'Phase 1',
     agentOrder: 0,
     name: 'Test Agent',
-    tools: [],
-    journeySteps: [],
+    fieldValues: fieldValueOverrides,
+    modelVersion: AGENT_MODEL_VERSION,
     createdBy: 'user-id',
     updatedBy: 'user-id',
     createdAt: Date.now(),
@@ -199,17 +236,21 @@ describe('YAML export', () => {
 
   it('exports agents to YAML format', () => {
     const agents: Agent[] = [
-      mockAgent({
-        name: 'Agent 1',
-        phase: 'Discovery',
-        agentOrder: 0,
-        objective: 'First objective',
-        tools: ['Tool A', 'Tool B'],
-        journeySteps: ['Step 1', 'Step 2'],
-        metrics: { numberOfUsers: 100, timesUsed: 50, timeSaved: 10, roi: 5000 },
-        category: 'Sales',
-        status: 'live',
-      }),
+      mockAgent(
+        {
+          name: 'Agent 1',
+          phase: 'Discovery',
+          agentOrder: 0,
+        },
+        buildAgentFieldValues({
+          objective: 'First objective',
+          tools: ['Tool A', 'Tool B'],
+          journeySteps: ['Step 1', 'Step 2'],
+          metrics: { numberOfUsers: 100, timesUsed: 50, timeSaved: 10, roi: 5000 },
+          category: 'Sales',
+          status: 'live',
+        })
+      ),
       mockAgent({
         name: 'Agent 2',
         phase: 'Discovery',
@@ -219,6 +260,7 @@ describe('YAML export', () => {
 
     const yaml = exportToYaml('Test Canvas', agents);
 
+    expect(yaml).toContain('specVersion: 2');
     expect(yaml).toContain('documentTitle: Test Canvas');
     expect(yaml).toContain('name: Agent 1');
     expect(yaml).toContain('objective: First objective');
@@ -240,6 +282,24 @@ describe('YAML export', () => {
     expect(yaml).not.toContain('description:');
     expect(yaml).not.toContain('metrics:');
     expect(yaml).not.toContain('category:');
+  });
+
+  it('exports extension fields under fields key', () => {
+    const agents: Agent[] = [
+      mockAgent(
+        { name: 'Extensible Agent' },
+        buildAgentFieldValues({}, {
+          confidenceBand: 'high',
+          rolloutWindow: 'Q2',
+        })
+      ),
+    ];
+
+    const yaml = exportToYaml('Extensible', agents);
+
+    expect(yaml).toContain('fields:');
+    expect(yaml).toContain('confidenceBand: high');
+    expect(yaml).toContain('rolloutWindow: Q2');
   });
 
   it('maintains phase ordering using canvas phaseOrder', () => {
@@ -295,27 +355,22 @@ describe('YAML full canvas import', () => {
 
     const result = parseYaml(yamlText);
 
-    // Title
     expect(result.title).toBe(
       'Danucem AI Agent Portfolio - Complete Workshop (Jan 8, 28, 29, 30, 2026)'
     );
-
-    // All 42 agents imported
     expect(result.agents).toHaveLength(42);
 
-    // All agents should have required fields
     result.agents.forEach((agent) => {
+      const fields = coreFields(agent);
       expect(agent.name).toBeTruthy();
       expect(agent.phase).toBeTruthy();
       expect(typeof agent.agentOrder).toBe('number');
-      expect(Array.isArray(agent.tools)).toBe(true);
-      expect(Array.isArray(agent.journeySteps)).toBe(true);
+      expect(Array.isArray(fields.tools)).toBe(true);
+      expect(Array.isArray(fields.journeySteps)).toBe(true);
     });
 
-    // Single phase: all agents are in "ideation"
     expect(result.phases).toEqual(['ideation']);
 
-    // Categories extracted from agents
     expect(result.categories).toContain('Finance & Controlling');
     expect(result.categories).toContain('Health & Safety');
     expect(result.categories).toContain('Procurement & Supply Chain');
@@ -329,57 +384,50 @@ describe('YAML full canvas import', () => {
     expect(result.categories).toContain('Performance & Analytics');
     expect(result.categories).toContain('Maintenance & Production');
 
-    // All agents have status "idea"
     result.agents.forEach((agent) => {
-      expect(agent.status).toBe('idea');
+      expect(coreFields(agent).status).toBe('idea');
     });
 
-    // Spot-check a specific agent with long multiline description
     const proposalAgent = result.agents.find(
       (a) => a.name === 'Business Acquisition Proposal Agent'
     );
     expect(proposalAgent).toBeDefined();
-    expect(proposalAgent!.category).toBe('Finance & Controlling');
-    expect(proposalAgent!.tools).toEqual(['rag', 'code']);
-    expect(proposalAgent!.journeySteps).toHaveLength(4);
-    expect(proposalAgent!.description).toContain('VALUE MEASUREMENT');
+    expect(coreFields(proposalAgent!).category).toBe('Finance & Controlling');
+    expect(coreFields(proposalAgent!).tools).toEqual(['rag', 'code']);
+    expect(coreFields(proposalAgent!).journeySteps).toHaveLength(4);
+    expect(coreFields(proposalAgent!).description).toContain('VALUE MEASUREMENT');
 
-    // Spot-check agent with special characters in name
     const learningAgent = result.agents.find(
       (a) => a.name === 'Learning path/ Individual Development plan  agent'
     );
     expect(learningAgent).toBeDefined();
-    expect(learningAgent!.tools).toEqual(['rag', 'code', 'forms']);
+    expect(coreFields(learningAgent!).tools).toEqual(['rag', 'code', 'forms']);
 
-    // Spot-check agent with 4 tools
     const salesAssistant = result.agents.find((a) => a.name === 'Sales Assistant');
     expect(salesAssistant).toBeDefined();
-    expect(salesAssistant!.tools).toEqual(['rag', 'code', 'web-search', 'api']);
+    expect(coreFields(salesAssistant!).tools).toEqual(['rag', 'code', 'web-search', 'api']);
 
-    // Extra fields (submitter, department) should be silently ignored
     const gdprAgent = result.agents.find((a) => a.name === 'GDPR agent');
     expect(gdprAgent).toBeDefined();
     expect(gdprAgent).not.toHaveProperty('submitter');
     expect(gdprAgent).not.toHaveProperty('department');
 
-    // Agent with unicode characters in description (en-dashes)
     const journalAgent = result.agents.find(
       (a) => a.name === 'Journal Entry Tax Validation Agent'
     );
     expect(journalAgent).toBeDefined();
-    expect(journalAgent!.description).toContain('tax');
+    expect(coreFields(journalAgent!).description).toContain('tax');
   });
 
   it('round-trips a full canvas through export and re-import', () => {
     const yamlText = readDanucemFixture();
-
     const imported = parseYaml(yamlText);
 
-    // Convert to Agent[] for export
     const agents: Agent[] = imported.agents.map((a, i) => ({
       _id: `id-${i}` as Id<"agents">,
       _creationTime: Date.now(),
       canvasId: 'canvas-id' as Id<"canvases">,
+      modelVersion: AGENT_MODEL_VERSION,
       ...a,
       createdBy: 'user',
       updatedBy: 'user',
@@ -397,10 +445,10 @@ describe('YAML full canvas import', () => {
     for (let i = 0; i < imported.agents.length; i++) {
       expect(reimported.agents[i].name).toBe(imported.agents[i].name);
       expect(reimported.agents[i].phase).toBe(imported.agents[i].phase);
-      expect(reimported.agents[i].tools).toEqual(imported.agents[i].tools);
-      expect(reimported.agents[i].journeySteps).toEqual(imported.agents[i].journeySteps);
-      expect(reimported.agents[i].category).toBe(imported.agents[i].category);
-      expect(reimported.agents[i].status).toBe(imported.agents[i].status);
+      expect(coreFields(reimported.agents[i]).tools).toEqual(coreFields(imported.agents[i]).tools);
+      expect(coreFields(reimported.agents[i]).journeySteps).toEqual(coreFields(imported.agents[i]).journeySteps);
+      expect(coreFields(reimported.agents[i]).category).toBe(coreFields(imported.agents[i]).category);
+      expect(coreFields(reimported.agents[i]).status).toBe(coreFields(imported.agents[i]).status);
     }
   });
 });

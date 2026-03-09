@@ -12,6 +12,7 @@ import {
   validateOptionalUrl,
   validateAgentData,
 } from '../../convex/lib/validation';
+import { buildAgentFieldValues } from '../../shared/agentModel';
 
 describe('Convex Backend Validation', () => {
   describe('validateMetric', () => {
@@ -327,11 +328,13 @@ describe('Convex Backend Validation', () => {
         validateAgentData({
           name: 'Sales Agent',
           phase: 'Discovery',
-          objective: 'Help the sales team',
-          description: 'A helpful agent',
-          metrics: { numberOfUsers: 10, timesUsed: 50, timeSaved: 100, roi: 25 },
-          demoLink: 'https://example.com/demo',
-          videoLink: 'https://youtube.com/watch?v=123',
+          fieldValues: buildAgentFieldValues({
+            objective: 'Help the sales team',
+            description: 'A helpful agent',
+            metrics: { numberOfUsers: 10, timesUsed: 50, timeSaved: 100, roi: 25 },
+            demoLink: 'https://example.com/demo',
+            videoLink: 'https://youtube.com/watch?v=123',
+          }),
         })
       ).not.toThrow();
     });
@@ -356,24 +359,36 @@ describe('Convex Backend Validation', () => {
 
     it('should throw for invalid metrics (negative numberOfUsers)', () => {
       expect(() =>
-        validateAgentData({ metrics: { numberOfUsers: -1 } })
+        validateAgentData({
+          fieldValues: buildAgentFieldValues({ metrics: { numberOfUsers: -1 } }),
+        })
       ).toThrow('Validation: numberOfUsers must be 0 or greater');
     });
 
     it('should throw for invalid metrics (negative timesUsed)', () => {
       expect(() =>
-        validateAgentData({ metrics: { timesUsed: -5 } })
+        validateAgentData({
+          fieldValues: buildAgentFieldValues({ metrics: { timesUsed: -5 } }),
+        })
       ).toThrow('Validation: timesUsed must be 0 or greater');
     });
 
     it('should throw for invalid demoLink URL', () => {
-      expect(() => validateAgentData({ demoLink: 'not-a-url' })).toThrow(
+      expect(() =>
+        validateAgentData({
+          fieldValues: buildAgentFieldValues({ demoLink: 'not-a-url' }),
+        })
+      ).toThrow(
         'Validation: demoLink must be a valid URL'
       );
     });
 
     it('should throw for invalid videoLink URL', () => {
-      expect(() => validateAgentData({ videoLink: 'bad-link' })).toThrow(
+      expect(() =>
+        validateAgentData({
+          fieldValues: buildAgentFieldValues({ videoLink: 'bad-link' }),
+        })
+      ).toThrow(
         'Validation: videoLink must be a valid URL'
       );
     });
@@ -383,20 +398,23 @@ describe('Convex Backend Validation', () => {
       expect(() => validateAgentData({ name: 'Agent' })).not.toThrow();
       expect(() => validateAgentData({ phase: 'Discovery' })).not.toThrow();
       expect(() =>
-        validateAgentData({ demoLink: 'https://example.com' })
+        validateAgentData({
+          fieldValues: buildAgentFieldValues({ demoLink: 'https://example.com' }),
+        })
       ).not.toThrow();
     });
 
     it('should ignore non-string/non-object fields (number passed as name is ignored)', () => {
       expect(() => validateAgentData({ name: 42 as unknown })).not.toThrow();
       expect(() => validateAgentData({ phase: 123 as unknown })).not.toThrow();
-      expect(() => validateAgentData({ metrics: 'not-an-object' })).not.toThrow();
-      expect(() => validateAgentData({ demoLink: 99 as unknown })).not.toThrow();
+      expect(() => validateAgentData({ fieldValues: 'not-an-object' as unknown })).not.toThrow();
     });
 
     it('should allow negative roi through agent data', () => {
       expect(() =>
-        validateAgentData({ metrics: { roi: -50 } })
+        validateAgentData({
+          fieldValues: buildAgentFieldValues({ metrics: { roi: -50 } }),
+        })
       ).not.toThrow();
     });
   });
