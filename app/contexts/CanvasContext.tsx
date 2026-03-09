@@ -79,7 +79,7 @@ export function CanvasProvider({ children, initialCanvasId }: CanvasProviderProp
     ? canvases.find((c: Canvas) => c._id === currentCanvasId) || null
     : null;
 
-  // Handle initial canvas from URL (shareable links)
+  // Handle initial canvas from URL (shareable links).
   useEffect(() => {
     // Skip if no initialCanvasId, already handled, or query not yet completed
     if (isConvexAuthLoading || !initialCanvasId || initialCanvasHandled || initialCanvas === undefined) {
@@ -158,8 +158,8 @@ export function CanvasProvider({ children, initialCanvasId }: CanvasProviderProp
   }, [currentCanvasId, reorderCategoriesMutation]);
 
   // Derive phases/categories from current canvas with defaults
-  const phases = currentCanvas?.phases ?? ['Backlog'];
-  const categories = currentCanvas?.categories ?? ['Uncategorized'];
+  const phases = useMemo(() => currentCanvas?.phases ?? ['Backlog'], [currentCanvas?.phases]);
+  const categories = useMemo(() => currentCanvas?.categories ?? ['Uncategorized'], [currentCanvas?.categories]);
   const isLoading = (!isInitialized || isConvexAuthLoading || isCanvasesQueryLoading) && !hasLoadedCanvases;
 
   const value = useMemo<CanvasContextValue>(() => ({
