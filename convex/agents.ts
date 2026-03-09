@@ -10,14 +10,12 @@ import {
 } from "./lib/helpers";
 import {
   validateAgentData,
+  validateAgentFieldValues,
   validateAgentName,
-  validateDescription,
-  validateMetrics,
-  validateObjective,
-  validateOptionalUrl,
   validatePhase,
 } from "./lib/validation";
 import { agentFieldValidators, agentInputValidator, agentUpdateValidator, CHANGE_TYPE } from "./lib/validators";
+import { AGENT_MODEL_VERSION, readAgentCoreFields } from "../shared/agentModel";
 
 /**
  * List all agents for a canvas (excludes soft-deleted)
@@ -60,15 +58,7 @@ export const create = mutation({
     phase: v.string(),
     agentOrder: v.number(),
     name: v.string(),
-    objective: v.optional(v.string()),
-    description: v.optional(v.string()),
-    tools: v.array(v.string()),
-    journeySteps: v.array(v.string()),
-    demoLink: v.optional(v.string()),
-    videoLink: v.optional(v.string()),
-    metrics: agentFieldValidators.metrics,
-    category: v.optional(v.string()),
-    status: agentFieldValidators.status,
+    fieldValues: agentFieldValidators.fieldValues,
   },
   handler: async (ctx, args) => {
     const auth = await requireAuth(ctx);
@@ -80,6 +70,7 @@ export const create = mutation({
 
     const agentId = await ctx.db.insert("agents", {
       ...args,
+      modelVersion: AGENT_MODEL_VERSION,
       createdBy: auth.workosUserId,
       updatedBy: auth.workosUserId,
       createdAt: now,
@@ -107,11 +98,9 @@ export const update = mutation({
     // Validate provided fields
     if (updates.name !== undefined) validateAgentName(updates.name);
     if (updates.phase !== undefined) validatePhase(updates.phase);
-    if (updates.objective !== undefined) validateObjective(updates.objective);
-    if (updates.description !== undefined) validateDescription(updates.description);
-    validateMetrics(updates.metrics);
-    validateOptionalUrl(updates.demoLink, "demoLink");
-    validateOptionalUrl(updates.videoLink, "videoLink");
+    if (updates.fieldValues !== undefined) {
+      validateAgentFieldValues(updates.fieldValues);
+    }
 
     const now = Date.now();
     const previousData = getAgentSnapshot(agent);
@@ -123,6 +112,7 @@ export const update = mutation({
 
     await ctx.db.patch(agentId, {
       ...definedUpdates,
+      ...(updates.fieldValues !== undefined ? { modelVersion: AGENT_MODEL_VERSION } : {}),
       updatedBy: auth.workosUserId,
       updatedAt: now,
     });
@@ -262,7 +252,8 @@ export const bulkCreate = mutation({
     const newCategories = new Set<string>();
     for (const agent of agents) {
       newPhases.add(agent.phase);
-      if (agent.category) newCategories.add(agent.category);
+      const category = readAgentCoreFields(agent.fieldValues).category;
+      if (category) newCategories.add(category);
     }
 
     // Append only NEW phases/categories not already in canvas
@@ -285,6 +276,7 @@ export const bulkCreate = mutation({
       const agentId = await ctx.db.insert("agents", {
         canvasId,
         ...agentData,
+        modelVersion: AGENT_MODEL_VERSION,
         createdBy: auth.workosUserId,
         updatedBy: auth.workosUserId,
         createdAt: now,
@@ -329,9 +321,10 @@ export const bulkReplace = mutation({
         seenPhases.add(agent.phase);
         newPhases.push(agent.phase);
       }
-      if (agent.category && !seenCategories.has(agent.category)) {
-        seenCategories.add(agent.category);
-        newCategories.push(agent.category);
+      const category = readAgentCoreFields(agent.fieldValues).category;
+      if (category && !seenCategories.has(category)) {
+        seenCategories.add(category);
+        newCategories.push(category);
       }
     }
 
@@ -368,6 +361,7 @@ export const bulkReplace = mutation({
       const agentId = await ctx.db.insert("agents", {
         canvasId,
         ...agentData,
+        modelVersion: AGENT_MODEL_VERSION,
         createdBy: auth.workosUserId,
         updatedBy: auth.workosUserId,
         createdAt: now,
@@ -411,8 +405,9 @@ export const getDistinctCategories = query({
         .collect();
 
       for (const agent of agents) {
-        if (agent.category && agent.category.trim()) {
-          categories.add(agent.category.trim());
+        const category = readAgentCoreFields(agent.fieldValues).category;
+        if (category && category.trim()) {
+          categories.add(category.trim());
         }
       }
     }

@@ -5,6 +5,7 @@ import { requireAuth, requireOrgAccess, hasOrgAccess } from "./lib/auth";
 import { getAgentSnapshot, getCanvasWithAccess, recordHistory } from "./lib/helpers";
 import { validateSlug, validateTitle } from "./lib/validation";
 import { CHANGE_TYPE } from "./lib/validators";
+import { AGENT_MODEL_VERSION } from "../shared/agentModel";
 
 /**
  * Generate a unique slug in the target org by appending -copy, -copy-2, etc.
@@ -345,20 +346,19 @@ export const copyToOrgs = mutation({
     const results: Array<{ orgId: string; canvasId: string; slug: string }> = [];
 
     // Extract agent data once (optimization: avoid repeated property access in loop)
-    const agentDataToCopy = sourceAgents.map((agent) => ({
-      name: agent.name,
-      objective: agent.objective,
-      description: agent.description,
-      tools: agent.tools,
-      journeySteps: agent.journeySteps,
-      demoLink: agent.demoLink,
-      videoLink: agent.videoLink,
-      metrics: agent.metrics,
-      category: agent.category,
-      status: agent.status,
-      phase: agent.phase,
-      agentOrder: agent.agentOrder,
-    }));
+    const agentDataToCopy = sourceAgents.map((agent) => {
+      if (!agent.fieldValues || agent.modelVersion !== AGENT_MODEL_VERSION) {
+        throw new Error("Migration: Source canvas contains unmigrated agents");
+      }
+
+      return {
+        name: agent.name,
+        phase: agent.phase,
+        agentOrder: agent.agentOrder,
+        fieldValues: agent.fieldValues,
+        modelVersion: AGENT_MODEL_VERSION,
+      };
+    });
 
     // Copy to each target org
     for (const targetOrgId of targetOrgIds) {

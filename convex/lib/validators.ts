@@ -70,6 +70,8 @@ export const statusValidator = v.optional(
   )
 );
 
+export const fieldValuesValidator = v.record(v.string(), v.any());
+
 /**
  * Shared validator components for agent fields
  */
@@ -78,26 +80,7 @@ export const agentFieldValidators = {
   phase: v.string(),
   agentOrder: v.number(),
   name: v.string(),
-
-  // Optional fields
-  objective: v.optional(v.string()),
-  description: v.optional(v.string()),
-  tools: v.array(v.string()),
-  journeySteps: v.array(v.string()),
-  demoLink: v.optional(v.string()),
-  videoLink: v.optional(v.string()),
-
-  // Metrics - all fields optional
-  metrics: v.optional(
-    v.object({
-      numberOfUsers: v.optional(v.number()),
-      timesUsed: v.optional(v.number()),
-      timeSaved: v.optional(v.number()), // hours
-      roi: v.optional(v.number()), // integer currency
-    })
-  ),
-  category: v.optional(v.string()),
-  status: statusValidator,
+  fieldValues: fieldValuesValidator,
 } as const;
 
 /**
@@ -114,13 +97,5 @@ export const agentUpdateValidator = {
   phase: v.optional(agentFieldValidators.phase),
   agentOrder: v.optional(agentFieldValidators.agentOrder),
   name: v.optional(agentFieldValidators.name),
-  objective: agentFieldValidators.objective,
-  description: agentFieldValidators.description,
-  tools: v.optional(agentFieldValidators.tools),
-  journeySteps: v.optional(agentFieldValidators.journeySteps),
-  demoLink: agentFieldValidators.demoLink,
-  videoLink: agentFieldValidators.videoLink,
-  metrics: agentFieldValidators.metrics,
-  category: agentFieldValidators.category,
-  status: agentFieldValidators.status,
+  fieldValues: v.optional(fieldValuesValidator),
 };

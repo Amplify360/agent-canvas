@@ -14,7 +14,7 @@ This file provides guidance to Claude Code when working with this repository.
 - **Backend**: Convex (real-time backend-as-a-service)
 - **Auth**: WorkOS AuthKit (magic link, social login, SSO)
 - **Hosting**: Vercel (Next.js deployment)
-- **Libraries**: `next`, `react`, `react-dom`, `lucide-react` (icons), `@workos-inc/authkit-nextjs` (auth SDK), `@workos-inc/widgets` (member management UI), `@tanstack/react-query`, `convex`, `js-yaml` (legacy YAML import)
+- **Libraries**: `next`, `react`, `react-dom`, `lucide-react` (icons), `@workos-inc/authkit-nextjs` (auth SDK), `@workos-inc/widgets` (member management UI), `@tanstack/react-query`, `convex`, `js-yaml` (YAML import/export)
 
 ## Development Commands
 

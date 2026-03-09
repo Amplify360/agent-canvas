@@ -1,5 +1,5 @@
 /**
- * ImportYamlModal - Modal for importing legacy YAML files
+ * ImportYamlModal - Modal for importing YAML files
  */
 
 'use client';

@@ -11,7 +11,9 @@
 import React, { createContext, useContext, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { Canvas } from '@/types/canvas';
 import type { Agent } from '@/types/agent';
+import { getAgentCategory } from '@/utils/agentModel';
 import type { VoteType } from '@/types/validationConstants';
+import { AGENT_MODEL_VERSION } from '../../shared/agentModel';
 
 type MockOrgMembership = {
   orgId: string;
@@ -88,7 +90,10 @@ export function MockConvexProvider({
   currentUserEmail: string;
   initialState: MockConvexState;
 }) {
-  const [state, setState] = useState<MockConvexState>(initialState);
+  const [state, setState] = useState<MockConvexState>({
+    ...initialState,
+    agents: initialState.agents,
+  });
 
   // Synchronous ID generators (state updates are async in React, so keep counters in refs).
   const countersRef = useRef({
@@ -150,7 +155,7 @@ export function MockConvexProvider({
         for (const agent of state.agents) {
           if (!canvasIds.has(String(agent.canvasId))) continue;
           if (agent.deletedAt) continue;
-          const category = safeString(agent.category).trim();
+          const category = safeString(getAgentCategory(agent)).trim();
           if (category) categories.add(category);
         }
         return Array.from(categories).sort(byString);
@@ -453,15 +458,8 @@ export function MockConvexProvider({
           phase: safeString(agentInput.phase) || 'Backlog',
           agentOrder: typeof agentInput.agentOrder === 'number' ? agentInput.agentOrder : 0,
           name: safeString(agentInput.name) || 'Untitled Agent',
-          objective: safeString(agentInput.objective) || undefined,
-          description: safeString(agentInput.description) || undefined,
-          tools: Array.isArray(agentInput.tools) ? (agentInput.tools as string[]) : [],
-          journeySteps: Array.isArray(agentInput.journeySteps) ? (agentInput.journeySteps as string[]) : [],
-          demoLink: safeString(agentInput.demoLink) || undefined,
-          videoLink: safeString(agentInput.videoLink) || undefined,
-          metrics: (agentInput.metrics as any) ?? {},
-          category: safeString(agentInput.category) || undefined,
-          status: (agentInput.status as any) ?? undefined,
+          fieldValues: (agentInput.fieldValues as any) ?? {},
+          modelVersion: AGENT_MODEL_VERSION,
           createdBy: currentUserId,
           updatedBy: currentUserId,
           createdAt: now,
@@ -485,6 +483,7 @@ export function MockConvexProvider({
               ? ({
                   ...a,
                   ...updates,
+                  modelVersion: updates.fieldValues ? AGENT_MODEL_VERSION : a.modelVersion,
                   updatedBy: currentUserId,
                   updatedAt: now,
                 } as Agent)
@@ -534,7 +533,8 @@ export function MockConvexProvider({
             createdIds.push(id);
             const phase = safeString(agentInput.phase) || 'Backlog';
             phases.add(phase);
-            const category = safeString(agentInput.category).trim();
+            const normalizedFieldValues = (agentInput.fieldValues as Record<string, unknown>) ?? {};
+            const category = safeString(getAgentCategory({ fieldValues: normalizedFieldValues } as Agent)).trim();
             if (category) categories.add(category);
 
             nextAgents.push({
@@ -544,15 +544,8 @@ export function MockConvexProvider({
               phase,
               agentOrder: typeof agentInput.agentOrder === 'number' ? agentInput.agentOrder : 0,
               name: safeString(agentInput.name) || 'Untitled Agent',
-              objective: safeString(agentInput.objective) || undefined,
-              description: safeString(agentInput.description) || undefined,
-              tools: Array.isArray(agentInput.tools) ? agentInput.tools : [],
-              journeySteps: Array.isArray(agentInput.journeySteps) ? agentInput.journeySteps : [],
-              demoLink: safeString(agentInput.demoLink) || undefined,
-              videoLink: safeString(agentInput.videoLink) || undefined,
-              metrics: agentInput.metrics ?? {},
-              category: category || undefined,
-              status: agentInput.status ?? undefined,
+              fieldValues: normalizedFieldValues,
+              modelVersion: AGENT_MODEL_VERSION,
               createdBy: currentUserId,
               updatedBy: currentUserId,
               createdAt: now,

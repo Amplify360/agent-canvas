@@ -5,7 +5,7 @@
 'use client';
 
 import React, { createContext, useContext, useCallback, useMemo } from 'react';
-import { Agent, AgentFormData } from '@/types/agent';
+import { Agent, AgentMutationInput } from '@/types/agent';
 import { useMutation, useCanQuery } from '@/hooks/useConvex';
 import { useStableQuery } from '@/hooks/useStableQuery';
 import { useAuth } from './AuthContext';
@@ -16,8 +16,8 @@ import { Id } from '../../convex/_generated/dataModel';
 interface AgentContextValue {
   agents: Agent[];
   isLoading: boolean;
-  createAgent: (data: AgentFormData) => Promise<string>;
-  updateAgent: (agentId: string, data: Partial<AgentFormData>) => Promise<void>;
+  createAgent: (data: AgentMutationInput) => Promise<string>;
+  updateAgent: (agentId: string, data: Partial<AgentMutationInput>) => Promise<void>;
   deleteAgent: (agentId: string) => Promise<void>;
 }
 
@@ -41,7 +41,7 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
   const updateAgentMutation = useMutation(api.agents.update);
   const deleteAgentMutation = useMutation(api.agents.remove);
 
-  const createAgent = useCallback(async (data: AgentFormData) => {
+  const createAgent = useCallback(async (data: AgentMutationInput) => {
     if (!currentCanvasId) throw new Error('No canvas selected');
     const agentId = await createAgentMutation({
       canvasId: currentCanvasId as Id<"canvases">,
@@ -50,7 +50,7 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
     return agentId as string;
   }, [currentCanvasId, createAgentMutation]);
 
-  const updateAgent = useCallback(async (agentId: string, data: Partial<AgentFormData>) => {
+  const updateAgent = useCallback(async (agentId: string, data: Partial<AgentMutationInput>) => {
     await updateAgentMutation({ agentId: agentId as Id<"agents">, ...data });
   }, [updateAgentMutation]);
 

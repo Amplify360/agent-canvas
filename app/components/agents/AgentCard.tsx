@@ -11,6 +11,7 @@ import { formatCurrency } from '@/utils/formatting';
 import { Icon } from '@/components/ui/Icon';
 import { Tooltip } from '@/components/ui/Tooltip';
 import { getAgentStatusConfig, type VoteType } from '@/types/validationConstants';
+import { getAgentCoreFields } from '@/utils/agentModel';
 import { useClickOutside } from '@/hooks/useClickOutside';
 import { useAgentVoteActions } from '@/hooks/useAgentVoteActions';
 
@@ -37,8 +38,10 @@ export function AgentCard({
   userVote,
   commentCount = 0,
 }: AgentCardProps) {
-  const metrics = agent.metrics || {};
-  const statusColor = getAgentStatusConfig(agent.status).color;
+  const coreFields = getAgentCoreFields(agent);
+  const metrics = coreFields.metrics || {};
+  const status = coreFields.status;
+  const statusColor = getAgentStatusConfig(status).color;
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const { toggleVote } = useAgentVoteActions(agent._id);
@@ -78,19 +81,19 @@ export function AgentCard({
           <span className="agent-card__number">
             {(agent.agentOrder ?? 0) + 1}
           </span>
-          {agent.status && (
-            <span className={`agent-card__status-badge badge badge--${getAgentStatusConfig(agent.status).badgeVariant}`}>
-              <span className={`status-dot status-dot--${agent.status}`} />
-              {getAgentStatusConfig(agent.status).label}
+          {status && (
+            <span className={`agent-card__status-badge badge badge--${getAgentStatusConfig(status).badgeVariant}`}>
+              <span className={`status-dot status-dot--${status}`} />
+              {getAgentStatusConfig(status).label}
             </span>
           )}
         </div>
 
         <div className="agent-card__header-right">
           {/* Tool dots - right aligned */}
-          {agent.tools && agent.tools.length > 0 && (
+          {coreFields.tools.length > 0 && (
             <div className="tool-dots-container">
-              {agent.tools.slice(0, 5).map((tool) => {
+              {coreFields.tools.slice(0, 5).map((tool) => {
                 const toolDisplay = getToolDisplay(tool);
                 return (
                   <span
@@ -100,14 +103,14 @@ export function AgentCard({
                   />
                 );
               })}
-              {agent.tools.length > 5 && (
-                <span className="tool-dots-more">+{agent.tools.length - 5}</span>
+              {coreFields.tools.length > 5 && (
+                <span className="tool-dots-more">+{coreFields.tools.length - 5}</span>
               )}
               {/* Styled tooltip on hover */}
               <div className="tool-dots-tooltip">
                 <div className="tool-dots-tooltip__title">Capabilities</div>
                 <div className="tool-dots-tooltip__list">
-                  {agent.tools.map((tool) => {
+                  {coreFields.tools.map((tool) => {
                     const toolDisplay = getToolDisplay(tool);
                     return (
                       <div key={tool} className="tool-dots-tooltip__item">
@@ -167,16 +170,16 @@ export function AgentCard({
       </Tooltip>
 
       {/* Objective - highlighted (primary content) */}
-      {agent.objective && (
-        <p className="agent-card__objective">{agent.objective}</p>
+      {coreFields.objective && (
+        <p className="agent-card__objective">{coreFields.objective}</p>
       )}
 
       {/* Footer with Links, Metrics, and Journey - icons only with tooltips */}
       <div className="agent-card__footer">
-        {agent.demoLink && (
+        {coreFields.demoLink && (
           <Tooltip content="View Demo" placement="top">
             <a
-              href={agent.demoLink}
+              href={coreFields.demoLink}
               target="_blank"
               rel="noopener noreferrer"
               className="agent-card__footer-icon"
@@ -186,10 +189,10 @@ export function AgentCard({
             </a>
           </Tooltip>
         )}
-        {agent.videoLink && (
+        {coreFields.videoLink && (
           <Tooltip content="Watch Video" placement="top">
             <a
-              href={agent.videoLink}
+              href={coreFields.videoLink}
               target="_blank"
               rel="noopener noreferrer"
               className="agent-card__footer-icon"
@@ -244,7 +247,7 @@ export function AgentCard({
             </div>
           </div>
         )}
-        {agent.journeySteps && agent.journeySteps.length > 0 && (
+        {coreFields.journeySteps.length > 0 && (
           <div className="agent-card__journey">
             <button
               type="button"
@@ -256,7 +259,7 @@ export function AgentCard({
             <div className="agent-card__journey-tooltip">
               <div className="journey-tooltip__title">User Journey</div>
               <ol className="journey-tooltip__steps">
-                {agent.journeySteps.map((step, i) => (
+                {coreFields.journeySteps.map((step, i) => (
                   <li key={i}>{step}</li>
                 ))}
               </ol>

@@ -10,6 +10,7 @@
 
 import type * as agentComments from "../agentComments.js";
 import type * as agentHistory from "../agentHistory.js";
+import type * as agentModelMigrations from "../agentModelMigrations.js";
 import type * as agentVotes from "../agentVotes.js";
 import type * as agents from "../agents.js";
 import type * as canvases from "../canvases.js";
@@ -34,6 +35,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   agentComments: typeof agentComments;
   agentHistory: typeof agentHistory;
+  agentModelMigrations: typeof agentModelMigrations;
   agentVotes: typeof agentVotes;
   agents: typeof agents;
   canvases: typeof canvases;
