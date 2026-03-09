@@ -114,7 +114,7 @@ export function MainToolbar({ onAddAgent }: MainToolbarProps) {
         </div>
 
         {/* Add Agent Button */}
-        <button type="button" className="btn btn--primary" onClick={onAddAgent}>
+        <button type="button" className="btn btn--primary" onClick={onAddAgent} disabled={!currentCanvasId}>
           <Icon name="plus" />
           <span>Add Agent</span>
         </button>

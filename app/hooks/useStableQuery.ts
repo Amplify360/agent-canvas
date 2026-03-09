@@ -31,6 +31,7 @@ export function useStableQuery<Query extends FunctionReference<"query">>(
   hasLoaded: boolean;
 } {
   type ReturnT = FunctionReturnType<Query>;
+  const isSkipped = args === 'skip';
 
   const [lastData, setLastData] = useState<ReturnT | undefined>(undefined);
   const [hasLoaded, setHasLoaded] = useState(false);
@@ -54,8 +55,8 @@ export function useStableQuery<Query extends FunctionReference<"query">>(
   }, [queryResult]);
 
   return {
-    data: queryResult ?? lastData,
-    isLoading: queryResult === undefined && !hasLoaded,
+    data: isSkipped ? undefined : (queryResult ?? lastData),
+    isLoading: !isSkipped && queryResult === undefined && !hasLoaded,
     hasLoaded,
   };
 }
