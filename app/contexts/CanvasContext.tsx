@@ -49,7 +49,11 @@ export function CanvasProvider({ children, initialCanvasId }: CanvasProviderProp
 
   // Subscribe to canvases using official Convex hook with stale-data caching
   // Only query if Convex has the token AND has orgId
-  const { data: canvases = [], hasLoaded: hasLoadedCanvases } = useStableQuery(
+  const {
+    data: canvases = [],
+    isLoading: isCanvasesQueryLoading,
+    hasLoaded: hasLoadedCanvases,
+  } = useStableQuery(
     api.canvases.list,
     canQuery && currentOrgId ? { workosOrgId: currentOrgId } : 'skip',
     currentOrgId,
@@ -156,7 +160,7 @@ export function CanvasProvider({ children, initialCanvasId }: CanvasProviderProp
   // Derive phases/categories from current canvas with defaults
   const phases = currentCanvas?.phases ?? ['Backlog'];
   const categories = currentCanvas?.categories ?? ['Uncategorized'];
-  const isLoading = (!isInitialized || isConvexAuthLoading) && !hasLoadedCanvases;
+  const isLoading = (!isInitialized || isConvexAuthLoading || isCanvasesQueryLoading) && !hasLoadedCanvases;
 
   const value = useMemo<CanvasContextValue>(() => ({
     canvases,

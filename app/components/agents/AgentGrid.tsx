@@ -27,7 +27,7 @@ interface AgentGridProps {
 export function AgentGrid({ onEditAgent, onAddAgent, onQuickLook, onOpenComments }: AgentGridProps) {
   const { computedGroups } = useGrouping();
   const { isLoading } = useAgents();
-  const { currentCanvasId } = useCanvas();
+  const { currentCanvas, currentCanvasId } = useCanvas();
   const { isConvexAuthenticated, isConvexAuthLoading } = useCanQuery();
   const confirmAndDelete = useDeleteAgent();
   const { voteCountsByAgent, userVotesByAgent, commentCountsByAgent } = useCanvasFeedback(
@@ -61,6 +61,20 @@ export function AgentGrid({ onEditAgent, onAddAgent, onQuickLook, onOpenComments
           <Icon name="loader-2" className="loading-icon" />
         </div>
         <h3 className="empty-state__title">Loading...</h3>
+      </div>
+    );
+  }
+
+  if (!currentCanvas) {
+    return (
+      <div className="empty-state">
+        <div className="empty-state__icon">
+          <Icon name="file-text" />
+        </div>
+        <h3 className="empty-state__title">No canvas selected</h3>
+        <p className="empty-state__description">
+          This organization does not have any canvases yet. Create one from the sidebar to get started.
+        </p>
       </div>
     );
   }
