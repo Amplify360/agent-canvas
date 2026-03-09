@@ -33,6 +33,22 @@ CONVEX_DEPLOYMENT=prod:fortunate-hummingbird-653 npx convex deploy --yes
 
 For lab inspection commands such as `logs`, `data`, and `function-spec`, use `--deployment-name fortunate-hummingbird-653`. Do not rely on the repo's ambient/default Convex context when working on lab.
 
+### Deploy Main Convex Backends
+
+Use explicit deployment targeting when working outside local dev.
+
+```bash
+CONVEX_DEPLOYMENT=dev:expert-narwhal-281 npx convex deploy --yes
+CONVEX_DEPLOYMENT=prod:quaint-bee-380 npx convex deploy --yes
+```
+
+For inspection commands against non-default deployments, prefer:
+
+```bash
+npx convex <command> --deployment-name expert-narwhal-281
+npx convex <command> --deployment-name quaint-bee-380
+```
+
 ### Deploy to Original Project (Frozen - Manual Only)
 If you need to deploy to the original frozen project:
 
@@ -59,9 +75,36 @@ If you need to deploy to the original frozen project:
 
 **Note:** The original project is frozen and should only be updated manually when absolutely necessary.
 
-## Project Information
+## Project Mapping
 
-- **Original Project:** See `.vercel.original/project.json`
-- **V2 Project:** See `.vercel/project.json`
-- **Lab Project:** `agentcanvas-app-lab` (link separately; do not assume `.vercel/project.json` points there)
-- **Full Details:** See `.vercel/PROJECT_INFO.md`
+### Main App
+
+- **Project Name:** `agentcanvas-app-v2`
+- **Project ID:** `prj_F861OkfkgcZKI2Qj8Dvgj009KaUM`
+- **Organization ID:** `team_OyuSxI1QnCzGd7SOW2T9YveW`
+- **Production URL:** `https://canvas.amplify360.ai`
+- **Dev URL:** `https://canvas-dev.amplify360.ai`
+- **Git branch mapping:** `main` -> prod, `dev` -> dev
+
+### Lab App
+
+- **Project Name:** `agentcanvas-app-lab`
+- **Project ID:** `prj_1Xn6IY43I3NSxBSxBB1Q8NzXbb2c`
+- **Organization ID:** `team_OyuSxI1QnCzGd7SOW2T9YveW`
+- **Production URL:** `https://canvas-lab.amplify360.ai`
+- **Git branch mapping:** `lab` -> lab production deployment
+- **Backend pairing:** Convex project `agent-canvas-lab` using `prod:fortunate-hummingbird-653`
+
+### Local Linking
+
+- This repo's checked-in [`.vercel/project.json`](/Users/andreas/src/agent-canvas/.vercel/project.json) points to `agentcanvas-app-v2`.
+- Manual `vercel` commands from the repo root therefore target the main app by default.
+- For manual lab deploy/debug work, use a separate temp directory linked to `agentcanvas-app-lab` or temporarily relink this checkout.
+- [`.vercel.original/project.json`](/Users/andreas/src/agent-canvas/.vercel.original/project.json) is only for the frozen legacy project.
+
+### Deprecated Projects
+
+These should stay disconnected from GitHub and can be removed once no longer needed:
+
+- `agentcanvas-app` (`prj_nQkPX9TgaZbr738EJWPSI4Pog77T`) - original frozen project
+- `agent-canvas` - legacy duplicate project causing misleading preview/check noise
