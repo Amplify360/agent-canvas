@@ -1,4 +1,4 @@
-import { Agent, AgentCoreFields, AgentFieldValues, AgentFormData, AgentMutationInput } from '@/types/agent';
+import { Agent, AgentCoreFields, AgentFormData, AgentMutationInput } from '@/types/agent';
 import {
   buildAgentFieldValues,
   readAgentCoreFields,

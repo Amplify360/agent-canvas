@@ -677,7 +677,7 @@ export function MockConvexProvider({
     }
   };
 
-  const action = async (functionName: string, args: unknown) => {
+  const action = async (functionName: string, _args: unknown) => {
     switch (functionName) {
       case 'orgMemberships:syncMyMemberships': {
         return { added: 0, updated: 0, removed: 0, errors: [] as string[] };

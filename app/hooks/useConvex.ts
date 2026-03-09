@@ -7,6 +7,10 @@
  * to exercise the happy path without real Convex/WorkOS credentials.
  */
 
+/* eslint-disable react-hooks/rules-of-hooks -- This module intentionally dispatches
+to either real Convex hooks or the in-memory mock implementation based on the
+provider tree used for the current subtree. */
+
 import type { FunctionReference } from 'convex/server';
 import type { ConvexReactClient, OptionalRestArgsOrSkip, ReactAction, ReactMutation } from 'convex/react';
 import {
@@ -39,11 +43,11 @@ export function useQuery<Query extends FunctionReference<'query'>>(
 ): Query['_returnType'] | undefined {
   const mock = useMockConvex();
   if (mock) {
-    const queryArgs = args[0] as any;
+    const queryArgs = args[0] as unknown;
     if (queryArgs === 'skip') return undefined;
     return mock.query(getFunctionName(query), queryArgs) as Query['_returnType'];
   }
-  return useQueryReal(query, ...(args as any));
+  return useQueryReal(query, ...(args as OptionalRestArgsOrSkip<Query>));
 }
 
 export function useMutation<Mutation extends FunctionReference<'mutation'>>(

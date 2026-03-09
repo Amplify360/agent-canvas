@@ -2,7 +2,7 @@
  * Hook for syncing state with localStorage
  */
 
-import { useState, useCallback, useEffect, useRef, Dispatch, SetStateAction } from 'react';
+import { useState, useCallback, useEffect, Dispatch, SetStateAction } from 'react';
 
 function readStorageValue<T>(key: string, initialValue: T): T {
   if (typeof window === 'undefined') {
@@ -22,19 +22,22 @@ export function useLocalStorage<T>(
   key: string,
   initialValue: T
 ): [T, Dispatch<SetStateAction<T>>] {
-  const initialValueRef = useRef(initialValue);
-  const keyRef = useRef(key);
-  if (keyRef.current !== key) {
-    keyRef.current = key;
-    initialValueRef.current = initialValue;
-  }
+  const [keyState, setKeyState] = useState(() => ({
+    key,
+    initialValue,
+  }));
 
   // Use initialValue for first render to keep server/client HTML consistent.
-  const [storedValue, setStoredValue] = useState<T>(initialValueRef.current);
+  const [storedValue, setStoredValue] = useState<T>(keyState.initialValue);
 
   useEffect(() => {
-    setStoredValue(readStorageValue(key, initialValueRef.current));
-  }, [key]);
+    if (keyState.key === key) {
+      return;
+    }
+
+    setKeyState({ key, initialValue });
+    setStoredValue(readStorageValue(key, initialValue));
+  }, [initialValue, key, keyState.key]);
 
   const setValue: Dispatch<SetStateAction<T>> = useCallback((value) => {
     setStoredValue((currentValue) => {
@@ -61,12 +64,12 @@ export function useLocalStorage<T>(
       if (event.key !== key) {
         return;
       }
-      setStoredValue(readStorageValue(key, initialValueRef.current));
+      setStoredValue(readStorageValue(key, keyState.initialValue));
     };
 
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
-  }, [key]);
+  }, [key, keyState.initialValue]);
 
   return [storedValue, setValue];
 }

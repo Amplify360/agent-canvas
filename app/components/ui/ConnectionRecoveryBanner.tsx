@@ -10,7 +10,7 @@
 
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useEffectEvent } from 'react';
 import { useConvexAuth } from '@/hooks/useConvex';
 import { useAuth } from '@/contexts/AuthContext';
 import { Icon } from '@/components/ui/Icon';
@@ -23,22 +23,19 @@ export function ConnectionRecoveryBanner() {
   const { signOut, refreshAuth } = useAuth();
   const [showBanner, setShowBanner] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // Use ref for refreshAuth to avoid adding it to effect dependency arrays
-  const refreshAuthRef = useRef(refreshAuth);
-  refreshAuthRef.current = refreshAuth;
 
   // Attempt silent reauth; returns true if it succeeds
-  const trySilentReauth = useCallback(async (): Promise<boolean> => {
+  const trySilentReauth = useEffectEvent(async (): Promise<boolean> => {
     try {
       authDebug('ConnectionRecoveryBanner', 'silent_reauth_start');
-      await refreshAuthRef.current();
+      await refreshAuth();
       authDebug('ConnectionRecoveryBanner', 'silent_reauth_success');
       return true;
     } catch {
       authDebug('ConnectionRecoveryBanner', 'silent_reauth_failed');
       return false;
     }
-  }, []);
+  });
 
   // Gradual failure: attempt silent reauth after 5s, show banner only if it fails
   useEffect(() => {
@@ -72,7 +69,7 @@ export function ConnectionRecoveryBanner() {
         timerRef.current = null;
       }
     };
-  }, [isAuthenticated, isLoading, trySilentReauth]);
+  }, [isAuthenticated, isLoading]);
 
   // Immediate trigger: AuthKit detected session expiry — try silent reauth first
   useEffect(() => {
@@ -86,7 +83,7 @@ export function ConnectionRecoveryBanner() {
     };
     window.addEventListener('workos-session-expired', handleSessionExpired);
     return () => window.removeEventListener('workos-session-expired', handleSessionExpired);
-  }, [trySilentReauth]);
+  }, []);
 
   if (!showBanner) return null;
 
