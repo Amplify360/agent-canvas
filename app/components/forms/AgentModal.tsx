@@ -392,7 +392,7 @@ export function AgentModal({ isOpen, onClose, agent, defaults }: AgentModalProps
 
             {formData.journeySteps.length === 0 ? (
               <div className="journey-editor__empty">
-                No journey steps defined. Add steps to describe the agent's workflow.
+                No journey steps defined. Add steps to describe the agent&apos;s workflow.
               </div>
             ) : (
               <div className="journey-editor__list">

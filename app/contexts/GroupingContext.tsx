@@ -49,8 +49,7 @@ export function GroupingProvider({ children }: { children: React.ReactNode }) {
   // Migrate legacy viewMode values ('compact', 'detail') to 'grid' for existing users
   const hasMigrated = useRef(false);
   useEffect(() => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const currentViewMode = preferences.viewMode as any;
+    const currentViewMode = preferences.viewMode as string;
     if (!hasMigrated.current && (currentViewMode === 'compact' || currentViewMode === 'detail')) {
       hasMigrated.current = true;
       setPreferences((prev) => ({ ...prev, viewMode: 'grid' }));

@@ -36,12 +36,13 @@
     "dev:auth-debug": "NEXT_PUBLIC_AUTH_DEBUG=1 next dev",
     "build": "next build",
     "start": "next start",
+    "lint": "eslint --max-warnings 0 app convex server tests middleware.ts playwright.config.ts",
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:run": "vitest run",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
-    "test:all": "pnpm test:run && pnpm test:e2e",
+    "test:all": "pnpm lint && pnpm test:run && pnpm test:e2e",
     "check:unused": "unimported --show-unused-files --show-unused-deps"
   }
 }

@@ -3,7 +3,7 @@ name: Tests
 on:
   pull_request:
   push:
-    branches: [main]
+    branches: [main, dev, lab]
   merge_group:
 
 concurrency:
@@ -40,6 +40,9 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm lint
 
       - name: Unit tests (Vitest)
         run: pnpm test:run

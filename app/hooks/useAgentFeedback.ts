@@ -20,6 +20,7 @@ interface UseAgentFeedbackOptions {
 export function useAgentFeedback({ agentId }: UseAgentFeedbackOptions) {
   // Get current user for email (used for comments)
   const currentUser = useCurrentUser();
+  const currentUserEmail = currentUser?.email;
   const { showToast } = useAppState();
 
   // Queries - skip when no agentId
@@ -74,7 +75,7 @@ export function useAgentFeedback({ agentId }: UseAgentFeedbackOptions) {
         await createCommentMutation({
           agentId: id,
           content,
-          userEmail: currentUser?.email || undefined,
+          userEmail: currentUserEmail || undefined,
         });
       } catch (error) {
         console.error('Add comment error:', error);
@@ -82,7 +83,7 @@ export function useAgentFeedback({ agentId }: UseAgentFeedbackOptions) {
         throw error; // Re-throw so CommentForm can handle it
       }
     },
-    [agentId, createCommentMutation, currentUser?.email, showToast]
+    [agentId, createCommentMutation, currentUserEmail, showToast]
   );
 
   const editComment = useCallback(

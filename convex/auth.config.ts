@@ -9,7 +9,7 @@
 const clientId = process.env.WORKOS_CLIENT_ID;
 if (!clientId) throw new Error("WORKOS_CLIENT_ID environment variable is required");
 
-export default {
+const authConfig = {
   providers: [
     // WorkOS User Management - primary auth provider
     // Access tokens from AuthKit SDK are issued by this provider
@@ -29,3 +29,5 @@ export default {
     },
   ],
 };
+
+export default authConfig;
