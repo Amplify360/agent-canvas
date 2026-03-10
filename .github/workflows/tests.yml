@@ -47,6 +47,9 @@ jobs:
       - name: Unit tests (Vitest)
         run: pnpm test:run
 
+      - name: Production build
+        run: pnpm build
+
       - name: Cache Playwright browsers
         uses: actions/cache@v4
         with:
