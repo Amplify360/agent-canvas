@@ -10,7 +10,7 @@
 
 'use client';
 
-import { useState, useEffect, useRef, useEffectEvent } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useConvexAuth } from '@/hooks/useConvex';
 import { useAuth } from '@/contexts/AuthContext';
 import { Icon } from '@/components/ui/Icon';
@@ -23,19 +23,24 @@ export function ConnectionRecoveryBanner() {
   const { signOut, refreshAuth } = useAuth();
   const [showBanner, setShowBanner] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const refreshAuthRef = useRef(refreshAuth);
 
-  // Attempt silent reauth; returns true if it succeeds
-  const trySilentReauth = useEffectEvent(async (): Promise<boolean> => {
+  useEffect(() => {
+    refreshAuthRef.current = refreshAuth;
+  }, [refreshAuth]);
+
+  // Keep the reauth helper build-safe while still calling the latest auth callback.
+  const trySilentReauth = async (): Promise<boolean> => {
     try {
       authDebug('ConnectionRecoveryBanner', 'silent_reauth_start');
-      await refreshAuth();
+      await refreshAuthRef.current();
       authDebug('ConnectionRecoveryBanner', 'silent_reauth_success');
       return true;
     } catch {
       authDebug('ConnectionRecoveryBanner', 'silent_reauth_failed');
       return false;
     }
-  });
+  };
 
   // Gradual failure: attempt silent reauth after 5s, show banner only if it fails
   useEffect(() => {
