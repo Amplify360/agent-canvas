@@ -22,8 +22,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      pull-requests: read
-      issues: read
+      pull-requests: write
+      issues: write
       id-token: write
       actions: read
     steps:
@@ -45,7 +45,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      pull-requests: read
+      pull-requests: write
+      issues: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -91,6 +92,7 @@ jobs:
             - Do NOT run `gh` and do NOT use any network tools. Prefer reading `./pr.files` and `./pr.diff`.
             - If you need extra context beyond the diff, use Read/Glob/Grep on the checked-out repository.
             - Focus on correctness, security (especially auth/token handling), and consistency with patterns in `CLAUDE.md`.
+            - Post actionable findings to the pull request review when warranted. If there are no findings, post a brief summary.
 
             Output a concise review with:
             - A short summary
