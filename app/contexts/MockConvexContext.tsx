@@ -247,6 +247,10 @@ export function MockConvexProvider({
           }));
       }
 
+      case 'mcpTokens:listForOrg': {
+        return [];
+      }
+
       case 'files:getUrl': {
         const { storageId } = (args ?? {}) as { storageId?: string };
         if (!storageId) return null;
@@ -262,6 +266,18 @@ export function MockConvexProvider({
 
   const mutation = async (functionName: string, args: unknown) => {
     switch (functionName) {
+      case 'mcpTokens:create': {
+        return { token: 'mcp_mock.secret' };
+      }
+
+      case 'mcpTokens:revoke': {
+        return null;
+      }
+
+      case 'mcpTokens:rotate': {
+        return { token: 'mcp_mock.rotated' };
+      }
+
       case 'canvases:create': {
         const { workosOrgId, title, slug, phases, categories } = (args ?? {}) as {
           workosOrgId?: string;
