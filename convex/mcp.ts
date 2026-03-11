@@ -1,7 +1,18 @@
 import { v } from "convex/values";
 import { internalMutation, internalQuery } from "./_generated/server";
-import { Id } from "./_generated/dataModel";
-import { validateSlug, validateTitle } from "./lib/validation";
+import { Doc, Id } from "./_generated/dataModel";
+import { AGENT_MODEL_VERSION } from "../shared/agentModel";
+import { getAgentSnapshot, recordHistory } from "./lib/helpers";
+import { applyCanvasStateOperation } from "./lib/mcpHelpers";
+import {
+  validateAgentData,
+  validateAgentFieldValues,
+  validateAgentName,
+  validatePhase,
+  validateSlug,
+  validateTitle,
+} from "./lib/validation";
+import { CHANGE_TYPE } from "./lib/validators";
 
 function constantTimeEquals(a: string, b: string): boolean {
   if (a.length !== b.length) return false;
@@ -36,6 +47,23 @@ async function resolveCanvas(ctx: any, workosOrgId: string, canvasId?: Id<"canva
     if (byDefault && !byDefault.deletedAt && byDefault.workosOrgId === workosOrgId) return byDefault;
   }
   throw new Error("Validation: canvasId or canvasSlug is required");
+}
+
+async function ensureUniqueCanvasSlug(
+  ctx: any,
+  workosOrgId: string,
+  slug: string,
+  excludeCanvasId?: Id<"canvases">
+) {
+  const existing = await ctx.db
+    .query("canvases")
+    .withIndex("by_org_slug", (q: any) => q.eq("workosOrgId", workosOrgId).eq("slug", slug))
+    .filter((q: any) => q.eq(q.field("deletedAt"), undefined))
+    .first();
+
+  if (existing && existing._id !== excludeCanvasId) {
+    throw new Error("Validation: A canvas with this slug already exists");
+  }
 }
 
 export const authenticateToken = internalQuery({
@@ -185,6 +213,7 @@ export const applyCanvasChanges = internalMutation({
       .filter((q) => q.eq(q.field("deletedAt"), undefined))
       .collect();
 
+    let canvasState = canvas;
     const byId = new Map(agents.map((a) => [a._id, a]));
     const now = Date.now();
     const actor = `mcp_token:${args.tokenId}`;
@@ -192,49 +221,153 @@ export const applyCanvasChanges = internalMutation({
 
     for (const op of args.operations) {
       if (op.type === "update_canvas") {
-        if (op.title) validateTitle(op.title);
-        if (op.slug) validateSlug(op.slug);
-        if (!args.dryRun) {
-          await ctx.db.patch(canvas._id, { title: op.title ?? canvas.title, slug: op.slug ?? canvas.slug, updatedBy: actor, updatedAt: now });
+        if (op.title !== undefined) validateTitle(op.title);
+        if (op.slug !== undefined) {
+          validateSlug(op.slug);
+          if (op.slug !== canvasState.slug) {
+            await ensureUniqueCanvasSlug(ctx, args.workosOrgId, op.slug, canvasState._id);
+          }
         }
+        const nextCanvasState = applyCanvasStateOperation(canvasState, op);
+        if (!args.dryRun) {
+          await ctx.db.patch(canvasState._id, {
+            title: nextCanvasState.title,
+            slug: nextCanvasState.slug,
+            updatedBy: actor,
+            updatedAt: now,
+          });
+        }
+        canvasState = { ...canvasState, ...nextCanvasState, updatedAt: now };
         summary.push("updated canvas");
       } else if (op.type === "rename_phase") {
+        validatePhase(op.fromPhase);
+        validatePhase(op.toPhase);
+        const nextCanvasState = applyCanvasStateOperation(canvasState, op);
         if (!args.dryRun) {
-          const phases = (canvas.phases ?? []).map((p) => (p === op.fromPhase ? op.toPhase : p));
-          await ctx.db.patch(canvas._id, { phases, updatedBy: actor, updatedAt: now });
-          for (const agent of agents.filter((a) => a.phase === op.fromPhase)) {
+          await ctx.db.patch(canvasState._id, { phases: nextCanvasState.phases, updatedBy: actor, updatedAt: now });
+          for (const agent of Array.from(byId.values()).filter((entry) => entry.phase === op.fromPhase)) {
+            await recordHistory(ctx, agent._id, actor, CHANGE_TYPE.UPDATE, getAgentSnapshot(agent));
             await ctx.db.patch(agent._id, { phase: op.toPhase, updatedBy: actor, updatedAt: now });
           }
         }
+        for (const agent of Array.from(byId.values()).filter((entry) => entry.phase === op.fromPhase)) {
+          byId.set(agent._id, { ...agent, phase: op.toPhase, updatedBy: actor, updatedAt: now } as Doc<"agents">);
+        }
+        canvasState = { ...canvasState, ...nextCanvasState, updatedAt: now };
         summary.push("renamed phase");
       } else if (op.type === "reorder_phases") {
-        if (!args.dryRun) await ctx.db.patch(canvas._id, { phases: op.phases, updatedBy: actor, updatedAt: now });
+        const nextCanvasState = applyCanvasStateOperation(canvasState, op);
+        if (!args.dryRun) {
+          await ctx.db.patch(canvasState._id, { phases: nextCanvasState.phases, updatedBy: actor, updatedAt: now });
+        }
+        canvasState = { ...canvasState, ...nextCanvasState, updatedAt: now };
         summary.push("reordered phases");
       } else if (op.type === "reorder_categories") {
-        if (!args.dryRun) await ctx.db.patch(canvas._id, { categories: op.categories, updatedBy: actor, updatedAt: now });
+        const nextCanvasState = applyCanvasStateOperation(canvasState, op);
+        if (!args.dryRun) {
+          await ctx.db.patch(canvasState._id, { categories: nextCanvasState.categories, updatedBy: actor, updatedAt: now });
+        }
+        canvasState = { ...canvasState, ...nextCanvasState, updatedAt: now };
         summary.push("reordered categories");
       } else if (op.type === "create_agent") {
+        validateAgentData({
+          name: op.name,
+          phase: op.phase,
+          fieldValues: op.fieldValues ?? {},
+        });
         if (!args.dryRun) {
-          await ctx.db.insert("agents", { canvasId: canvas._id, phase: op.phase, agentOrder: op.agentOrder ?? agents.length, name: op.name, fieldValues: op.fieldValues ?? {}, createdBy: actor, updatedBy: actor, createdAt: now, updatedAt: now });
+          const agentId = await ctx.db.insert("agents", {
+            canvasId: canvasState._id,
+            phase: op.phase,
+            agentOrder: op.agentOrder ?? byId.size,
+            name: op.name,
+            fieldValues: op.fieldValues ?? {},
+            modelVersion: AGENT_MODEL_VERSION,
+            createdBy: actor,
+            updatedBy: actor,
+            createdAt: now,
+            updatedAt: now,
+          });
+          await recordHistory(ctx, agentId, actor, CHANGE_TYPE.CREATE);
+          byId.set(agentId, {
+            _id: agentId,
+            _creationTime: now,
+            canvasId: canvasState._id,
+            phase: op.phase,
+            agentOrder: op.agentOrder ?? byId.size,
+            name: op.name,
+            fieldValues: op.fieldValues ?? {},
+            modelVersion: AGENT_MODEL_VERSION,
+            createdBy: actor,
+            updatedBy: actor,
+            createdAt: now,
+            updatedAt: now,
+          } as Doc<"agents">);
+        } else {
+          byId.set(`dryrun-${summary.length}` as Id<"agents">, {
+            _id: `dryrun-${summary.length}` as Id<"agents">,
+            _creationTime: now,
+            canvasId: canvasState._id,
+            phase: op.phase,
+            agentOrder: op.agentOrder ?? byId.size,
+            name: op.name,
+            fieldValues: op.fieldValues ?? {},
+            modelVersion: AGENT_MODEL_VERSION,
+            createdBy: actor,
+            updatedBy: actor,
+            createdAt: now,
+            updatedAt: now,
+          } as Doc<"agents">);
         }
         summary.push("created agent");
       } else if (op.type === "update_agent") {
-        if (!byId.get(op.agentId as Id<"agents">)) throw new Error("Validation: agentId not in canvas");
+        const agent = byId.get(op.agentId as Id<"agents">);
+        if (!agent) throw new Error("Validation: agentId not in canvas");
+        if (op.name !== undefined) validateAgentName(op.name);
+        if (op.phase !== undefined) validatePhase(op.phase);
+        if (op.fieldValues !== undefined) validateAgentFieldValues(op.fieldValues);
+        const definedUpdates = Object.fromEntries(
+          Object.entries({
+            name: op.name,
+            phase: op.phase,
+            agentOrder: op.agentOrder,
+            fieldValues: op.fieldValues,
+          }).filter(([, value]) => value !== undefined)
+        );
         if (!args.dryRun) {
-          await ctx.db.patch(op.agentId, { name: op.name, phase: op.phase, agentOrder: op.agentOrder, fieldValues: op.fieldValues, updatedBy: actor, updatedAt: now });
+          await recordHistory(ctx, agent._id, actor, CHANGE_TYPE.UPDATE, getAgentSnapshot(agent));
+          await ctx.db.patch(op.agentId, {
+            ...definedUpdates,
+            ...(op.fieldValues !== undefined ? { modelVersion: AGENT_MODEL_VERSION } : {}),
+            updatedBy: actor,
+            updatedAt: now,
+          });
         }
+        byId.set(agent._id, {
+          ...agent,
+          ...definedUpdates,
+          ...(op.fieldValues !== undefined ? { modelVersion: AGENT_MODEL_VERSION } : {}),
+          updatedBy: actor,
+          updatedAt: now,
+        } as Doc<"agents">);
         summary.push("updated agent");
       } else if (op.type === "move_agent") {
-        if (!byId.get(op.agentId as Id<"agents">)) throw new Error("Validation: agentId not in canvas");
+        const agent = byId.get(op.agentId as Id<"agents">);
+        if (!agent) throw new Error("Validation: agentId not in canvas");
+        validatePhase(op.phase);
         if (!args.dryRun) {
           await ctx.db.patch(op.agentId, { phase: op.phase, agentOrder: op.agentOrder, updatedBy: actor, updatedAt: now });
         }
+        byId.set(agent._id, { ...agent, phase: op.phase, agentOrder: op.agentOrder, updatedBy: actor, updatedAt: now } as Doc<"agents">);
         summary.push("moved agent");
       } else if (op.type === "delete_agent") {
-        if (!byId.get(op.agentId as Id<"agents">)) throw new Error("Validation: agentId not in canvas");
+        const agent = byId.get(op.agentId as Id<"agents">);
+        if (!agent) throw new Error("Validation: agentId not in canvas");
         if (!args.dryRun) {
+          await recordHistory(ctx, agent._id, actor, CHANGE_TYPE.DELETE, getAgentSnapshot(agent));
           await ctx.db.patch(op.agentId, { deletedAt: now, updatedBy: actor, updatedAt: now });
         }
+        byId.delete(agent._id);
         summary.push("deleted agent");
       } else {
         throw new Error(`Validation: Unsupported operation ${op.type}`);
@@ -255,6 +388,10 @@ export const getRecentActivity = internalQuery({
     updatedSince: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
+    const targetCanvas =
+      args.canvasId || args.canvasSlug || args.defaultCanvasId
+        ? await resolveCanvas(ctx, args.workosOrgId, args.canvasId, args.canvasSlug, args.defaultCanvasId)
+        : null;
     const entries = await ctx.db
       .query("agentHistory")
       .collect();
@@ -265,12 +402,11 @@ export const getRecentActivity = internalQuery({
     const activity = [] as any[];
     for (const entry of entries) {
       const agent = await ctx.db.get(entry.agentId);
-      if (!agent || agent.deletedAt) continue;
+      if (!agent) continue;
       const canvas = await ctx.db.get(agent.canvasId);
       if (!canvas || canvas.deletedAt || canvas.workosOrgId !== args.workosOrgId) continue;
       if (args.updatedSince && entry.changedAt < args.updatedSince) continue;
-      if (args.canvasId && canvas._id !== args.canvasId) continue;
-      if (args.canvasSlug && canvas.slug !== args.canvasSlug) continue;
+      if (targetCanvas && canvas._id !== targetCanvas._id) continue;
 
       activity.push({
         activityId: `${entry._id}`,

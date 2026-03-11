@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
-import { requireAuth, requireOrgAdmin, requireOrgAccess } from "./lib/auth";
+import { requireAuth, requireOrgAdmin } from "./lib/auth";
 
 const MCP_SCOPES = ["canvas:read", "canvas:write", "canvas:comment", "canvas:export"] as const;
 
@@ -42,7 +42,7 @@ export const listForOrg = query({
   },
   handler: async (ctx, { workosOrgId, includeRevoked }) => {
     const auth = await requireAuth(ctx);
-    requireOrgAccess(auth, workosOrgId);
+    requireOrgAdmin(auth, workosOrgId);
 
     const tokens = await ctx.db
       .query("mcpTokens")
