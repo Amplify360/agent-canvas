@@ -5,6 +5,8 @@
 'use client';
 
 import React, { useState, useRef, useCallback } from 'react';
+import { usePathname } from 'next/navigation';
+import Link from 'next/link';
 import { useAuth, useIsOrgAdmin, useCurrentOrg } from '@/contexts/AuthContext';
 import { useAgents } from '@/contexts/AgentContext';
 import { useCanvas } from '@/contexts/CanvasContext';
@@ -42,6 +44,7 @@ const MENU_HEIGHT = 190; // 5 items
 const VIEWPORT_PADDING = 8;
 
 export function Sidebar() {
+  const pathname = usePathname();
   const { user, userOrgs, currentOrgId, setCurrentOrgId, signOut } = useAuth();
   const { canvases, currentCanvasId, setCurrentCanvasId, createCanvas, deleteCanvas } = useCanvas();
   const { agents, isLoading: isAgentsLoading } = useAgents();
@@ -314,6 +317,23 @@ export function Sidebar() {
             </button>
           </Tooltip>
         </div>
+
+        <nav className="sidebar__nav">
+          <Link
+            href={currentCanvasId ? `/c/${currentCanvasId}` : '/'}
+            className={`sidebar__nav-item ${!pathname.startsWith('/strategy') ? 'is-active' : ''}`}
+          >
+            <Icon name="layout-grid" />
+            <span>Canvases</span>
+          </Link>
+          <Link
+            href="/strategy"
+            className={`sidebar__nav-item ${pathname.startsWith('/strategy') ? 'is-active' : ''}`}
+          >
+            <Icon name="compass" />
+            <span>Strategy</span>
+          </Link>
+        </nav>
 
         <div className="sidebar__section sidebar__section--grow">
           <div className="sidebar__section-header">
