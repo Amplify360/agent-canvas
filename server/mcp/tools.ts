@@ -5,80 +5,53 @@ import { AuthContext, requireScope } from "./auth";
 export const MCP_TOOLS = [
   {
     name: "whoami",
-    title: "Who Am I",
-    description: "Get service token identity and org scope",
+    description: "Returns token identity, scopes, org, and defaultCanvasId.",
     inputSchema: {
       type: "object",
       additionalProperties: false,
-    },
-    annotations: {
-      readOnlyHint: true,
-      idempotentHint: true,
-      destructiveHint: false,
-      openWorldHint: false,
     },
   },
   {
     name: "list_canvases",
-    title: "List Canvases",
-    description: "List canvases available to the token's organization",
+    description: "Lists canvases in the token's organization.",
     inputSchema: {
       type: "object",
       properties: {
-        text: { type: "string", description: "Optional case-insensitive search over canvas title or slug" },
-        updatedSince: { type: "number", description: "Optional Unix timestamp in milliseconds" },
-        limit: { type: "number", minimum: 1, maximum: 100, description: "Maximum number of canvases to return" },
+        text: { type: "string" },
+        updatedSince: { type: "number" },
+        limit: { type: "number", minimum: 1, maximum: 100 },
       },
       additionalProperties: false,
-    },
-    annotations: {
-      readOnlyHint: true,
-      idempotentHint: true,
-      destructiveHint: false,
-      openWorldHint: false,
     },
   },
   {
     name: "get_canvas_snapshot",
-    title: "Get Canvas Snapshot",
-    description: "Get a compact or full snapshot of a canvas",
+    description: "Gets a canvas snapshot. If canvasId and canvasSlug are omitted, uses the token default canvas.",
     inputSchema: {
       type: "object",
       properties: {
-        canvasId: { type: "string", description: "Canvas ID to fetch" },
-        canvasSlug: { type: "string", description: "Canvas slug to fetch" },
+        canvasId: { type: "string" },
+        canvasSlug: { type: "string" },
         view: {
           type: "string",
           enum: ["compact", "full"],
-          description: "Whether to include full field values for each agent",
         },
       },
       additionalProperties: false,
     },
-    annotations: {
-      readOnlyHint: true,
-      idempotentHint: true,
-      destructiveHint: false,
-      openWorldHint: false,
-    },
   },
   {
     name: "apply_canvas_changes",
-    title: "Apply Canvas Changes",
-    description: "Apply a batch of canvas and agent edits to an existing canvas",
+    description: "Applies canvas edits. If canvasId and canvasSlug are omitted, uses the token default canvas.",
     inputSchema: {
       type: "object",
       properties: {
-        canvasId: { type: "string", description: "Canvas ID to update" },
-        canvasSlug: { type: "string", description: "Canvas slug to update" },
-        dryRun: { type: "boolean", description: "If true, validate and summarize changes without persisting them" },
-        expectedUpdatedAt: {
-          type: "number",
-          description: "Optional optimistic concurrency check against the current canvas updatedAt timestamp",
-        },
+        canvasId: { type: "string" },
+        canvasSlug: { type: "string" },
+        dryRun: { type: "boolean" },
+        expectedUpdatedAt: { type: "number" },
         operations: {
           type: "array",
-          description: "Ordered list of canvas state operations to apply",
           items: {
             type: "object",
           },
@@ -87,32 +60,19 @@ export const MCP_TOOLS = [
       required: ["operations"],
       additionalProperties: false,
     },
-    annotations: {
-      readOnlyHint: false,
-      idempotentHint: false,
-      destructiveHint: true,
-      openWorldHint: false,
-    },
   },
   {
     name: "get_recent_activity",
-    title: "Get Recent Activity",
-    description: "Get recent change history for canvases visible to the token",
+    description: "Gets recent activity. If canvasId and canvasSlug are omitted, uses the token default canvas when set.",
     inputSchema: {
       type: "object",
       properties: {
-        canvasId: { type: "string", description: "Optional canvas ID filter" },
-        canvasSlug: { type: "string", description: "Optional canvas slug filter" },
-        limit: { type: "number", minimum: 1, maximum: 100, description: "Maximum number of activity records to return" },
-        updatedSince: { type: "number", description: "Optional Unix timestamp in milliseconds" },
+        canvasId: { type: "string" },
+        canvasSlug: { type: "string" },
+        limit: { type: "number", minimum: 1, maximum: 100 },
+        updatedSince: { type: "number" },
       },
       additionalProperties: false,
-    },
-    annotations: {
-      readOnlyHint: true,
-      idempotentHint: true,
-      destructiveHint: false,
-      openWorldHint: false,
     },
   },
 ];
