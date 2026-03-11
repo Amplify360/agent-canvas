@@ -6,12 +6,46 @@ import { JsonRpcRequest } from "@/server/mcp/types";
 
 export const runtime = "nodejs";
 
+const SUPPORTED_PROTOCOL_VERSIONS = [
+  "2025-06-18",
+  "2025-03-26",
+  "2024-11-05",
+] as const;
+const DEFAULT_PROTOCOL_VERSION = SUPPORTED_PROTOCOL_VERSIONS[0];
+
 function jsonRpcResult(id: string | number | null | undefined, result: unknown) {
   return NextResponse.json({ jsonrpc: "2.0", id: id ?? null, result });
 }
 
 function jsonRpcError(id: string | number | null | undefined, code: number, message: string, data?: unknown) {
   return NextResponse.json({ jsonrpc: "2.0", id: id ?? null, error: { code, message, data } }, { status: 200 });
+}
+
+function withProtocolHeader(response: NextResponse, protocolVersion: string) {
+  response.headers.set("MCP-Protocol-Version", protocolVersion);
+  return response;
+}
+
+function notificationAccepted(protocolVersion: string) {
+  const response = new NextResponse(null, { status: 202 });
+  response.headers.set("MCP-Protocol-Version", protocolVersion);
+  return response;
+}
+
+function negotiateProtocolVersion(request: JsonRpcRequest): string {
+  const requested = request.params?.protocolVersion;
+  if (typeof requested === "string" && SUPPORTED_PROTOCOL_VERSIONS.includes(requested as (typeof SUPPORTED_PROTOCOL_VERSIONS)[number])) {
+    return requested;
+  }
+  return DEFAULT_PROTOCOL_VERSION;
+}
+
+export async function GET() {
+  return new NextResponse(null, { status: 405 });
+}
+
+export async function DELETE() {
+  return new NextResponse(null, { status: 405 });
 }
 
 export async function POST(request: Request) {
@@ -29,19 +63,25 @@ export async function POST(request: Request) {
     return jsonRpcError(null, -32700, "Parse error");
   }
 
+  const protocolVersion = negotiateProtocolVersion(body);
+
+  if (body.id === undefined && body.method.startsWith("notifications/")) {
+    return notificationAccepted(protocolVersion);
+  }
+
   try {
     const auth = await authenticateMcpRequest(request, convex);
 
     if (body.method === "initialize") {
-      return jsonRpcResult(body.id, {
-        protocolVersion: "2024-11-05",
+      return withProtocolHeader(jsonRpcResult(body.id, {
+        protocolVersion,
         serverInfo: { name: "agent-canvas-mcp", version: "1.0.0" },
-        capabilities: { tools: {} },
-      });
+        capabilities: { tools: { listChanged: false } },
+      }), protocolVersion);
     }
 
     if (body.method === "tools/list") {
-      return jsonRpcResult(body.id, { tools: MCP_TOOLS });
+      return withProtocolHeader(jsonRpcResult(body.id, { tools: MCP_TOOLS }), protocolVersion);
     }
 
     if (body.method === "tools/call") {
@@ -49,12 +89,16 @@ export async function POST(request: Request) {
       const name = String(params.name ?? "");
       const args = (params.arguments as Record<string, unknown>) ?? {};
       const data = await executeTool(convex, auth, name, args);
-      return jsonRpcResult(body.id, { content: [{ type: "text", text: JSON.stringify(data) }], structuredContent: data });
+      return withProtocolHeader(jsonRpcResult(body.id, {
+        content: [{ type: "text", text: JSON.stringify(data) }],
+        structuredContent: data,
+        isError: false,
+      }), protocolVersion);
     }
 
-    return jsonRpcError(body.id, -32601, `Method not found: ${body.method}`);
+    return withProtocolHeader(jsonRpcError(body.id, -32601, `Method not found: ${body.method}`), protocolVersion);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
-    return jsonRpcError(body.id, -32000, message);
+    return withProtocolHeader(jsonRpcError(body.id, -32000, message), protocolVersion);
   }
 }
