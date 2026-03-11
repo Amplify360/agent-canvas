@@ -22,8 +22,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      pull-requests: read
-      issues: read
+      pull-requests: write
+      issues: write
       id-token: write
       actions: read
     steps:
@@ -45,7 +45,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      pull-requests: read
+      pull-requests: write
+      issues: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -88,14 +89,21 @@ jobs:
             - `./pr.diff`: unified diff for the PR (may be truncated)
 
             Instructions:
-            - Do NOT run `gh` and do NOT use any network tools. Prefer reading `./pr.files` and `./pr.diff`.
-            - If you need extra context beyond the diff, use Read/Glob/Grep on the checked-out repository.
+            - Read `./pr.files` and `./pr.diff` first. Use Read/Glob/Grep on the repo for extra context.
             - Focus on correctness, security (especially auth/token handling), and consistency with patterns in `CLAUDE.md`.
+            - Do NOT use any network tools other than `gh`.
 
-            Output a concise review with:
-            - A short summary
-            - Actionable findings (include file paths and approximate line numbers when possible)
+            When done, post your review to the PR using `gh pr review`. Example:
+            ```
+            gh pr review ${{ github.event.pull_request.number }} --comment --body "YOUR REVIEW"
+            ```
+            Use `--comment` for informational reviews, `--approve` if the code looks good, or `--request-changes` only for serious issues.
+
+            Your review should include:
+            - A short summary of the changes
+            - Actionable findings with file paths and line numbers (if any)
             - Suggested fixes (minimal changes preferred)
+            If there are no actionable findings, post a brief approval or summary.
           claude_args: >-
             --max-turns 20
-            --allowedTools Read,LS,Glob,Grep
+            --allowedTools Bash,Read,LS,Glob,Grep
