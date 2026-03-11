@@ -27,3 +27,8 @@ Use this directory as a small set of focused references, not a dumping ground.
 
 - [UI_IMPROVEMENT_IDEAS.md](/Users/andreas/src/agent-canvas/docs/UI_IMPROVEMENT_IDEAS.md)
   Deferred UI concepts that are intentionally not active requirements.
+
+## Product Principles
+
+- [STRATEGY_SERVICE_PROCESS_LAYER_PRINCIPLES.md](/Users/andreas/src/agent-canvas/docs/STRATEGY_SERVICE_PROCESS_LAYER_PRINCIPLES.md)
+  Principle-level requirements for a new top-down strategy, service, and process reengineering layer.
