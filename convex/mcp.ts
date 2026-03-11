@@ -3,6 +3,7 @@ import { mutation, query } from "./_generated/server";
 import { Doc, Id } from "./_generated/dataModel";
 import { AGENT_MODEL_VERSION } from "../shared/agentModel";
 import { getAgentSnapshot, recordHistory } from "./lib/helpers";
+import { deepMerge } from "./lib/deepMerge";
 import { applyCanvasStateOperation, resolveDryRun } from "./lib/mcpHelpers";
 import {
   validateAgentData,
@@ -73,10 +74,7 @@ function normalizeUpdateAgentOperation(op: any, existingFieldValues: Record<stri
     agentOrder,
     fieldValues:
       fieldValuesPatch !== undefined
-        ? {
-            ...existingFieldValues,
-            ...fieldValuesPatch,
-          }
+        ? deepMerge(existingFieldValues, fieldValuesPatch)
         : undefined,
   };
 }

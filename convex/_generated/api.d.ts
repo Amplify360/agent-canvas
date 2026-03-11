@@ -18,6 +18,7 @@ import type * as crons from "../crons.js";
 import type * as files from "../files.js";
 import type * as http from "../http.js";
 import type * as lib_auth from "../lib/auth.js";
+import type * as lib_deepMerge from "../lib/deepMerge.js";
 import type * as lib_helpers from "../lib/helpers.js";
 import type * as lib_mcpHelpers from "../lib/mcpHelpers.js";
 import type * as lib_membershipSync from "../lib/membershipSync.js";
@@ -46,6 +47,7 @@ declare const fullApi: ApiFromModules<{
   files: typeof files;
   http: typeof http;
   "lib/auth": typeof lib_auth;
+  "lib/deepMerge": typeof lib_deepMerge;
   "lib/helpers": typeof lib_helpers;
   "lib/mcpHelpers": typeof lib_mcpHelpers;
   "lib/membershipSync": typeof lib_membershipSync;

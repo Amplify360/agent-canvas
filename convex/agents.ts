@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { Id } from "./_generated/dataModel";
 import { mutation, query } from "./_generated/server";
 import { requireAuth, requireOrgAccess } from "./lib/auth";
+import { deepMerge } from "./lib/deepMerge";
 import {
   getAgentSnapshot,
   getCanvasWithAccess,
@@ -94,12 +95,16 @@ export const update = mutation({
   handler: async (ctx, { agentId, ...updates }) => {
     const auth = await requireAuth(ctx);
     const { agent } = await getAgentWithAccess(ctx, auth, agentId);
+    const mergedFieldValues =
+      updates.fieldValues !== undefined
+        ? deepMerge((agent.fieldValues ?? {}) as Record<string, unknown>, updates.fieldValues as Record<string, unknown>)
+        : undefined;
 
     // Validate provided fields
     if (updates.name !== undefined) validateAgentName(updates.name);
     if (updates.phase !== undefined) validatePhase(updates.phase);
-    if (updates.fieldValues !== undefined) {
-      validateAgentFieldValues(updates.fieldValues);
+    if (mergedFieldValues !== undefined) {
+      validateAgentFieldValues(mergedFieldValues);
     }
 
     const now = Date.now();
@@ -107,12 +112,15 @@ export const update = mutation({
 
     // Filter out undefined values from updates
     const definedUpdates = Object.fromEntries(
-      Object.entries(updates).filter(([_, v]) => v !== undefined)
+      Object.entries({
+        ...updates,
+        ...(mergedFieldValues !== undefined ? { fieldValues: mergedFieldValues } : {}),
+      }).filter(([_, v]) => v !== undefined)
     );
 
     await ctx.db.patch(agentId, {
       ...definedUpdates,
-      ...(updates.fieldValues !== undefined ? { modelVersion: AGENT_MODEL_VERSION } : {}),
+      ...(mergedFieldValues !== undefined ? { modelVersion: AGENT_MODEL_VERSION } : {}),
       updatedBy: auth.workosUserId,
       updatedAt: now,
     });
