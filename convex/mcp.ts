@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { internalMutation, internalQuery } from "./_generated/server";
+import { mutation, query } from "./_generated/server";
 import { Doc, Id } from "./_generated/dataModel";
 import { AGENT_MODEL_VERSION } from "../shared/agentModel";
 import { getAgentSnapshot, recordHistory } from "./lib/helpers";
@@ -60,44 +60,68 @@ async function ensureUniqueCanvasSlug(
   }
 }
 
-export const authenticateToken = internalQuery({
+async function getValidTokenByHash(ctx: any, tokenPrefix: string, tokenHash: string) {
+  if (!tokenPrefix) return null;
+
+  const candidate = await ctx.db
+    .query("mcpTokens")
+    .withIndex("by_prefix", (q: any) => q.eq("tokenPrefix", tokenPrefix))
+    .first();
+
+  if (!candidate || candidate.revokedAt) return null;
+  if (candidate.expiresAt && candidate.expiresAt < Date.now()) return null;
+  if (!constantTimeEquals(tokenHash, candidate.tokenHash)) return null;
+
+  return candidate;
+}
+
+async function requireToken(ctx: any, tokenPrefix: string, tokenHash: string, requiredScope?: string) {
+  const token = await getValidTokenByHash(ctx, tokenPrefix, tokenHash);
+  if (!token) {
+    throw new Error("Auth: Invalid service token");
+  }
+  if (requiredScope && !token.scopes.includes(requiredScope)) {
+    throw new Error(`Auth: Missing required scope ${requiredScope}`);
+  }
+  return token;
+}
+
+export const authenticateToken = query({
   args: { tokenPrefix: v.string(), tokenHash: v.string() },
   handler: async (ctx, { tokenPrefix, tokenHash }) => {
-    if (!tokenPrefix) return null;
-
-    const candidate = await ctx.db
-      .query("mcpTokens")
-      .withIndex("by_prefix", (q) => q.eq("tokenPrefix", tokenPrefix))
-      .first();
-
-    if (!candidate || candidate.revokedAt) return null;
-    if (candidate.expiresAt && candidate.expiresAt < Date.now()) return null;
-
-    if (!constantTimeEquals(tokenHash, candidate.tokenHash)) return null;
-
-    return candidate;
+    const token = await getValidTokenByHash(ctx, tokenPrefix, tokenHash);
+    if (!token) return null;
+    return {
+      _id: token._id,
+      name: token.name,
+      tokenPrefix: token.tokenPrefix,
+      workosOrgId: token.workosOrgId,
+      scopes: token.scopes,
+      defaultCanvasId: token.defaultCanvasId,
+      expiresAt: token.expiresAt,
+      lastUsedAt: token.lastUsedAt,
+    };
   },
 });
 
-export const touchLastUsed = internalMutation({
-  args: { tokenId: v.id("mcpTokens"), minIntervalMs: v.optional(v.number()) },
-  handler: async (ctx, { tokenId, minIntervalMs }) => {
-    const token = await ctx.db.get(tokenId);
-    if (!token || token.revokedAt) return;
+export const touchLastUsed = mutation({
+  args: { tokenPrefix: v.string(), tokenHash: v.string(), minIntervalMs: v.optional(v.number()) },
+  handler: async (ctx, { tokenPrefix, tokenHash, minIntervalMs }) => {
+    const token = await getValidTokenByHash(ctx, tokenPrefix, tokenHash);
+    if (!token) return;
     const now = Date.now();
     const interval = minIntervalMs ?? 60_000;
     if (token.lastUsedAt && now - token.lastUsedAt < interval) return;
-    await ctx.db.patch(tokenId, { lastUsedAt: now });
+    await ctx.db.patch(token._id, { lastUsedAt: now });
   },
 });
 
-export const whoami = internalQuery({
-  args: { tokenId: v.id("mcpTokens") },
-  handler: async (ctx, { tokenId }) => {
-    const token = await ctx.db.get(tokenId);
-    if (!token) throw new Error("NotFound: Token not found");
+export const whoami = query({
+  args: { tokenPrefix: v.string(), tokenHash: v.string() },
+  handler: async (ctx, { tokenPrefix, tokenHash }) => {
+    const token = await requireToken(ctx, tokenPrefix, tokenHash, "canvas:read");
     return {
-      tokenId,
+      tokenId: token._id,
       tokenName: token.name,
       tokenPrefix: token.tokenPrefix,
       workosOrgId: token.workosOrgId,
@@ -109,12 +133,13 @@ export const whoami = internalQuery({
   },
 });
 
-export const listCanvases = internalQuery({
-  args: { workosOrgId: v.string(), text: v.optional(v.string()), updatedSince: v.optional(v.number()), limit: v.optional(v.number()) },
-  handler: async (ctx, { workosOrgId, text, updatedSince, limit }) => {
+export const listCanvases = query({
+  args: { tokenPrefix: v.string(), tokenHash: v.string(), text: v.optional(v.string()), updatedSince: v.optional(v.number()), limit: v.optional(v.number()) },
+  handler: async (ctx, { tokenPrefix, tokenHash, text, updatedSince, limit }) => {
+    const token = await requireToken(ctx, tokenPrefix, tokenHash, "canvas:read");
     const canvases = await ctx.db
       .query("canvases")
-      .withIndex("by_org", (q) => q.eq("workosOrgId", workosOrgId))
+      .withIndex("by_org", (q) => q.eq("workosOrgId", token.workosOrgId))
       .filter((q) => q.eq(q.field("deletedAt"), undefined))
       .collect();
 
@@ -144,16 +169,17 @@ export const listCanvases = internalQuery({
   },
 });
 
-export const getCanvasSnapshot = internalQuery({
+export const getCanvasSnapshot = query({
   args: {
-    workosOrgId: v.string(),
+    tokenPrefix: v.string(),
+    tokenHash: v.string(),
     canvasId: v.optional(v.id("canvases")),
     canvasSlug: v.optional(v.string()),
-    defaultCanvasId: v.optional(v.id("canvases")),
     view: v.optional(v.union(v.literal("compact"), v.literal("full"))),
   },
   handler: async (ctx, args) => {
-    const canvas = await resolveCanvas(ctx, args.workosOrgId, args.canvasId, args.canvasSlug, args.defaultCanvasId);
+    const token = await requireToken(ctx, args.tokenPrefix, args.tokenHash, "canvas:read");
+    const canvas = await resolveCanvas(ctx, token.workosOrgId, args.canvasId, args.canvasSlug, token.defaultCanvasId);
     const agents = await ctx.db
       .query("agents")
       .withIndex("by_canvas", (q) => q.eq("canvasId", canvas._id))
@@ -182,20 +208,20 @@ export const getCanvasSnapshot = internalQuery({
   },
 });
 
-export const applyCanvasChanges = internalMutation({
+export const applyCanvasChanges = mutation({
   args: {
-    tokenId: v.id("mcpTokens"),
-    workosOrgId: v.string(),
+    tokenPrefix: v.string(),
+    tokenHash: v.string(),
     canvasId: v.optional(v.id("canvases")),
     canvasSlug: v.optional(v.string()),
-    defaultCanvasId: v.optional(v.id("canvases")),
     dryRun: v.optional(v.boolean()),
     expectedUpdatedAt: v.optional(v.number()),
     operations: v.array(v.any()),
   },
   handler: async (ctx, args) => {
+    const token = await requireToken(ctx, args.tokenPrefix, args.tokenHash, "canvas:write");
     const isDryRun = resolveDryRun(args.dryRun);
-    const canvas = await resolveCanvas(ctx, args.workosOrgId, args.canvasId, args.canvasSlug, args.defaultCanvasId);
+    const canvas = await resolveCanvas(ctx, token.workosOrgId, args.canvasId, args.canvasSlug, token.defaultCanvasId);
     if (args.expectedUpdatedAt !== undefined && args.expectedUpdatedAt !== canvas.updatedAt) {
       return { ok: false, conflict: { expectedUpdatedAt: args.expectedUpdatedAt, actualUpdatedAt: canvas.updatedAt } };
     }
@@ -209,7 +235,7 @@ export const applyCanvasChanges = internalMutation({
     let canvasState = canvas;
     const byId = new Map(agents.map((a) => [a._id, a]));
     const now = Date.now();
-    const actor = `mcp_token:${args.tokenId}`;
+    const actor = `mcp_token:${token._id}`;
     const summary: string[] = [];
 
     for (const op of args.operations) {
@@ -218,7 +244,7 @@ export const applyCanvasChanges = internalMutation({
         if (op.slug !== undefined) {
           validateSlug(op.slug);
           if (op.slug !== canvasState.slug) {
-            await ensureUniqueCanvasSlug(ctx, args.workosOrgId, op.slug, canvasState._id);
+            await ensureUniqueCanvasSlug(ctx, token.workosOrgId, op.slug, canvasState._id);
           }
         }
         const nextCanvasState = applyCanvasStateOperation(canvasState, op);
@@ -371,19 +397,20 @@ export const applyCanvasChanges = internalMutation({
   },
 });
 
-export const getRecentActivity = internalQuery({
+export const getRecentActivity = query({
   args: {
-    workosOrgId: v.string(),
+    tokenPrefix: v.string(),
+    tokenHash: v.string(),
     canvasId: v.optional(v.id("canvases")),
     canvasSlug: v.optional(v.string()),
-    defaultCanvasId: v.optional(v.id("canvases")),
     limit: v.optional(v.number()),
     updatedSince: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
+    const token = await requireToken(ctx, args.tokenPrefix, args.tokenHash, "canvas:read");
     const targetCanvas =
-      args.canvasId || args.canvasSlug || args.defaultCanvasId
-        ? await resolveCanvas(ctx, args.workosOrgId, args.canvasId, args.canvasSlug, args.defaultCanvasId)
+      args.canvasId || args.canvasSlug || token.defaultCanvasId
+        ? await resolveCanvas(ctx, token.workosOrgId, args.canvasId, args.canvasSlug, token.defaultCanvasId)
         : null;
     const entries = await ctx.db
       .query("agentHistory")
@@ -397,7 +424,7 @@ export const getRecentActivity = internalQuery({
       const agent = await ctx.db.get(entry.agentId);
       if (!agent) continue;
       const canvas = await ctx.db.get(agent.canvasId);
-      if (!canvas || canvas.deletedAt || canvas.workosOrgId !== args.workosOrgId) continue;
+      if (!canvas || canvas.deletedAt || canvas.workosOrgId !== token.workosOrgId) continue;
       if (args.updatedSince && entry.changedAt < args.updatedSince) continue;
       if (targetCanvas && canvas._id !== targetCanvas._id) continue;
 

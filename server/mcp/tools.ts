@@ -1,5 +1,5 @@
 import { ConvexHttpClient } from "convex/browser";
-import { internal } from "../../convex/_generated/api";
+import { api } from "../../convex/_generated/api";
 import { AuthContext, requireScope } from "./auth";
 
 export const MCP_TOOLS = [
@@ -13,13 +13,17 @@ export const MCP_TOOLS = [
 export async function executeTool(convex: ConvexHttpClient, auth: AuthContext, name: string, args: Record<string, unknown>) {
   if (name === "whoami") {
     requireScope(auth, "canvas:read");
-    return convex.query((internal as any).mcp.whoami, { tokenId: auth.tokenId });
+    return convex.query((api as any).mcp.whoami, {
+      tokenPrefix: auth.tokenPrefix,
+      tokenHash: auth.tokenHash,
+    });
   }
 
   if (name === "list_canvases") {
     requireScope(auth, "canvas:read");
-    return convex.query((internal as any).mcp.listCanvases, {
-      workosOrgId: auth.workosOrgId,
+    return convex.query((api as any).mcp.listCanvases, {
+      tokenPrefix: auth.tokenPrefix,
+      tokenHash: auth.tokenHash,
       text: args.text,
       updatedSince: args.updatedSince,
       limit: args.limit,
@@ -28,23 +32,22 @@ export async function executeTool(convex: ConvexHttpClient, auth: AuthContext, n
 
   if (name === "get_canvas_snapshot") {
     requireScope(auth, "canvas:read");
-    return convex.query((internal as any).mcp.getCanvasSnapshot, {
-      workosOrgId: auth.workosOrgId,
+    return convex.query((api as any).mcp.getCanvasSnapshot, {
+      tokenPrefix: auth.tokenPrefix,
+      tokenHash: auth.tokenHash,
       canvasId: args.canvasId,
       canvasSlug: args.canvasSlug,
-      defaultCanvasId: auth.defaultCanvasId,
       view: args.view,
     });
   }
 
   if (name === "apply_canvas_changes") {
     requireScope(auth, "canvas:write");
-    return convex.mutation((internal as any).mcp.applyCanvasChanges, {
-      tokenId: auth.tokenId,
-      workosOrgId: auth.workosOrgId,
+    return convex.mutation((api as any).mcp.applyCanvasChanges, {
+      tokenPrefix: auth.tokenPrefix,
+      tokenHash: auth.tokenHash,
       canvasId: args.canvasId,
       canvasSlug: args.canvasSlug,
-      defaultCanvasId: auth.defaultCanvasId,
       dryRun: args.dryRun,
       expectedUpdatedAt: args.expectedUpdatedAt,
       operations: args.operations,
@@ -53,11 +56,11 @@ export async function executeTool(convex: ConvexHttpClient, auth: AuthContext, n
 
   if (name === "get_recent_activity") {
     requireScope(auth, "canvas:read");
-    return convex.query((internal as any).mcp.getRecentActivity, {
-      workosOrgId: auth.workosOrgId,
+    return convex.query((api as any).mcp.getRecentActivity, {
+      tokenPrefix: auth.tokenPrefix,
+      tokenHash: auth.tokenHash,
       canvasId: args.canvasId,
       canvasSlug: args.canvasSlug,
-      defaultCanvasId: auth.defaultCanvasId,
       limit: args.limit,
       updatedSince: args.updatedSince,
     });

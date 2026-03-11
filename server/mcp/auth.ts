@@ -1,9 +1,11 @@
 import { ConvexHttpClient } from "convex/browser";
-import { internal } from "../../convex/_generated/api";
+import { api } from "../../convex/_generated/api";
 import { McpScope } from "./types";
 
 export interface AuthContext {
   tokenId: string;
+  tokenPrefix: string;
+  tokenHash: string;
   workosOrgId: string;
   scopes: string[];
   defaultCanvasId?: string;
@@ -41,15 +43,17 @@ export async function authenticateMcpRequest(request: Request, convex: ConvexHtt
   }
 
   const { tokenPrefix, tokenHash } = await hashTokenForLookup(token);
-  const auth = await convex.query((internal as any).mcp.authenticateToken, { tokenPrefix, tokenHash });
+  const auth = await convex.query((api as any).mcp.authenticateToken, { tokenPrefix, tokenHash });
   if (!auth) {
     throw new Error("Auth: Invalid service token");
   }
 
-  await convex.mutation((internal as any).mcp.touchLastUsed, { tokenId: auth._id, minIntervalMs: 60_000 });
+  await convex.mutation((api as any).mcp.touchLastUsed, { tokenPrefix, tokenHash, minIntervalMs: 60_000 });
 
   return {
     tokenId: auth._id,
+    tokenPrefix,
+    tokenHash,
     workosOrgId: auth.workosOrgId,
     scopes: auth.scopes,
     defaultCanvasId: auth.defaultCanvasId,

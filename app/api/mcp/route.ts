@@ -16,13 +16,11 @@ function jsonRpcError(id: string | number | null | undefined, code: number, mess
 
 export async function POST(request: Request) {
   const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL;
-  const adminKey = process.env.CONVEX_MCP_ADMIN_KEY;
-  if (!convexUrl || !adminKey) {
+  if (!convexUrl) {
     return NextResponse.json({ error: "MCP not configured" }, { status: 500 });
   }
 
   const convex = new ConvexHttpClient(convexUrl);
-  (convex as any).setAdminAuth(adminKey);
 
   let body: JsonRpcRequest;
   try {
