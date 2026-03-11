@@ -52,6 +52,7 @@ export const MCP_TOOLS = [
         expectedUpdatedAt: { type: "number" },
         operations: {
           type: "array",
+          description: "For update_agent, use fields:{name?,phase?,agentOrder?,fieldValues?}. fieldValues merge into existing values.",
           items: {
             type: "object",
           },

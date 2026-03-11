@@ -60,6 +60,27 @@ async function ensureUniqueCanvasSlug(
   }
 }
 
+function normalizeUpdateAgentOperation(op: any, existingFieldValues: Record<string, unknown>) {
+  const nestedFields = op.fields && typeof op.fields === "object" ? op.fields : {};
+  const name = op.name ?? nestedFields.name;
+  const phase = op.phase ?? nestedFields.phase;
+  const agentOrder = op.agentOrder ?? nestedFields.agentOrder;
+  const fieldValuesPatch = op.fieldValues ?? nestedFields.fieldValues;
+
+  return {
+    name,
+    phase,
+    agentOrder,
+    fieldValues:
+      fieldValuesPatch !== undefined
+        ? {
+            ...existingFieldValues,
+            ...fieldValuesPatch,
+          }
+        : undefined,
+  };
+}
+
 async function getValidTokenByHash(ctx: any, tokenPrefix: string, tokenHash: string) {
   if (!tokenPrefix) return null;
 
@@ -342,22 +363,26 @@ export const applyCanvasChanges = mutation({
       } else if (op.type === "update_agent") {
         const agent = byId.get(op.agentId as Id<"agents">);
         if (!agent) throw new Error("Validation: agentId not in canvas");
-        if (op.name !== undefined) validateAgentName(op.name);
-        if (op.phase !== undefined) validatePhase(op.phase);
-        if (op.fieldValues !== undefined) validateAgentFieldValues(op.fieldValues);
+        const normalized = normalizeUpdateAgentOperation(op, agent.fieldValues ?? {});
+        if (normalized.name !== undefined) validateAgentName(normalized.name);
+        if (normalized.phase !== undefined) validatePhase(normalized.phase);
+        if (normalized.fieldValues !== undefined) validateAgentFieldValues(normalized.fieldValues);
         const definedUpdates = Object.fromEntries(
           Object.entries({
-            name: op.name,
-            phase: op.phase,
-            agentOrder: op.agentOrder,
-            fieldValues: op.fieldValues,
+            name: normalized.name,
+            phase: normalized.phase,
+            agentOrder: normalized.agentOrder,
+            fieldValues: normalized.fieldValues,
           }).filter(([, value]) => value !== undefined)
         );
+        if (Object.keys(definedUpdates).length === 0) {
+          throw new Error("Validation: update_agent requires at least one field to update");
+        }
         if (!isDryRun) {
           await recordHistory(ctx, agent._id, actor, CHANGE_TYPE.UPDATE, getAgentSnapshot(agent));
           await ctx.db.patch(op.agentId, {
             ...definedUpdates,
-            ...(op.fieldValues !== undefined ? { modelVersion: AGENT_MODEL_VERSION } : {}),
+            ...(normalized.fieldValues !== undefined ? { modelVersion: AGENT_MODEL_VERSION } : {}),
             updatedBy: actor,
             updatedAt: now,
           });
@@ -365,7 +390,7 @@ export const applyCanvasChanges = mutation({
         byId.set(agent._id, {
           ...agent,
           ...definedUpdates,
-          ...(op.fieldValues !== undefined ? { modelVersion: AGENT_MODEL_VERSION } : {}),
+          ...(normalized.fieldValues !== undefined ? { modelVersion: AGENT_MODEL_VERSION } : {}),
           updatedBy: actor,
           updatedAt: now,
         } as Doc<"agents">);
@@ -391,6 +416,13 @@ export const applyCanvasChanges = mutation({
       } else {
         throw new Error(`Validation: Unsupported operation ${op.type}`);
       }
+    }
+
+    if (!isDryRun && args.operations.length > 0) {
+      await ctx.db.patch(canvasState._id, {
+        updatedBy: actor,
+        updatedAt: now,
+      });
     }
 
     return { ok: true, dryRun: isDryRun, summary, operationCount: args.operations.length };
