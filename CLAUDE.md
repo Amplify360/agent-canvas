@@ -75,12 +75,12 @@ pnpm test:all
 - **Prod:** https://canvas.amplify360.ai (from `main` branch)
 - **Lab:** https://canvas-lab.amplify360.ai (from `lab` branch via separate Vercel project `agentcanvas-app-lab`)
 
-**Backend (Convex)** - requires manual `npx convex deploy`:
+**Backend (Convex)**:
 - **Main project `agent-canvas`**
-  - **Dev** (`expert-narwhal-281`): Used locally and by the `dev` frontend
+  - **Dev** (`expert-narwhal-281`): Auto-deployed from `dev` when Convex/backend files change; also used locally unless `.env.local` is pointed elsewhere
   - **Prod** (`quaint-bee-380`): Used by the `main` frontend
 - **Lab project `agent-canvas-lab`**
-  - **Prod** (`fortunate-hummingbird-653`): Long-lived backend for `canvas-lab.amplify360.ai`
+  - **Prod** (`fortunate-hummingbird-653`): Auto-deployed from `lab` when Convex/backend files change; long-lived backend for `canvas-lab.amplify360.ai`
 
 ### Convex MCP Selectors
 
@@ -112,28 +112,27 @@ Generate: `echo -n '{...}' | base64`. Machine-specific encoded values for this i
    - `main` branch drives production
    - Lab work is intentionally disposable/iterative; clean implementations belong on `dev`
 
-3. **Vercel and Convex are separate deploy steps**
-   - Pushing `lab` only deploys the frontend to `agentcanvas-app-lab`
-   - Vercel does not deploy Convex
-   - Any Convex schema/function changes for lab must be deployed manually to `agent-canvas-lab`
+3. **Vercel and Convex are separate systems**
+   - Pushing `lab` deploys the frontend via Vercel and the lab Convex backend via GitHub Actions when backend files change
+   - Pushing `dev` deploys the shared dev frontend via Vercel and the dev Convex backend via GitHub Actions when backend files change
+   - `main` Convex deploys remain manual
 
 4. **Local development against lab**
    - Point `.env.local` at the lab Vercel/Convex values before running `pnpm dev`
    - This repo does not commit `.env.local.lab` / `.env.local.dev`; keep those as local, unstaged convenience copies if you want quick swapping
    - `npx convex dev` is for the main dev project only; do not use it as a shortcut for the lab backend
 
-5. **Deploying to the lab Convex project**
-   - Authenticate the Convex CLI against the `agent-canvas-lab` project
+5. **Working with the lab Convex project**
    - Prefer explicit targeting for lab CLI work
    - For inspection commands (`logs`, `data`, `function-spec`), use `--deployment-name fortunate-hummingbird-653`
-   - For deploys, use `CONVEX_DEPLOYMENT=prod:fortunate-hummingbird-653 npx convex deploy --yes`
+   - Manual deploy fallback: `pnpm deploy:convex:lab`
    - Required runtime env on the lab Convex deployment includes the WorkOS settings used by auth and any admin tokens used by internal tools
 
 6. **Manual Vercel commands from this repo**
    - `.vercel/project.json` in this checkout is linked to `agentcanvas-app-v2`
    - `vercel` commands run here target the main app unless you temporarily relink or use a separate temp directory linked to `agentcanvas-app-lab`
 
-**TL;DR**: Lab is a permanent branch + permanent Vercel project + permanent Convex project. Use `lab` for fast experiments, deploy its frontend through `agentcanvas-app-lab`, deploy its backend separately to `fortunate-hummingbird-653`, prefer explicit deployment targeting for CLI work, then reimplement validated work on `dev`.
+**TL;DR**: Lab is a permanent branch + permanent Vercel project + permanent Convex project. Use `lab` for fast experiments; frontend deploys via Vercel, backend deploys via GitHub Actions, and CLI work should still target `fortunate-hummingbird-653` explicitly. Reimplement validated work on `dev`.
 
 ## Admin Batch Tools
 

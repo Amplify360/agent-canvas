@@ -25,21 +25,25 @@ vercel --prod
 `canvas-lab.amplify360.ai` should normally be driven by the `lab` branch through Git integration. Use manual deploys only when you need to debug or repair the lab frontend project wiring.
 
 ### Deploy Lab Convex Backend
-The lab backend is separate from Vercel and must be deployed manually.
+The lab backend is separate from Vercel. It is auto-deployed from `lab` by GitHub Actions when backend files change.
+
+Manual fallback:
 
 ```bash
-CONVEX_DEPLOYMENT=prod:fortunate-hummingbird-653 npx convex deploy --yes
+pnpm deploy:convex:lab
 ```
 
 For lab inspection commands such as `logs`, `data`, and `function-spec`, use `--deployment-name fortunate-hummingbird-653`. Do not rely on the repo's ambient/default Convex context when working on lab.
 
 ### Deploy Main Convex Backends
 
-Use explicit deployment targeting when working outside local dev.
+`dev` is auto-deployed from the `dev` branch by GitHub Actions when backend files change. `main` remains manual.
+
+Use explicit deployment targeting when working outside local dev or when doing a manual fallback.
 
 ```bash
-CONVEX_DEPLOYMENT=dev:expert-narwhal-281 npx convex deploy --yes
-CONVEX_DEPLOYMENT=prod:quaint-bee-380 npx convex deploy --yes
+pnpm deploy:convex:dev
+pnpm deploy:convex:prod
 ```
 
 For inspection commands against non-default deployments, prefer:
@@ -94,6 +98,13 @@ If you need to deploy to the original frozen project:
 - **Production URL:** `https://canvas-lab.amplify360.ai`
 - **Git branch mapping:** `lab` -> lab production deployment
 - **Backend pairing:** Convex project `agent-canvas-lab` using `prod:fortunate-hummingbird-653`
+
+## CI Secrets
+
+GitHub Actions Convex deploy automation expects:
+
+- `CONVEX_DEPLOY_KEY_DEV` for `dev:expert-narwhal-281`
+- `CONVEX_DEPLOY_KEY_LAB` for `prod:fortunate-hummingbird-653`
 
 ### Local Linking
 
