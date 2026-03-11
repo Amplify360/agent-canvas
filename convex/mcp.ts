@@ -190,6 +190,46 @@ export const listCanvases = query({
   },
 });
 
+export const createCanvas = mutation({
+  args: {
+    tokenPrefix: v.string(),
+    tokenHash: v.string(),
+    title: v.string(),
+    slug: v.string(),
+    phases: v.optional(v.array(v.string())),
+    categories: v.optional(v.array(v.string())),
+  },
+  handler: async (ctx, { tokenPrefix, tokenHash, title, slug, phases, categories }) => {
+    const token = await requireToken(ctx, tokenPrefix, tokenHash, "canvas:write");
+    validateTitle(title);
+    validateSlug(slug);
+
+    await ensureUniqueCanvasSlug(ctx, token.workosOrgId, slug);
+
+    const now = Date.now();
+    const canvasId = await ctx.db.insert("canvases", {
+      workosOrgId: token.workosOrgId,
+      title,
+      slug,
+      phases: phases ?? ["Backlog"],
+      categories: categories ?? ["Uncategorized"],
+      createdBy: `mcp_token:${token._id}`,
+      updatedBy: `mcp_token:${token._id}`,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    return {
+      canvasId,
+      slug,
+      title,
+      phases: phases ?? ["Backlog"],
+      categories: categories ?? ["Uncategorized"],
+      updatedAt: now,
+    };
+  },
+});
+
 export const getCanvasSnapshot = query({
   args: {
     tokenPrefix: v.string(),

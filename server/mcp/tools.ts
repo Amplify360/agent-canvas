@@ -1,6 +1,43 @@
 import { ConvexHttpClient } from "convex/browser";
 import { api } from "../../convex/_generated/api";
 import { AuthContext, requireScope } from "./auth";
+import { AGENT_STATUS_VALUES } from "../../shared/agentModel";
+
+const agentFieldValuesSchema = {
+  type: "object",
+  properties: {
+    objective: { type: "string" },
+    description: { type: "string" },
+    tools: { type: "array", items: { type: "string" } },
+    journeySteps: { type: "array", items: { type: "string" } },
+    demoLink: { type: "string" },
+    videoLink: { type: "string" },
+    category: { type: "string" },
+    status: { type: "string", enum: [...AGENT_STATUS_VALUES] },
+    metrics: {
+      type: "object",
+      properties: {
+        numberOfUsers: { type: "number" },
+        timesUsed: { type: "number" },
+        timeSaved: { type: "number" },
+        roi: { type: "number" },
+      },
+      additionalProperties: false,
+    },
+  },
+  additionalProperties: true,
+} as const;
+
+const updateAgentFieldsSchema = {
+  type: "object",
+  properties: {
+    name: { type: "string" },
+    phase: { type: "string" },
+    agentOrder: { type: "number" },
+    fieldValues: agentFieldValuesSchema,
+  },
+  additionalProperties: false,
+} as const;
 
 export const MCP_TOOLS = [
   {
@@ -41,8 +78,23 @@ export const MCP_TOOLS = [
     },
   },
   {
+    name: "create_canvas",
+    description: "Creates a new canvas in the token's organization and returns its canvasId. Use apply_canvas_changes afterward to add agents.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        title: { type: "string" },
+        slug: { type: "string" },
+        phases: { type: "array", items: { type: "string" } },
+        categories: { type: "array", items: { type: "string" } },
+      },
+      required: ["title", "slug"],
+      additionalProperties: false,
+    },
+  },
+  {
     name: "apply_canvas_changes",
-    description: "Applies canvas edits. If canvasId and canvasSlug are omitted, uses the token default canvas.",
+    description: "Applies canvas edits. Supports create_agent and update_agent. If canvasId and canvasSlug are omitted, uses the token default canvas.",
     inputSchema: {
       type: "object",
       properties: {
@@ -52,9 +104,94 @@ export const MCP_TOOLS = [
         expectedUpdatedAt: { type: "number" },
         operations: {
           type: "array",
-          description: "For update_agent, use fields:{name?,phase?,agentOrder?,fieldValues?}. fieldValues merge into existing values.",
+          description: "Use create_agent with name and phase to add a new agent. Use update_agent with agentId plus either fields:{...} or top-level name/phase/agentOrder/fieldValues. fieldValues supports common keys such as category, description, objective, tools, journeySteps, status, and metrics.",
           items: {
-            type: "object",
+            anyOf: [
+              {
+                type: "object",
+                properties: {
+                  type: { const: "create_agent" },
+                  name: { type: "string" },
+                  phase: { type: "string" },
+                  agentOrder: { type: "number" },
+                  fieldValues: agentFieldValuesSchema,
+                },
+                required: ["type", "name", "phase"],
+                additionalProperties: false,
+              },
+              {
+                type: "object",
+                properties: {
+                  type: { const: "update_agent" },
+                  agentId: { type: "string" },
+                  name: { type: "string" },
+                  phase: { type: "string" },
+                  agentOrder: { type: "number" },
+                  fieldValues: agentFieldValuesSchema,
+                  fields: updateAgentFieldsSchema,
+                },
+                required: ["type", "agentId"],
+                additionalProperties: false,
+              },
+              {
+                type: "object",
+                properties: {
+                  type: { const: "update_canvas" },
+                  title: { type: "string" },
+                  slug: { type: "string" },
+                },
+                required: ["type"],
+                additionalProperties: false,
+              },
+              {
+                type: "object",
+                properties: {
+                  type: { const: "rename_phase" },
+                  fromPhase: { type: "string" },
+                  toPhase: { type: "string" },
+                },
+                required: ["type", "fromPhase", "toPhase"],
+                additionalProperties: false,
+              },
+              {
+                type: "object",
+                properties: {
+                  type: { const: "reorder_phases" },
+                  phases: { type: "array", items: { type: "string" } },
+                },
+                required: ["type", "phases"],
+                additionalProperties: false,
+              },
+              {
+                type: "object",
+                properties: {
+                  type: { const: "reorder_categories" },
+                  categories: { type: "array", items: { type: "string" } },
+                },
+                required: ["type", "categories"],
+                additionalProperties: false,
+              },
+              {
+                type: "object",
+                properties: {
+                  type: { const: "move_agent" },
+                  agentId: { type: "string" },
+                  phase: { type: "string" },
+                  agentOrder: { type: "number" },
+                },
+                required: ["type", "agentId", "phase", "agentOrder"],
+                additionalProperties: false,
+              },
+              {
+                type: "object",
+                properties: {
+                  type: { const: "delete_agent" },
+                  agentId: { type: "string" },
+                },
+                required: ["type", "agentId"],
+                additionalProperties: false,
+              },
+            ],
           },
         },
       },
@@ -106,6 +243,18 @@ export async function executeTool(convex: ConvexHttpClient, auth: AuthContext, n
       canvasId: args.canvasId,
       canvasSlug: args.canvasSlug,
       view: args.view,
+    });
+  }
+
+  if (name === "create_canvas") {
+    requireScope(auth, "canvas:write");
+    return convex.mutation((api as any).mcp.createCanvas, {
+      tokenPrefix: auth.tokenPrefix,
+      tokenHash: auth.tokenHash,
+      title: args.title,
+      slug: args.slug,
+      phases: args.phases,
+      categories: args.categories,
     });
   }
 
