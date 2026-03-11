@@ -40,6 +40,8 @@ function negotiateProtocolVersion(request: JsonRpcRequest): string {
   return DEFAULT_PROTOCOL_VERSION;
 }
 
+// We currently serve MCP over stateless POST only. Returning 405 for GET/DELETE
+// remains streamable-HTTP compatible for clients that probe richer transports.
 export async function GET() {
   return new NextResponse(null, { status: 405 });
 }
@@ -65,6 +67,8 @@ export async function POST(request: Request) {
 
   const protocolVersion = negotiateProtocolVersion(body);
 
+  // MCP lifecycle notifications are fire-and-forget; replying with JSON-RPC
+  // errors here breaks clients during the post-initialize handshake.
   if (body.id === undefined && body.method.startsWith("notifications/")) {
     return notificationAccepted(protocolVersion);
   }

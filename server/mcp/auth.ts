@@ -42,6 +42,8 @@ export async function authenticateMcpRequest(request: Request, convex: ConvexHtt
     throw new Error("Auth: Missing service token");
   }
 
+  // The raw MCP secret never leaves this route; Convex only sees the prefix and
+  // SHA-256 hash for lookup and per-request revalidation.
   const { tokenPrefix, tokenHash } = await hashTokenForLookup(token);
   const auth = await convex.query((api as any).mcp.authenticateToken, { tokenPrefix, tokenHash });
   if (!auth) {

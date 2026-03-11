@@ -74,6 +74,8 @@ function normalizeUpdateAgentOperation(op: any, existingFieldValues: Record<stri
     agentOrder,
     fieldValues:
       fieldValuesPatch !== undefined
+        // MCP clients may send partial nested patches such as metrics.roi; merge
+        // them into the existing fieldValues tree instead of replacing siblings.
         ? deepMerge(existingFieldValues, fieldValuesPatch)
         : undefined,
   };
@@ -417,6 +419,8 @@ export const applyCanvasChanges = mutation({
     }
 
     if (!isDryRun && args.operations.length > 0) {
+      // expectedUpdatedAt is checked at canvas scope, so any successful agent
+      // mutation must advance the canvas version as well.
       await ctx.db.patch(canvasState._id, {
         updatedBy: actor,
         updatedAt: now,
