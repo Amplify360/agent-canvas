@@ -47,6 +47,10 @@ jobs:
       - name: Unit tests (Vitest)
         run: pnpm test:run
 
+      - name: Production build
+        env:
+          NEXT_PUBLIC_CONVEX_URL: https://example.invalid
+        run: pnpm build
       - name: Cache Playwright browsers
         uses: actions/cache@v4
         with:
