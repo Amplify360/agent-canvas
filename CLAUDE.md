@@ -317,6 +317,12 @@ const agents = useQuery(api.agents.list, { canvasId });
 ### Persisted UI Preferences
 Use `useLocalStorage` hook + `AppStateContext` for UI state that persists across sessions (e.g., `sidebarWidth`, `isSidebarCollapsed`). Keys prefixed with `agentcanvas-`.
 
+### Auth + Realtime Invariants
+- Treat auth/query gaps as loading, not empty data.
+- Keep Convex auth callbacks stable and prefer live/cached tokens; callback churn or routine async token fetches can cause auth reset/request loops.
+- Only clear persisted org/canvas state after the current auth-scoped query has definitively loaded and invalidated it.
+- Closed modals/widgets must not mount or fetch.
+
 ## Styling System
 
 - CSS variables in `:root` for theming

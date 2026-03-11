@@ -50,7 +50,7 @@ export function CanvasProvider({ children, initialCanvasId }: CanvasProviderProp
   // Subscribe to canvases using official Convex hook with stale-data caching
   // Only query if Convex has the token AND has orgId
   const {
-    data: canvases = [],
+    data: canvasesData,
     isLoading: isCanvasesQueryLoading,
     hasLoaded: hasLoadedCanvases,
   } = useStableQuery(
@@ -58,6 +58,7 @@ export function CanvasProvider({ children, initialCanvasId }: CanvasProviderProp
     canQuery && currentOrgId ? { workosOrgId: currentOrgId } : 'skip',
     currentOrgId,
   );
+  const canvases = useMemo(() => canvasesData ?? [], [canvasesData]);
 
   // Query the initial canvas by ID if provided (for shareable links)
   // Using state for initialCanvasHandled ensures query skips after handling
@@ -109,7 +110,7 @@ export function CanvasProvider({ children, initialCanvasId }: CanvasProviderProp
   // Auto-select first canvas if none selected or current canvas was deleted
   // Skip this if we have an initialCanvasId that hasn't been handled yet
   useEffect(() => {
-    if (isConvexAuthLoading || (initialCanvasId && !initialCanvasHandled)) {
+    if (!canQuery || isConvexAuthLoading || !hasLoadedCanvases || (initialCanvasId && !initialCanvasHandled)) {
       return; // Wait for initial canvas handling
     }
 
@@ -123,7 +124,7 @@ export function CanvasProvider({ children, initialCanvasId }: CanvasProviderProp
       // No canvases available, clear selection
       setCurrentCanvasIdState(null);
     }
-  }, [isConvexAuthLoading, canvases, currentCanvasId, setCurrentCanvasIdState, initialCanvasId, initialCanvasHandled]);
+  }, [canQuery, hasLoadedCanvases, isConvexAuthLoading, canvases, currentCanvasId, setCurrentCanvasIdState, initialCanvasId, initialCanvasHandled]);
 
   const setCurrentCanvasId = useCallback((canvasId: string | null) => {
     setCurrentCanvasIdState(canvasId);
@@ -160,7 +161,11 @@ export function CanvasProvider({ children, initialCanvasId }: CanvasProviderProp
   // Derive phases/categories from current canvas with defaults
   const phases = useMemo(() => currentCanvas?.phases ?? ['Backlog'], [currentCanvas?.phases]);
   const categories = useMemo(() => currentCanvas?.categories ?? ['Uncategorized'], [currentCanvas?.categories]);
-  const isLoading = (!isInitialized || isConvexAuthLoading || isCanvasesQueryLoading) && !hasLoadedCanvases;
+  const isLoading =
+    !isInitialized ||
+    isConvexAuthLoading ||
+    (canQuery && !hasLoadedCanvases) ||
+    (canQuery && isCanvasesQueryLoading);
 
   const value = useMemo<CanvasContextValue>(() => ({
     canvases,

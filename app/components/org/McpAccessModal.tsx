@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Modal } from '@/components/ui/Modal';
-import { useMutation, useQuery } from '@/hooks/useConvex';
+import { useCanQuery, useMutation, useQuery } from '@/hooks/useConvex';
 import { api } from '../../../convex/_generated/api';
 
 interface Props {
@@ -13,7 +13,13 @@ interface Props {
 }
 
 export function McpAccessModal({ isOpen, onClose, workosOrgId, canvases }: Props) {
-  const tokens = (useQuery((api as any).mcpTokens.listForOrg, { workosOrgId, includeRevoked: true }) as any[]) ?? [];
+  const { canQuery } = useCanQuery();
+  const tokens = (
+    useQuery(
+      (api as any).mcpTokens.listForOrg,
+      isOpen && canQuery ? { workosOrgId, includeRevoked: true } : 'skip',
+    ) as any[]
+  ) ?? [];
   const createToken = useMutation((api as any).mcpTokens.create);
   const revokeToken = useMutation((api as any).mcpTokens.revoke);
   const rotateToken = useMutation((api as any).mcpTokens.rotate);

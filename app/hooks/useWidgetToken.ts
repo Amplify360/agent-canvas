@@ -23,25 +23,39 @@ export function useWidgetToken(
   options?: UseWidgetTokenOptions
 ): UseWidgetTokenResult {
   const [token, setToken] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => !!organizationId);
   const [error, setError] = useState<string | null>(null);
+  const isMountedRef = useRef(true);
 
   // Track the scopes array by value to prevent infinite loops
   const scopesRef = useRef(options?.scopes);
   scopesRef.current = options?.scopes;
 
-  const fetchToken = useCallback(async () => {
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
+  const fetchToken = useCallback(async (signal?: AbortSignal) => {
     if (!organizationId) {
-      setToken(null);
-      setLoading(false);
+      if (isMountedRef.current) {
+        setToken(null);
+        setError(null);
+        setLoading(false);
+      }
       return;
     }
 
-    setLoading(true);
-    setError(null);
+    if (isMountedRef.current) {
+      setLoading(true);
+      setError(null);
+    }
 
     try {
       const response = await fetch('/api/widgets/token', {
+        signal,
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -56,18 +70,35 @@ export function useWidgetToken(
       }
 
       const data = await response.json();
-      setToken(data.token);
+      if (!signal?.aborted && isMountedRef.current) {
+        setToken(data.token);
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Token fetch error');
-      setToken(null);
+      if (err instanceof Error && err.name === 'AbortError') {
+        return;
+      }
+      if (isMountedRef.current) {
+        setError(err instanceof Error ? err.message : 'Token fetch error');
+        setToken(null);
+      }
     } finally {
-      setLoading(false);
+      if (!signal?.aborted && isMountedRef.current) {
+        setLoading(false);
+      }
     }
   }, [organizationId]);
 
   useEffect(() => {
-    fetchToken();
+    const abortController = new AbortController();
+    void fetchToken(abortController.signal);
+    return () => {
+      abortController.abort();
+    };
   }, [fetchToken]);
 
-  return { token, loading, error, refetch: fetchToken };
+  const refetch = useCallback(async () => {
+    await fetchToken();
+  }, [fetchToken]);
+
+  return { token, loading, error, refetch };
 }

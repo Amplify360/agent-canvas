@@ -16,6 +16,7 @@ import { ORG_ROLES } from '@/types/validationConstants';
 import { useAction, useCanQuery } from '@/hooks/useConvex';
 import { useStableQuery } from '@/hooks/useStableQuery';
 import { authDebug } from '@/utils/authDebug';
+import { deriveAuthUserTransition } from '@/utils/authTransitions';
 import { api } from '../../convex/_generated/api';
 
 export interface AuthContextValue {
@@ -47,21 +48,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Clear persisted selections when user changes (prevents cross-user leakage)
   useEffect(() => {
     const currentId = authKitUser?.id ?? null;
+    const transition = deriveAuthUserTransition(prevUserIdRef.current, currentId);
     authDebug('AuthContext', 'user_state_change', {
       currentUserId: currentId,
       previousUserId: prevUserIdRef.current,
+      nextStableUserId: transition.nextStableUserId,
+      didSignIn: transition.didSignIn,
+      didSwitchUsers: transition.didSwitchUsers,
     });
 
-    if (currentId !== prevUserIdRef.current) {
+    if (transition.didSignIn || transition.didSwitchUsers) {
       setIsInitialized(false);
     }
-    if (prevUserIdRef.current !== null && currentId !== prevUserIdRef.current) {
+    if (transition.didSwitchUsers) {
       // User changed — clear org and canvas selections
       window.localStorage.removeItem(STORAGE_KEYS.CURRENT_ORG);
       window.localStorage.removeItem(STORAGE_KEYS.CURRENT_CANVAS);
       setCurrentOrgIdState(null);
     }
-    prevUserIdRef.current = currentId;
+    prevUserIdRef.current = transition.nextStableUserId;
   }, [authKitUser?.id, setCurrentOrgIdState]);
 
   // Transform AuthKit user to our User type (memoized to avoid new object on every render)

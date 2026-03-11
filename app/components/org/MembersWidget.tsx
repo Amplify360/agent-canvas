@@ -19,7 +19,7 @@ interface MembersWidgetProps {
 }
 
 export function MembersWidget({ isOpen, onClose, orgId }: MembersWidgetProps) {
-  const { token, loading, error } = useWidgetToken(orgId, {
+  const { token, loading, error } = useWidgetToken(isOpen ? orgId : null, {
     scopes: ['widgets:users-table:manage'],
   });
 

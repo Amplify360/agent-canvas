@@ -494,7 +494,7 @@ export function Sidebar() {
           onClose={() => setIsImportModalOpen(false)}
         />
 
-        {currentOrgId && (
+        {currentOrgId && isOrgAdmin && isMembersModalOpen && (
           <MembersWidget
             isOpen={isMembersModalOpen}
             onClose={() => setIsMembersModalOpen(false)}
@@ -502,7 +502,7 @@ export function Sidebar() {
           />
         )}
 
-        {currentOrgId && (
+        {currentOrgId && isOrgAdmin && isMcpModalOpen && (
           <McpAccessModal
             isOpen={isMcpModalOpen}
             onClose={() => setIsMcpModalOpen(false)}
