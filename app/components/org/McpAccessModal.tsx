@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { Modal } from '@/components/ui/Modal';
+import { Icon } from '@/components/ui/Icon';
 import { useCanQuery, useMutation, useQuery } from '@/hooks/useConvex';
 import { api } from '../../../convex/_generated/api';
 
@@ -28,19 +29,108 @@ export function McpAccessModal({ isOpen, onClose, workosOrgId, canvases }: Props
   const [canWrite, setCanWrite] = useState(false);
   const [defaultCanvasId, setDefaultCanvasId] = useState('');
   const [secret, setSecret] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
   const scopes = canWrite ? ['canvas:read', 'canvas:write'] : ['canvas:read'];
 
+  const activeTokens = tokens.filter((t: any) => !t.revokedAt);
+  const revokedTokens = tokens.filter((t: any) => t.revokedAt);
+
+  const copyToClipboard = async (text: string) => {
+    await navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="MCP Access">
-      <div className="u-flex u-flex-col u-gap-sm">
-        <p>Create service tokens for external MCP clients. Token secrets are shown once.</p>
-        <input placeholder="Token name" value={name} onChange={(e) => setName(e.target.value)} />
-        <label><input type="checkbox" checked={canWrite} onChange={(e) => setCanWrite(e.target.checked)} /> Allow write operations</label>
-        <select value={defaultCanvasId} onChange={(e) => setDefaultCanvasId(e.target.value)}>
+      {secret ? (
+        <div style={{
+          background: 'var(--warning-bg)',
+          border: '1px solid var(--warning)',
+          borderRadius: 'var(--radius-lg)',
+          padding: 'var(--space-5)',
+          marginBottom: 'var(--space-5)',
+        }}>
+          <div className="u-flex u-align-center u-gap-sm" style={{ marginBottom: 'var(--space-3)' }}>
+            <Icon name="alert-triangle" />
+            <strong>Save your token now</strong>
+          </div>
+          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', marginBottom: 'var(--space-3)' }}>
+            This secret will not be shown again. Copy it to a secure location.
+          </p>
+          <div className="u-flex u-align-center u-gap-sm" style={{
+            background: 'var(--bg-primary)',
+            border: '1px solid var(--border-muted)',
+            borderRadius: 'var(--radius-md)',
+            padding: 'var(--space-3)',
+          }}>
+            <code style={{
+              flex: 1,
+              fontSize: 'var(--text-sm)',
+              wordBreak: 'break-all',
+              userSelect: 'all',
+            }}>{secret}</code>
+            <button
+              className="btn btn--sm"
+              onClick={() => copyToClipboard(secret)}
+              style={{ flexShrink: 0 }}
+            >
+              <Icon name={copied ? 'check' : 'copy'} />
+              {copied ? 'Copied' : 'Copy'}
+            </button>
+          </div>
+          <button
+            className="btn btn--sm"
+            onClick={() => { setSecret(null); setCopied(false); }}
+            style={{ marginTop: 'var(--space-3)' }}
+          >
+            Dismiss
+          </button>
+        </div>
+      ) : (
+        <p style={{ color: 'var(--text-muted)', marginBottom: 'var(--space-5)' }}>
+          Create service tokens for external MCP clients. Token secrets are shown once.
+        </p>
+      )}
+
+      <div className="form-group">
+        <label className="form-label">Token name</label>
+        <input
+          className="form-input"
+          placeholder="e.g. CI Pipeline"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+        />
+      </div>
+
+      <div className="form-group">
+        <label className="form-label">Default canvas</label>
+        <select
+          className="form-select"
+          value={defaultCanvasId}
+          onChange={(e) => setDefaultCanvasId(e.target.value)}
+        >
           <option value="">No default canvas</option>
-          {canvases.map((canvas) => <option key={canvas._id} value={canvas._id}>{canvas.title}</option>)}
+          {canvases.map((canvas) => (
+            <option key={canvas._id} value={canvas._id}>{canvas.title}</option>
+          ))}
         </select>
+      </div>
+
+      <div className="form-group">
+        <label className="checkbox-label">
+          <input
+            type="checkbox"
+            checked={canWrite}
+            onChange={(e) => setCanWrite(e.target.checked)}
+          />
+          Allow write operations
+        </label>
+      </div>
+
+      <div className="form-actions">
+        <button className="btn" onClick={onClose}>Cancel</button>
         <button
           className="btn btn--primary"
           onClick={async () => {
@@ -51,36 +141,69 @@ export function McpAccessModal({ isOpen, onClose, workosOrgId, canvases }: Props
               defaultCanvasId: defaultCanvasId || undefined,
             } as any);
             setSecret(result.token);
+            setCopied(false);
             setName('');
           }}
         >
           Create token
         </button>
-        {secret && (
-          <div className="surface-card" style={{ padding: 8 }}>
-            <strong>Copy now (shown once):</strong>
-            <pre>{secret}</pre>
-          </div>
-        )}
-
-        <div className="sidebar__dropdown-divider" />
-        <h4>Existing tokens</h4>
-        {tokens.map((token: any) => (
-          <div key={token._id} className="surface-card" style={{ padding: 8 }}>
-            <div>{token.name} <code>{token.tokenPrefix}</code> {token.revokedAt ? '(revoked)' : ''}</div>
-            <div>Scopes: {token.scopes.join(', ')}</div>
-            {!token.revokedAt && (
-              <div className="u-flex u-gap-sm">
-                <button className="btn" onClick={() => revokeToken({ tokenId: token._id } as any)}>Revoke</button>
-                <button className="btn" onClick={async () => {
-                  const result = await rotateToken({ tokenId: token._id } as any);
-                  setSecret(result.token);
-                }}>Rotate</button>
-              </div>
-            )}
-          </div>
-        ))}
       </div>
+
+      {activeTokens.length > 0 && (
+        <>
+          <div style={{ borderTop: '1px solid var(--border-subtle)', margin: 'var(--space-6) 0 var(--space-4)' }} />
+          <h4 style={{ marginBottom: 'var(--space-3)' }}>Active tokens</h4>
+          <div className="u-flex u-flex-column u-gap-sm">
+            {activeTokens.map((token: any) => (
+              <div key={token._id} className="surface-card" style={{ padding: 'var(--space-4)' }}>
+                <div className="u-flex u-align-center u-gap-sm" style={{ marginBottom: 'var(--space-2)' }}>
+                  <strong>{token.name}</strong>
+                  <code style={{ fontSize: 'var(--text-xs)', opacity: 0.7 }}>{token.tokenPrefix}</code>
+                </div>
+                <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)', marginBottom: 'var(--space-3)' }}>
+                  {token.scopes.join(', ')}
+                  {token.lastUsedAt && (
+                    <> &middot; last used {new Date(token.lastUsedAt).toLocaleDateString()}</>
+                  )}
+                </div>
+                <div className="u-flex u-gap-sm">
+                  <button
+                    className="btn btn--sm"
+                    onClick={async () => {
+                      const result = await rotateToken({ tokenId: token._id } as any);
+                      setSecret(result.token);
+                      setCopied(false);
+                    }}
+                  >
+                    Rotate
+                  </button>
+                  <button
+                    className="btn btn--sm btn--danger"
+                    onClick={() => revokeToken({ tokenId: token._id } as any)}
+                  >
+                    Revoke
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
+      {revokedTokens.length > 0 && (
+        <>
+          <div style={{ borderTop: '1px solid var(--border-subtle)', margin: 'var(--space-5) 0 var(--space-3)' }} />
+          <h4 style={{ marginBottom: 'var(--space-3)', color: 'var(--text-muted)' }}>Revoked tokens</h4>
+          <div className="u-flex u-flex-column u-gap-sm">
+            {revokedTokens.map((token: any) => (
+              <div key={token._id} style={{ padding: 'var(--space-3) var(--space-4)', opacity: 0.5 }}>
+                <span>{token.name}</span>
+                <code style={{ fontSize: 'var(--text-xs)', marginLeft: 'var(--space-2)' }}>{token.tokenPrefix}</code>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
     </Modal>
   );
 }
