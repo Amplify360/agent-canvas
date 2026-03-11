@@ -15,6 +15,10 @@ type CanvasStateOperation = {
   toPhase?: string;
 };
 
+export function resolveDryRun(value?: boolean): boolean {
+  return value ?? true;
+}
+
 export function applyCanvasStateOperation<T extends CanvasState>(
   canvas: T,
   operation: CanvasStateOperation

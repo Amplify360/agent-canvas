@@ -19,13 +19,29 @@ export function getTokenFromRequest(request: Request): string | null {
   return apiKey?.trim() || null;
 }
 
+export async function hashTokenForLookup(token: string): Promise<{ tokenPrefix: string; tokenHash: string }> {
+  const [tokenPrefix] = token.split(".");
+  if (!tokenPrefix) {
+    throw new Error("Auth: Invalid service token format");
+  }
+
+  const data = new TextEncoder().encode(token);
+  const digest = await crypto.subtle.digest("SHA-256", data);
+  const tokenHash = Array.from(new Uint8Array(digest))
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
+
+  return { tokenPrefix, tokenHash };
+}
+
 export async function authenticateMcpRequest(request: Request, convex: ConvexHttpClient): Promise<AuthContext> {
   const token = getTokenFromRequest(request);
   if (!token) {
     throw new Error("Auth: Missing service token");
   }
 
-  const auth = await convex.query((internal as any).mcp.authenticateToken, { token });
+  const { tokenPrefix, tokenHash } = await hashTokenForLookup(token);
+  const auth = await convex.query((internal as any).mcp.authenticateToken, { tokenPrefix, tokenHash });
   if (!auth) {
     throw new Error("Auth: Invalid service token");
   }

@@ -3,7 +3,7 @@ import { internalMutation, internalQuery } from "./_generated/server";
 import { Doc, Id } from "./_generated/dataModel";
 import { AGENT_MODEL_VERSION } from "../shared/agentModel";
 import { getAgentSnapshot, recordHistory } from "./lib/helpers";
-import { applyCanvasStateOperation } from "./lib/mcpHelpers";
+import { applyCanvasStateOperation, resolveDryRun } from "./lib/mcpHelpers";
 import {
   validateAgentData,
   validateAgentFieldValues,
@@ -19,12 +19,6 @@ function constantTimeEquals(a: string, b: string): boolean {
   let mismatch = 0;
   for (let i = 0; i < a.length; i++) mismatch |= a.charCodeAt(i) ^ b.charCodeAt(i);
   return mismatch === 0;
-}
-
-async function sha256(value: string): Promise<string> {
-  const data = new TextEncoder().encode(value);
-  const digest = await crypto.subtle.digest("SHA-256", data);
-  return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
 async function resolveCanvas(ctx: any, workosOrgId: string, canvasId?: Id<"canvases">, canvasSlug?: string, defaultCanvasId?: Id<"canvases">) {
@@ -67,9 +61,8 @@ async function ensureUniqueCanvasSlug(
 }
 
 export const authenticateToken = internalQuery({
-  args: { token: v.string() },
-  handler: async (ctx, { token }) => {
-    const [tokenPrefix] = token.split(".");
+  args: { tokenPrefix: v.string(), tokenHash: v.string() },
+  handler: async (ctx, { tokenPrefix, tokenHash }) => {
     if (!tokenPrefix) return null;
 
     const candidate = await ctx.db
@@ -80,7 +73,6 @@ export const authenticateToken = internalQuery({
     if (!candidate || candidate.revokedAt) return null;
     if (candidate.expiresAt && candidate.expiresAt < Date.now()) return null;
 
-    const tokenHash = await sha256(token);
     if (!constantTimeEquals(tokenHash, candidate.tokenHash)) return null;
 
     return candidate;
@@ -202,6 +194,7 @@ export const applyCanvasChanges = internalMutation({
     operations: v.array(v.any()),
   },
   handler: async (ctx, args) => {
+    const isDryRun = resolveDryRun(args.dryRun);
     const canvas = await resolveCanvas(ctx, args.workosOrgId, args.canvasId, args.canvasSlug, args.defaultCanvasId);
     if (args.expectedUpdatedAt !== undefined && args.expectedUpdatedAt !== canvas.updatedAt) {
       return { ok: false, conflict: { expectedUpdatedAt: args.expectedUpdatedAt, actualUpdatedAt: canvas.updatedAt } };
@@ -229,7 +222,7 @@ export const applyCanvasChanges = internalMutation({
           }
         }
         const nextCanvasState = applyCanvasStateOperation(canvasState, op);
-        if (!args.dryRun) {
+        if (!isDryRun) {
           await ctx.db.patch(canvasState._id, {
             title: nextCanvasState.title,
             slug: nextCanvasState.slug,
@@ -243,7 +236,7 @@ export const applyCanvasChanges = internalMutation({
         validatePhase(op.fromPhase);
         validatePhase(op.toPhase);
         const nextCanvasState = applyCanvasStateOperation(canvasState, op);
-        if (!args.dryRun) {
+        if (!isDryRun) {
           await ctx.db.patch(canvasState._id, { phases: nextCanvasState.phases, updatedBy: actor, updatedAt: now });
           for (const agent of Array.from(byId.values()).filter((entry) => entry.phase === op.fromPhase)) {
             await recordHistory(ctx, agent._id, actor, CHANGE_TYPE.UPDATE, getAgentSnapshot(agent));
@@ -257,14 +250,14 @@ export const applyCanvasChanges = internalMutation({
         summary.push("renamed phase");
       } else if (op.type === "reorder_phases") {
         const nextCanvasState = applyCanvasStateOperation(canvasState, op);
-        if (!args.dryRun) {
+        if (!isDryRun) {
           await ctx.db.patch(canvasState._id, { phases: nextCanvasState.phases, updatedBy: actor, updatedAt: now });
         }
         canvasState = { ...canvasState, ...nextCanvasState, updatedAt: now };
         summary.push("reordered phases");
       } else if (op.type === "reorder_categories") {
         const nextCanvasState = applyCanvasStateOperation(canvasState, op);
-        if (!args.dryRun) {
+        if (!isDryRun) {
           await ctx.db.patch(canvasState._id, { categories: nextCanvasState.categories, updatedBy: actor, updatedAt: now });
         }
         canvasState = { ...canvasState, ...nextCanvasState, updatedAt: now };
@@ -275,7 +268,7 @@ export const applyCanvasChanges = internalMutation({
           phase: op.phase,
           fieldValues: op.fieldValues ?? {},
         });
-        if (!args.dryRun) {
+        if (!isDryRun) {
           const agentId = await ctx.db.insert("agents", {
             canvasId: canvasState._id,
             phase: op.phase,
@@ -334,7 +327,7 @@ export const applyCanvasChanges = internalMutation({
             fieldValues: op.fieldValues,
           }).filter(([, value]) => value !== undefined)
         );
-        if (!args.dryRun) {
+        if (!isDryRun) {
           await recordHistory(ctx, agent._id, actor, CHANGE_TYPE.UPDATE, getAgentSnapshot(agent));
           await ctx.db.patch(op.agentId, {
             ...definedUpdates,
@@ -355,7 +348,7 @@ export const applyCanvasChanges = internalMutation({
         const agent = byId.get(op.agentId as Id<"agents">);
         if (!agent) throw new Error("Validation: agentId not in canvas");
         validatePhase(op.phase);
-        if (!args.dryRun) {
+        if (!isDryRun) {
           await ctx.db.patch(op.agentId, { phase: op.phase, agentOrder: op.agentOrder, updatedBy: actor, updatedAt: now });
         }
         byId.set(agent._id, { ...agent, phase: op.phase, agentOrder: op.agentOrder, updatedBy: actor, updatedAt: now } as Doc<"agents">);
@@ -363,7 +356,7 @@ export const applyCanvasChanges = internalMutation({
       } else if (op.type === "delete_agent") {
         const agent = byId.get(op.agentId as Id<"agents">);
         if (!agent) throw new Error("Validation: agentId not in canvas");
-        if (!args.dryRun) {
+        if (!isDryRun) {
           await recordHistory(ctx, agent._id, actor, CHANGE_TYPE.DELETE, getAgentSnapshot(agent));
           await ctx.db.patch(op.agentId, { deletedAt: now, updatedBy: actor, updatedAt: now });
         }
@@ -374,7 +367,7 @@ export const applyCanvasChanges = internalMutation({
       }
     }
 
-    return { ok: true, dryRun: args.dryRun ?? true, summary, operationCount: args.operations.length };
+    return { ok: true, dryRun: isDryRun, summary, operationCount: args.operations.length };
   },
 });
 

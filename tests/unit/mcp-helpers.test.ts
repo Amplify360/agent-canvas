@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applyCanvasStateOperation } from "../../convex/lib/mcpHelpers";
+import { applyCanvasStateOperation, resolveDryRun } from "../../convex/lib/mcpHelpers";
 
 describe("applyCanvasStateOperation", () => {
   it("preserves earlier title changes across sequential update_canvas operations", () => {
@@ -47,5 +47,11 @@ describe("applyCanvasStateOperation", () => {
       phases: ["Discovery", "Phase 1"],
       categories: ["Ops"],
     });
+  });
+
+  it("defaults dryRun to true when omitted", () => {
+    expect(resolveDryRun(undefined)).toBe(true);
+    expect(resolveDryRun(true)).toBe(true);
+    expect(resolveDryRun(false)).toBe(false);
   });
 });
