@@ -12,6 +12,7 @@ const unauthenticatedPaths = [
   '/login',
   '/api/auth/(.*)', // Auth endpoints
   '/api/preview/(.*)', // Public preview links (token-gated, no auth)
+  '/api/mcp', // MCP endpoint uses token auth, not WorkOS session cookies
 ];
 
 // E2E-only route that renders the app with in-memory mocks.

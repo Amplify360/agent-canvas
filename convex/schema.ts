@@ -137,4 +137,21 @@ export default defineSchema({
   })
     .index("by_agent", ["agentId"])
     .index("by_agent_time", ["agentId", "createdAt"]),
+
+  // MCP service tokens scoped to a single org
+  mcpTokens: defineTable({
+    name: v.string(),
+    tokenPrefix: v.string(),
+    tokenHash: v.string(),
+    workosOrgId: v.string(),
+    scopes: v.array(v.string()),
+    defaultCanvasId: v.optional(v.id("canvases")),
+    createdByUserId: v.string(),
+    createdAt: v.number(),
+    expiresAt: v.optional(v.number()),
+    lastUsedAt: v.optional(v.number()),
+    revokedAt: v.optional(v.number()),
+  })
+    .index("by_prefix", ["tokenPrefix"])
+    .index("by_org", ["workosOrgId"]),
 });

@@ -20,6 +20,7 @@ import { CopyCanvasModal } from '../forms/CopyCanvasModal';
 import { FeedbackModal } from '../forms/FeedbackModal';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { MembersWidget } from '../org/MembersWidget';
+import { McpAccessModal } from '../org/McpAccessModal';
 import { Tooltip } from '../ui/Tooltip';
 import { THEMES, SYSTEM_THEME_OPTION, THEME_VALUES } from '@/constants/themes';
 import { copyTextToClipboard } from '@/utils/clipboard';
@@ -66,6 +67,7 @@ export function Sidebar() {
 
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [isMembersModalOpen, setIsMembersModalOpen] = useState(false);
+  const [isMcpModalOpen, setIsMcpModalOpen] = useState(false);
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
   const [canvasMenu, setCanvasMenu] = useState<CanvasMenuState | null>(null);
   const [renameCanvas, setRenameCanvas] = useState<{ id: string; title: string } | null>(null);
@@ -444,6 +446,18 @@ export function Sidebar() {
                 <span>Members</span>
               </button>
             )}
+            {isOrgAdmin && (
+              <button
+                className="sidebar__dropdown-item"
+                onClick={() => {
+                  setIsMcpModalOpen(true);
+                  setUserMenuOpen(false);
+                }}
+              >
+                <Icon name="key-round" />
+                <span>MCP Access</span>
+              </button>
+            )}
             <button
               className="sidebar__dropdown-item"
               onClick={handleSyncMemberships}
@@ -485,6 +499,15 @@ export function Sidebar() {
             isOpen={isMembersModalOpen}
             onClose={() => setIsMembersModalOpen(false)}
             orgId={currentOrgId}
+          />
+        )}
+
+        {currentOrgId && (
+          <McpAccessModal
+            isOpen={isMcpModalOpen}
+            onClose={() => setIsMcpModalOpen(false)}
+            workosOrgId={currentOrgId}
+            canvases={canvases.map((canvas) => ({ _id: canvas._id, title: canvas.title }))}
           />
         )}
 
