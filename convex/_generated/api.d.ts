@@ -19,10 +19,13 @@ import type * as files from "../files.js";
 import type * as http from "../http.js";
 import type * as lib_auth from "../lib/auth.js";
 import type * as lib_helpers from "../lib/helpers.js";
+import type * as lib_mcpHelpers from "../lib/mcpHelpers.js";
 import type * as lib_membershipSync from "../lib/membershipSync.js";
 import type * as lib_validation from "../lib/validation.js";
 import type * as lib_validators from "../lib/validators.js";
 import type * as lib_workosApi from "../lib/workosApi.js";
+import type * as mcp from "../mcp.js";
+import type * as mcpTokens from "../mcpTokens.js";
 import type * as orgMemberships from "../orgMemberships.js";
 import type * as orgSettings from "../orgSettings.js";
 
@@ -44,10 +47,13 @@ declare const fullApi: ApiFromModules<{
   http: typeof http;
   "lib/auth": typeof lib_auth;
   "lib/helpers": typeof lib_helpers;
+  "lib/mcpHelpers": typeof lib_mcpHelpers;
   "lib/membershipSync": typeof lib_membershipSync;
   "lib/validation": typeof lib_validation;
   "lib/validators": typeof lib_validators;
   "lib/workosApi": typeof lib_workosApi;
+  mcp: typeof mcp;
+  mcpTokens: typeof mcpTokens;
   orgMemberships: typeof orgMemberships;
   orgSettings: typeof orgSettings;
 }>;
