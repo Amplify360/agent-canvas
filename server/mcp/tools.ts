@@ -5,38 +5,14 @@ import { AGENT_STATUS_VALUES } from "../../shared/agentModel";
 
 const agentFieldValuesSchema = {
   type: "object",
-  properties: {
-    objective: { type: "string" },
-    description: { type: "string" },
-    tools: { type: "array", items: { type: "string" } },
-    journeySteps: { type: "array", items: { type: "string" } },
-    demoLink: { type: "string" },
-    videoLink: { type: "string" },
-    category: { type: "string" },
-    status: { type: "string", enum: [...AGENT_STATUS_VALUES] },
-    metrics: {
-      type: "object",
-      properties: {
-        numberOfUsers: { type: "number" },
-        timesUsed: { type: "number" },
-        timeSaved: { type: "number" },
-        roi: { type: "number" },
-      },
-      additionalProperties: false,
-    },
-  },
+  description: `Common keys: objective, description, tools[], journeySteps[], category, status (${AGENT_STATUS_VALUES.join(", ")}), metrics{numberOfUsers,timesUsed,timeSaved,roi}. Additional custom keys are allowed.`,
   additionalProperties: true,
 } as const;
 
 const updateAgentFieldsSchema = {
   type: "object",
-  properties: {
-    name: { type: "string" },
-    phase: { type: "string" },
-    agentOrder: { type: "number" },
-    fieldValues: agentFieldValuesSchema,
-  },
-  additionalProperties: false,
+  description: "For update_agent only. Same shape as top-level name, phase, agentOrder, and fieldValues.",
+  additionalProperties: true,
 } as const;
 
 export const MCP_TOOLS = [
@@ -104,94 +80,38 @@ export const MCP_TOOLS = [
         expectedUpdatedAt: { type: "number" },
         operations: {
           type: "array",
-          description: "Use create_agent with name and phase to add a new agent. Use update_agent with agentId plus either fields:{...} or top-level name/phase/agentOrder/fieldValues. fieldValues supports common keys such as category, description, objective, tools, journeySteps, status, and metrics.",
+          description: "Use create_agent with name and phase to add an agent. Use update_agent with agentId plus either fields:{...} or top-level name/phase/agentOrder/fieldValues. Other supported types: update_canvas, rename_phase, reorder_phases, reorder_categories, move_agent, delete_agent.",
           items: {
-            anyOf: [
-              {
-                type: "object",
-                properties: {
-                  type: { const: "create_agent" },
-                  name: { type: "string" },
-                  phase: { type: "string" },
-                  agentOrder: { type: "number" },
-                  fieldValues: agentFieldValuesSchema,
-                },
-                required: ["type", "name", "phase"],
-                additionalProperties: false,
+            type: "object",
+            properties: {
+              type: {
+                type: "string",
+                enum: [
+                  "create_agent",
+                  "update_agent",
+                  "update_canvas",
+                  "rename_phase",
+                  "reorder_phases",
+                  "reorder_categories",
+                  "move_agent",
+                  "delete_agent",
+                ],
               },
-              {
-                type: "object",
-                properties: {
-                  type: { const: "update_agent" },
-                  agentId: { type: "string" },
-                  name: { type: "string" },
-                  phase: { type: "string" },
-                  agentOrder: { type: "number" },
-                  fieldValues: agentFieldValuesSchema,
-                  fields: updateAgentFieldsSchema,
-                },
-                required: ["type", "agentId"],
-                additionalProperties: false,
-              },
-              {
-                type: "object",
-                properties: {
-                  type: { const: "update_canvas" },
-                  title: { type: "string" },
-                  slug: { type: "string" },
-                },
-                required: ["type"],
-                additionalProperties: false,
-              },
-              {
-                type: "object",
-                properties: {
-                  type: { const: "rename_phase" },
-                  fromPhase: { type: "string" },
-                  toPhase: { type: "string" },
-                },
-                required: ["type", "fromPhase", "toPhase"],
-                additionalProperties: false,
-              },
-              {
-                type: "object",
-                properties: {
-                  type: { const: "reorder_phases" },
-                  phases: { type: "array", items: { type: "string" } },
-                },
-                required: ["type", "phases"],
-                additionalProperties: false,
-              },
-              {
-                type: "object",
-                properties: {
-                  type: { const: "reorder_categories" },
-                  categories: { type: "array", items: { type: "string" } },
-                },
-                required: ["type", "categories"],
-                additionalProperties: false,
-              },
-              {
-                type: "object",
-                properties: {
-                  type: { const: "move_agent" },
-                  agentId: { type: "string" },
-                  phase: { type: "string" },
-                  agentOrder: { type: "number" },
-                },
-                required: ["type", "agentId", "phase", "agentOrder"],
-                additionalProperties: false,
-              },
-              {
-                type: "object",
-                properties: {
-                  type: { const: "delete_agent" },
-                  agentId: { type: "string" },
-                },
-                required: ["type", "agentId"],
-                additionalProperties: false,
-              },
-            ],
+              agentId: { type: "string" },
+              name: { type: "string" },
+              phase: { type: "string" },
+              agentOrder: { type: "number" },
+              fieldValues: agentFieldValuesSchema,
+              fields: updateAgentFieldsSchema,
+              title: { type: "string" },
+              slug: { type: "string" },
+              fromPhase: { type: "string" },
+              toPhase: { type: "string" },
+              phases: { type: "array", items: { type: "string" } },
+              categories: { type: "array", items: { type: "string" } },
+            },
+            required: ["type"],
+            additionalProperties: false,
           },
         },
       },
