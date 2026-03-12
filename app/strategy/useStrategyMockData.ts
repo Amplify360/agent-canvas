@@ -7,41 +7,30 @@
 
 'use client';
 
-import { useEffect, useMemo, useRef } from 'react';
+import { useMemo } from 'react';
 import { api } from '../../convex/_generated/api';
-import { useMutation, useQuery, useCanQuery } from '@/hooks/useConvex';
+import { useQuery, useCanQuery } from '@/hooks/useConvex';
 import { useAuth } from '@/contexts/AuthContext';
-import type { Department, DepartmentSummary, Deviation, Initiative, StrategicObjective, Service } from './types';
+import type { Department, DepartmentSummary, Deviation, FlowStep, Initiative, StrategicObjective, StrategicPressure, Service } from './types';
 import { countUniqueLinkedAgentsForService } from './utils';
+
+const EMPTY_DEPARTMENT_SUMMARIES: DepartmentSummary[] = [];
+const EMPTY_PRESSURES: StrategicPressure[] = [];
+const EMPTY_ENTERPRISE_OBJECTIVES: StrategicObjective[] = [];
+const EMPTY_SERVICES: Service[] = [];
+const EMPTY_STEPS: FlowStep[] = [];
+const EMPTY_DEVIATIONS: Deviation[] = [];
+const EMPTY_INITIATIVES: Initiative[] = [];
+const EMPTY_AGENT_COUNTS: Record<string, number> = {};
 
 export function useStrategyData(departmentId?: string | null, serviceId?: string | null) {
   const { currentOrgId, isInitialized } = useAuth();
   const { canQuery } = useCanQuery();
-  const ensurePrototypeMap = useMutation(api.transformationMaps.ensurePrototypeMap);
-  const seededOrgRef = useRef<string | null>(null);
 
   const maps = useQuery(
     api.transformationMaps.list,
     currentOrgId && canQuery ? { workosOrgId: currentOrgId } : 'skip'
   );
-
-  useEffect(() => {
-    if (!currentOrgId || !canQuery || maps === undefined) {
-      return;
-    }
-    if (maps.length > 0) {
-      seededOrgRef.current = currentOrgId;
-      return;
-    }
-    if (seededOrgRef.current === currentOrgId) {
-      return;
-    }
-
-    seededOrgRef.current = currentOrgId;
-    void ensurePrototypeMap({ workosOrgId: currentOrgId }).catch(() => {
-      seededOrgRef.current = null;
-    });
-  }, [canQuery, currentOrgId, ensurePrototypeMap, maps]);
 
   const activeMap = maps?.[0];
 
@@ -60,9 +49,9 @@ export function useStrategyData(departmentId?: string | null, serviceId?: string
     canQuery && activeMap && serviceId ? { mapId: activeMap._id, serviceKey: serviceId } : 'skip'
   );
 
-  const departmentSummaries = overview?.departmentSummaries ?? [];
-  const pressures = overview?.pressures ?? [];
-  const enterpriseObjectives = overview?.enterpriseObjectives ?? [];
+  const departmentSummaries = overview?.departmentSummaries ?? EMPTY_DEPARTMENT_SUMMARIES;
+  const pressures = overview?.pressures ?? EMPTY_PRESSURES;
+  const enterpriseObjectives = overview?.enterpriseObjectives ?? EMPTY_ENTERPRISE_OBJECTIVES;
 
   const currentDepartment = useMemo<Department | undefined>(() => {
     if (departmentSnapshot?.department) {
@@ -79,21 +68,23 @@ export function useStrategyData(departmentId?: string | null, serviceId?: string
     };
   }, [departmentId, departmentSnapshot, departmentSummaries]);
 
-  const currentServices = departmentSnapshot?.services ?? [];
+  const currentServices = departmentSnapshot?.services ?? EMPTY_SERVICES;
   const currentService = useMemo<Service | undefined>(() => {
     if (serviceSnapshot?.service) return serviceSnapshot.service;
     return currentServices.find((entry) => entry.id === serviceId);
   }, [currentServices, serviceId, serviceSnapshot]);
 
-  const currentObjectives = departmentSnapshot?.objectives ?? [];
-  const currentIdealSteps = serviceSnapshot?.idealSteps ?? [];
-  const currentCurrentSteps = serviceSnapshot?.currentSteps ?? [];
-  const currentDeviations = serviceSnapshot?.deviations ?? [];
-  const currentInitiatives = serviceSnapshot?.initiatives ?? [];
-  const agentCountsByService = departmentSnapshot?.agentCountsByService ?? {};
+  const currentObjectives = departmentSnapshot?.objectives ?? EMPTY_ENTERPRISE_OBJECTIVES;
+  const currentIdealSteps = serviceSnapshot?.idealSteps ?? EMPTY_STEPS;
+  const currentCurrentSteps = serviceSnapshot?.currentSteps ?? EMPTY_STEPS;
+  const currentDeviations = serviceSnapshot?.deviations ?? EMPTY_DEVIATIONS;
+  const currentInitiatives = serviceSnapshot?.initiatives ?? EMPTY_INITIATIVES;
+  const agentCountsByService = departmentSnapshot?.agentCountsByService ?? EMPTY_AGENT_COUNTS;
+  const isWaitingForQueryAuth = isInitialized && !!currentOrgId && !canQuery;
 
   const isLoading =
     !isInitialized ||
+    isWaitingForQueryAuth ||
     (canQuery && maps === undefined) ||
     (canQuery && !!activeMap && !departmentId && !serviceId && overview === undefined) ||
     (canQuery && !!activeMap && !!departmentId && !serviceId && departmentSnapshot === undefined) ||

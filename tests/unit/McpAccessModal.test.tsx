@@ -8,12 +8,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { McpAccessModal } from '@/components/org/McpAccessModal';
 
 const useQueryMock = vi.fn();
-const useMutationMock = vi.fn(() => vi.fn());
+const useMutationMock = vi.fn((..._args: any[]) => vi.fn());
 const useCanQueryMock = vi.fn(() => ({ canQuery: true, isConvexAuthenticated: true, isConvexAuthLoading: false }));
 
 vi.mock('@/hooks/useConvex', () => ({
-  useQuery: (...args: any[]) => (useQueryMock as any).apply(null, args),
-  useMutation: (...args: any[]) => (useMutationMock as any).apply(null, args),
+  useQuery: (query: unknown, args: unknown) => useQueryMock(query, args),
+  useMutation: (mutation: unknown) => useMutationMock(mutation),
   useCanQuery: () => useCanQueryMock(),
 }));
 

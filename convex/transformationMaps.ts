@@ -1,7 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
-import { requireAuth, requireOrgAccess } from "./lib/auth";
+import { requireAuth, requireOrgAccess, requireOrgAdmin } from "./lib/auth";
 import {
   artifactStatusValidator,
   buildDepartmentSnapshot,
@@ -58,24 +58,34 @@ async function getMapBySlugWithAccess(ctx: any, workosOrgId: string, slug: strin
 }
 
 async function getDepartmentByKey(ctx: any, mapId: Id<"transformationMaps">, departmentKey: string) {
-  const department = await ctx.db
-    .query("transformationDepartments")
-    .withIndex("by_map_key", (q: any) => q.eq("mapId", mapId).eq("key", departmentKey))
-    .first();
+  const department = await findDepartmentByKey(ctx, mapId, departmentKey);
   if (!department) {
     throw new Error("NotFound: Department not found");
   }
   return department;
 }
 
+async function findDepartmentByKey(ctx: any, mapId: Id<"transformationMaps">, departmentKey: string) {
+  const department = await ctx.db
+    .query("transformationDepartments")
+    .withIndex("by_map_key", (q: any) => q.eq("mapId", mapId).eq("key", departmentKey))
+    .first();
+  return department;
+}
+
 async function getServiceByKey(ctx: any, mapId: Id<"transformationMaps">, serviceKey: string) {
+  const service = await findServiceByKey(ctx, mapId, serviceKey);
+  if (!service) {
+    throw new Error("NotFound: Service not found");
+  }
+  return service;
+}
+
+async function findServiceByKey(ctx: any, mapId: Id<"transformationMaps">, serviceKey: string) {
   const service = await ctx.db
     .query("transformationServices")
     .withIndex("by_map_key", (q: any) => q.eq("mapId", mapId).eq("key", serviceKey))
     .first();
-  if (!service) {
-    throw new Error("NotFound: Service not found");
-  }
   return service;
 }
 
@@ -87,6 +97,22 @@ async function ensureUniqueMapSlug(ctx: any, workosOrgId: string, slug: string, 
 
   if (existing && existing._id !== excludeMapId) {
     throw new Error("Validation: A transformation map with this slug already exists");
+  }
+}
+
+async function ensureUniqueServiceKey(
+  ctx: any,
+  mapId: Id<"transformationMaps">,
+  serviceKey: string,
+  excludeServiceId?: Id<"transformationServices">
+) {
+  const existing = await ctx.db
+    .query("transformationServices")
+    .withIndex("by_map_key", (q: any) => q.eq("mapId", mapId).eq("key", serviceKey))
+    .first();
+
+  if (existing && existing._id !== excludeServiceId) {
+    throw new Error(`Validation: Service key already exists: ${serviceKey}`);
   }
 }
 
@@ -232,7 +258,7 @@ export const ensurePrototypeMap = mutation({
   args: { workosOrgId: v.string() },
   handler: async (ctx, { workosOrgId }) => {
     const auth = await requireAuth(ctx);
-    requireOrgAccess(auth, workosOrgId);
+    requireOrgAdmin(auth, workosOrgId);
 
     const existing = await ctx.db
       .query("transformationMaps")
@@ -379,7 +405,10 @@ export const getDepartmentSnapshot = query({
   handler: async (ctx, { mapId, departmentKey }) => {
     const auth = await requireAuth(ctx);
     const map = await getMapWithAccess(ctx, mapId, auth);
-    const department = await getDepartmentByKey(ctx, mapId, departmentKey);
+    const department = await findDepartmentByKey(ctx, mapId, departmentKey);
+    if (!department) {
+      return null;
+    }
     const [objectives, services, analyses] = await Promise.all([
       ctx.db
         .query("transformationObjectives")
@@ -389,7 +418,7 @@ export const getDepartmentSnapshot = query({
         .query("transformationServices")
         .withIndex("by_department", (q) => q.eq("mapId", mapId).eq("departmentKey", departmentKey))
         .collect(),
-      listMapChildren(ctx, mapId).then((children) => children.analyses),
+      ctx.db.query("transformationServiceAnalyses").withIndex("by_map", (q) => q.eq("mapId", mapId)).collect(),
     ]);
 
     return buildDepartmentSnapshot({ map, department, objectives, services, analyses });
@@ -404,8 +433,14 @@ export const getServiceSnapshot = query({
   handler: async (ctx, { mapId, serviceKey }) => {
     const auth = await requireAuth(ctx);
     const map = await getMapWithAccess(ctx, mapId, auth);
-    const service = await getServiceByKey(ctx, mapId, serviceKey);
-    const department = await getDepartmentByKey(ctx, mapId, service.departmentKey);
+    const service = await findServiceByKey(ctx, mapId, serviceKey);
+    if (!service) {
+      return null;
+    }
+    const department = await findDepartmentByKey(ctx, mapId, service.departmentKey);
+    if (!department) {
+      return null;
+    }
     const analysis =
       (await ctx.db
         .query("transformationServiceAnalyses")
@@ -478,9 +513,15 @@ export const applyDepartmentAnalysis = mutation({
       .withIndex("by_department", (q) => q.eq("mapId", mapId).eq("departmentKey", departmentKey))
       .collect();
     const serviceByKey = new Map(existingServices.map((service) => [service.key, service]));
+    const seenServiceKeys = new Set<string>();
 
     for (const [index, service] of payload.services.entries()) {
+      if (seenServiceKeys.has(service.key)) {
+        throw new Error(`Validation: Duplicate service key in payload: ${service.key}`);
+      }
+      seenServiceKeys.add(service.key);
       const current = serviceByKey.get(service.key);
+      await ensureUniqueServiceKey(ctx, mapId, service.key, current?._id);
       const nextData = {
         mapId,
         key: service.key,
@@ -512,6 +553,11 @@ export const applyDepartmentAnalysis = mutation({
         });
       }
     }
+
+    await ctx.db.patch(mapId, {
+      updatedBy: auth.workosUserId,
+      updatedAt: now,
+    });
 
     await recordTransformationHistory(ctx, {
       workosOrgId: map.workosOrgId,
@@ -590,6 +636,11 @@ export const applyServiceAnalysis = mutation({
       });
     }
 
+    await ctx.db.patch(mapId, {
+      updatedBy: auth.workosUserId,
+      updatedAt: now,
+    });
+
     await recordTransformationHistory(ctx, {
       workosOrgId: map.workosOrgId,
       mapId,
@@ -630,6 +681,7 @@ export const setServiceAnalysisReviewStatus = mutation({
     const auth = await requireAuth(ctx);
     const map = await getMapWithAccess(ctx, mapId, auth);
     const service = await getServiceByKey(ctx, mapId, serviceKey);
+    const now = Date.now();
     const analysis = await ctx.db
       .query("transformationServiceAnalyses")
       .withIndex("by_service", (q) => q.eq("serviceId", service._id))
@@ -641,9 +693,14 @@ export const setServiceAnalysisReviewStatus = mutation({
     await ctx.db.patch(analysis._id, {
       reviewStatus,
       lastReviewedBy: auth.workosUserId,
-      lastReviewedAt: Date.now(),
+      lastReviewedAt: now,
       updatedBy: auth.workosUserId,
-      updatedAt: Date.now(),
+      updatedAt: now,
+    });
+
+    await ctx.db.patch(mapId, {
+      updatedBy: auth.workosUserId,
+      updatedAt: now,
     });
 
     await recordTransformationHistory(ctx, {

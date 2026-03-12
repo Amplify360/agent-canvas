@@ -124,6 +124,22 @@ async function ensureUniqueTransformationMapSlug(
   }
 }
 
+async function ensureUniqueTransformationServiceKey(
+  ctx: any,
+  mapId: Id<"transformationMaps">,
+  serviceKey: string,
+  excludeServiceId?: Id<"transformationServices">
+) {
+  const existing = await ctx.db
+    .query("transformationServices")
+    .withIndex("by_map_key", (q: any) => q.eq("mapId", mapId).eq("key", serviceKey))
+    .first();
+
+  if (existing && existing._id !== excludeServiceId) {
+    throw new Error(`Validation: Service key already exists: ${serviceKey}`);
+  }
+}
+
 async function getTransformationDepartmentByKey(ctx: any, mapId: Id<"transformationMaps">, departmentKey: string) {
   const department = await ctx.db
     .query("transformationDepartments")
@@ -706,7 +722,7 @@ export const getTransformationDepartmentSnapshot = query({
         .query("transformationServices")
         .withIndex("by_department", (q) => q.eq("mapId", map._id).eq("departmentKey", args.departmentKey))
         .collect(),
-      listMapChildren(ctx, map._id).then((children) => children.analyses),
+      ctx.db.query("transformationServiceAnalyses").withIndex("by_map", (q) => q.eq("mapId", map._id)).collect(),
     ]);
     return buildDepartmentSnapshot({ map, department, objectives, services, analyses });
   },
@@ -825,6 +841,7 @@ export const applyTransformationMapChanges = mutation({
         if (!op.key || !op.departmentKey || !op.name) {
           throw new Error("Validation: create_service requires key, departmentKey, and name");
         }
+        await ensureUniqueTransformationServiceKey(ctx, map._id, op.key);
         if (!isDryRun) {
           await ctx.db.insert("transformationServices", {
             mapId: map._id,
@@ -969,8 +986,14 @@ export const applyTransformationDepartmentAnalysis = mutation({
         .withIndex("by_department", (q) => q.eq("mapId", map._id).eq("departmentKey", args.departmentKey))
         .collect();
       const serviceByKey = new Map(existingServices.map((service) => [service.key, service]));
+      const seenServiceKeys = new Set<string>();
       for (const [index, service] of args.payload.services.entries()) {
+        if (seenServiceKeys.has(service.key)) {
+          throw new Error(`Validation: Duplicate service key in payload: ${service.key}`);
+        }
+        seenServiceKeys.add(service.key);
         const existing = serviceByKey.get(service.key);
+        await ensureUniqueTransformationServiceKey(ctx, map._id, service.key, existing?._id);
         const patch = {
           mapId: map._id,
           key: service.key,
