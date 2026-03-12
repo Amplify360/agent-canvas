@@ -13,6 +13,7 @@ import { useAuth } from './AuthContext';
 import { api } from '../../convex/_generated/api';
 import { Id } from '../../convex/_generated/dataModel';
 import { STORAGE_KEYS } from '@/constants/storageKeys';
+import { readLocalStorageValue } from '@/utils/localStorage';
 
 interface CanvasContextValue {
   canvases: Canvas[];
@@ -118,7 +119,11 @@ export function CanvasProvider({ children, initialCanvasId }: CanvasProviderProp
       // If current canvas doesn't exist in the list (was deleted), select first available
       const currentExists = currentCanvasId && canvases.some((c: Canvas) => c._id === currentCanvasId);
       if (!currentExists) {
-        setCurrentCanvasIdState(canvases[0]._id);
+        const persistedCanvasId = readLocalStorageValue<string | null>(STORAGE_KEYS.CURRENT_CANVAS, null);
+        const nextCanvasId = persistedCanvasId && canvases.some((c: Canvas) => c._id === persistedCanvasId)
+          ? persistedCanvasId
+          : canvases[0]._id;
+        setCurrentCanvasIdState(nextCanvasId);
       }
     } else if (currentCanvasId) {
       // No canvases available, clear selection

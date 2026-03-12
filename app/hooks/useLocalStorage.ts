@@ -3,20 +3,7 @@
  */
 
 import { useState, useCallback, useEffect, Dispatch, SetStateAction } from 'react';
-
-function readStorageValue<T>(key: string, initialValue: T): T {
-  if (typeof window === 'undefined') {
-    return initialValue;
-  }
-
-  try {
-    const item = window.localStorage.getItem(key);
-    return item ? JSON.parse(item) : initialValue;
-  } catch (error) {
-    console.warn(`Error loading localStorage key "${key}":`, error);
-    return initialValue;
-  }
-}
+import { readLocalStorageValue } from '@/utils/localStorage';
 
 export function useLocalStorage<T>(
   key: string,
@@ -36,8 +23,11 @@ export function useLocalStorage<T>(
     }
 
     setKeyState({ key, initialValue });
-    setStoredValue(readStorageValue(key, initialValue));
   }, [initialValue, key, keyState.key]);
+
+  useEffect(() => {
+    setStoredValue(readLocalStorageValue(keyState.key, keyState.initialValue));
+  }, [keyState.initialValue, keyState.key]);
 
   const setValue: Dispatch<SetStateAction<T>> = useCallback((value) => {
     setStoredValue((currentValue) => {
@@ -64,7 +54,7 @@ export function useLocalStorage<T>(
       if (event.key !== key) {
         return;
       }
-      setStoredValue(readStorageValue(key, keyState.initialValue));
+      setStoredValue(readLocalStorageValue(key, keyState.initialValue));
     };
 
     window.addEventListener('storage', handleStorageChange);

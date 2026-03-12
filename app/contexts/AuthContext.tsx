@@ -17,6 +17,7 @@ import { useAction, useCanQuery } from '@/hooks/useConvex';
 import { useStableQuery } from '@/hooks/useStableQuery';
 import { authDebug } from '@/utils/authDebug';
 import { deriveAuthUserTransition } from '@/utils/authTransitions';
+import { readLocalStorageValue } from '@/utils/localStorage';
 import { api } from '../../convex/_generated/api';
 
 export interface AuthContextValue {
@@ -138,7 +139,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!hasLoadedMemberships) return;
 
     if (!currentOrgId && userOrgs.length > 0) {
-      setCurrentOrgIdState(userOrgs[0].id);
+      const persistedOrgId = readLocalStorageValue<string | null>(STORAGE_KEYS.CURRENT_ORG, null);
+      const nextOrgId = persistedOrgId && userOrgs.some((org) => org.id === persistedOrgId)
+        ? persistedOrgId
+        : userOrgs[0].id;
+      setCurrentOrgIdState(nextOrgId);
       return;
     }
 
@@ -153,8 +158,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = useCallback(async () => {
     try {
-      setCurrentOrgIdState(null);
-      // Clear canvas selection to prevent next user inheriting it
+      // Preserve the selected org for the same user across logout/login.
+      // Cross-user cleanup still happens when a different user signs in.
       window.localStorage.removeItem(STORAGE_KEYS.CURRENT_CANVAS);
 
       // Use AuthKit's signOut which handles the full WorkOS session clear
@@ -164,7 +169,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Fallback: redirect to login
       window.location.href = '/login';
     }
-  }, [authKit, setCurrentOrgIdState]);
+  }, [authKit]);
 
   const refreshAuth = useCallback(async () => {
     // AuthKit returns { error } on failure instead of throwing in some cases.
