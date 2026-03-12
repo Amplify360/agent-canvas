@@ -158,6 +158,18 @@ export function McpAccessModal({ isOpen, onClose, workosOrgId, canvases }: Props
           <div className="u-flex u-flex-column u-gap-sm">
             {activeTokens.map((token: any) => (
               <div key={token._id} className="surface-card" style={{ padding: 'var(--space-4)' }}>
+                {(!token.scopes.includes('transformation:read')) && (
+                  <div style={{
+                    marginBottom: 'var(--space-3)',
+                    padding: 'var(--space-3)',
+                    borderRadius: 'var(--radius-md)',
+                    border: '1px solid var(--warning)',
+                    background: 'var(--warning-bg)',
+                    fontSize: 'var(--text-sm)',
+                  }}>
+                    Legacy MCP token. Canvas tools will work, but Transformation Map tools will fail. Create a new token with the current scopes.
+                  </div>
+                )}
                 <div className="u-flex u-align-center u-gap-sm" style={{ marginBottom: 'var(--space-2)' }}>
                   <strong>{token.name}</strong>
                   <code style={{ fontSize: 'var(--text-xs)', opacity: 0.7 }}>{token.tokenPrefix}</code>

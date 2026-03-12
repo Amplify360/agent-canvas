@@ -103,6 +103,15 @@ export async function POST(request: Request) {
     return withProtocolHeader(jsonRpcError(body.id, -32601, `Method not found: ${body.method}`), protocolVersion);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
+    const toolName =
+      body.method === "tools/call" && typeof body.params?.name === "string"
+        ? body.params.name
+        : undefined;
+    console.error("MCP request failed", {
+      method: body.method,
+      toolName,
+      error: message,
+    });
     return withProtocolHeader(jsonRpcError(body.id, -32000, message), protocolVersion);
   }
 }

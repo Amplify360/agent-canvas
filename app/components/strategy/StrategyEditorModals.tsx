@@ -23,6 +23,7 @@ import {
   type ServiceFieldImproveResult,
   type ServiceTranscribeResult,
 } from '@/strategy/aiAssist';
+import { encodeWavAudio } from '@/strategy/audioRecording';
 import {
   type Department,
   type Deviation,
@@ -480,9 +481,12 @@ export function ServiceEditModal({
   const [selectedPatchFields, setSelectedPatchFields] = useState<Record<ServiceAssistField, boolean>>(
     createEmptyServiceAssistSelection({})
   );
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
-  const audioChunksRef = useRef<Blob[]>([]);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const processorNodeRef = useRef<ScriptProcessorNode | null>(null);
+  const sourceNodeRef = useRef<MediaStreamAudioSourceNode | null>(null);
+  const captureFramesRef = useRef<Float32Array[]>([]);
+  const captureSampleRateRef = useRef(16000);
 
   useEffect(() => {
     if (!isOpen || !service) return;
@@ -502,13 +506,15 @@ export function ServiceEditModal({
       return;
     }
 
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-      mediaRecorderRef.current.stop();
-    }
+    processorNodeRef.current?.disconnect();
+    sourceNodeRef.current?.disconnect();
     mediaStreamRef.current?.getTracks().forEach((track) => track.stop());
-    mediaRecorderRef.current = null;
+    audioContextRef.current?.close().catch(() => undefined);
     mediaStreamRef.current = null;
-    audioChunksRef.current = [];
+    processorNodeRef.current = null;
+    sourceNodeRef.current = null;
+    audioContextRef.current = null;
+    captureFramesRef.current = [];
     setIsRecording(false);
   }, [isOpen]);
 
@@ -694,11 +700,11 @@ export function ServiceEditModal({
 
   const handleToggleRecording = async () => {
     if (isRecording) {
-      mediaRecorderRef.current?.stop();
+      stopAudioCapture();
       return;
     }
 
-    if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
+    if (!navigator.mediaDevices?.getUserMedia || typeof AudioContext === 'undefined') {
       setAssistError('Audio recording is not supported in this browser.');
       return;
     }
@@ -706,62 +712,86 @@ export function ServiceEditModal({
     try {
       setAssistError(null);
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const preferredMimeType = getPreferredRecordingMimeType();
-      const recorder = preferredMimeType
-        ? new MediaRecorder(stream, { mimeType: preferredMimeType })
-        : new MediaRecorder(stream);
       mediaStreamRef.current = stream;
-      mediaRecorderRef.current = recorder;
-      audioChunksRef.current = [];
+      captureFramesRef.current = [];
 
-      recorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          audioChunksRef.current.push(event.data);
-        }
+      const audioContext = new AudioContext();
+      const sourceNode = audioContext.createMediaStreamSource(stream);
+      const processorNode = audioContext.createScriptProcessor(4096, 1, 1);
+      const sinkNode = audioContext.createGain();
+      sinkNode.gain.value = 0;
+
+      captureSampleRateRef.current = audioContext.sampleRate;
+      audioContextRef.current = audioContext;
+      sourceNodeRef.current = sourceNode;
+      processorNodeRef.current = processorNode;
+
+      processorNode.onaudioprocess = (event) => {
+        const channel = event.inputBuffer.getChannelData(0);
+        captureFramesRef.current.push(new Float32Array(channel));
       };
 
-      recorder.onstop = async () => {
-        setIsRecording(false);
-        const audioBlob = new Blob(audioChunksRef.current, { type: recorder.mimeType || 'audio/webm' });
-        audioChunksRef.current = [];
-        mediaStreamRef.current?.getTracks().forEach((track) => track.stop());
-        mediaStreamRef.current = null;
-        mediaRecorderRef.current = null;
-        if (audioBlob.size === 0) {
-          return;
-        }
+      sourceNode.connect(processorNode);
+      processorNode.connect(sinkNode);
+      sinkNode.connect(audioContext.destination);
 
-        setIsTranscribing(true);
-        try {
-          const formPayload = new FormData();
-          formPayload.append('audio', new File([audioBlob], 'service-notes.webm', { type: audioBlob.type }));
-          const response = await fetch('/api/transformation-map/service-transcribe', {
-            method: 'POST',
-            body: formPayload,
-          });
-          const payload = await response.json() as Partial<ServiceTranscribeResult> & { error?: string };
-          if (!response.ok || !payload.transcript) {
-            throw new Error(payload.error || 'Failed to transcribe audio');
-          }
-
-          setAssistNotes((current) => current.trim()
-            ? `${current.trim()}\n\n${payload.transcript?.trim() ?? ''}`.trim()
-            : payload.transcript?.trim() ?? '');
-          showToast('Transcript added to notes', 'success');
-        } catch (transcribeError) {
-          setAssistError(transcribeError instanceof Error ? transcribeError.message : 'Failed to transcribe audio.');
-        } finally {
-          setIsTranscribing(false);
-        }
-      };
-
-      recorder.start();
       setIsRecording(true);
     } catch (recordingError) {
-      mediaStreamRef.current?.getTracks().forEach((track) => track.stop());
-      mediaStreamRef.current = null;
+      cleanupAudioCapture();
       setAssistError(recordingError instanceof Error ? recordingError.message : 'Failed to start recording.');
     }
+  };
+
+  const stopAudioCapture = async () => {
+    if (!isRecording) {
+      return;
+    }
+
+    setIsRecording(false);
+
+    const capturedFrames = captureFramesRef.current;
+    const sampleRate = captureSampleRateRef.current;
+    cleanupAudioCapture();
+
+    if (capturedFrames.length === 0) {
+      return;
+    }
+
+    const audioBlob = encodeWavAudio(capturedFrames, sampleRate);
+    setIsTranscribing(true);
+    try {
+      const formPayload = new FormData();
+      formPayload.append('audio', new File([audioBlob], 'service-notes.wav', { type: audioBlob.type }));
+      const response = await fetch('/api/transformation-map/service-transcribe', {
+        method: 'POST',
+        body: formPayload,
+      });
+      const payload = await response.json() as Partial<ServiceTranscribeResult> & { error?: string };
+      if (!response.ok || !payload.transcript) {
+        throw new Error(payload.error || 'Failed to transcribe audio');
+      }
+
+      setAssistNotes((current) => current.trim()
+        ? `${current.trim()}\n\n${payload.transcript?.trim() ?? ''}`.trim()
+        : payload.transcript?.trim() ?? '');
+      showToast('Transcript added to notes', 'success');
+    } catch (transcribeError) {
+      setAssistError(transcribeError instanceof Error ? transcribeError.message : 'Failed to transcribe audio.');
+    } finally {
+      setIsTranscribing(false);
+    }
+  };
+
+  const cleanupAudioCapture = () => {
+    processorNodeRef.current?.disconnect();
+    sourceNodeRef.current?.disconnect();
+    mediaStreamRef.current?.getTracks().forEach((track) => track.stop());
+    audioContextRef.current?.close().catch(() => undefined);
+    processorNodeRef.current = null;
+    sourceNodeRef.current = null;
+    mediaStreamRef.current = null;
+    audioContextRef.current = null;
+    captureFramesRef.current = [];
   };
 
   return (
@@ -1184,15 +1214,6 @@ function FieldLabel({
       </button>
     </div>
   );
-}
-
-function getPreferredRecordingMimeType() {
-  if (typeof MediaRecorder === 'undefined' || typeof MediaRecorder.isTypeSupported !== 'function') {
-    return '';
-  }
-
-  const candidates = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4'];
-  return candidates.find((candidate) => MediaRecorder.isTypeSupported(candidate)) ?? '';
 }
 
 interface FlowStepEditModalProps {

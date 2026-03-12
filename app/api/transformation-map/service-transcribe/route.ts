@@ -26,7 +26,18 @@ export async function POST(request: Request) {
       (formData.get('model')?.toString().trim()) ||
       process.env.OPENROUTER_TRANSFORMATION_MAP_TRANSCRIBE_MODEL ||
       SERVICE_TRANSCRIBE_MODEL_FALLBACK;
-    const audioFormat = audio.type.includes('webm') ? 'webm' : audio.type.includes('mp4') ? 'mp4' : 'wav';
+    const audioFormat = audio.type.includes('mpeg') || audio.type.includes('mp3')
+      ? 'mp3'
+      : audio.type.includes('wav')
+        ? 'wav'
+        : null;
+
+    if (!audioFormat) {
+      return NextResponse.json(
+        { error: 'Unsupported audio format. Please provide wav or mp3 audio.' },
+        { status: 400 }
+      );
+    }
 
     const client = OpenRouterClient.fromEnv('AgentCanvas Transformation Map');
     const response = await client.chat({
