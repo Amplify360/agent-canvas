@@ -427,7 +427,8 @@ export function Sidebar() {
               <Icon name="more-vertical" />
             </button>
           </Tooltip>
-          <div className={`sidebar__dropdown sidebar__dropdown--up ${userMenuOpen ? 'open' : ''}`}>
+          {userMenuOpen && (
+          <div className="sidebar__dropdown sidebar__dropdown--up open">
             {/* Theme Selection */}
             <div className="sidebar__dropdown-header">Theme</div>
             <button
@@ -507,6 +508,7 @@ export function Sidebar() {
               <span>Sign out</span>
             </button>
           </div>
+          )}
         </div>
 
         <ImportYamlModal
