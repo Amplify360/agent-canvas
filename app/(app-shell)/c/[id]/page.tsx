@@ -1,19 +1,9 @@
-/**
- * Canvas page - Direct link to a specific canvas
- */
-
 'use client';
 
-import { use } from 'react';
-import { useRouter } from 'next/navigation';
-import { AppProviders } from '@/components/AppProviders';
+import { usePathname, useRouter } from 'next/navigation';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { useCanvas } from '@/contexts/CanvasContext';
 import { Icon } from '@/components/ui/Icon';
-
-interface CanvasPageProps {
-  params: Promise<{ id: string }>;
-}
 
 function CanvasErrorView() {
   const router = useRouter();
@@ -23,10 +13,6 @@ function CanvasErrorView() {
     return null;
   }
 
-  const handleGoHome = () => {
-    router.push('/');
-  };
-
   return (
     <div className="canvas-error">
       <div className="canvas-error__content">
@@ -34,7 +20,7 @@ function CanvasErrorView() {
         <p>
           This canvas may have been deleted, the link may be invalid, or you may not have access.
         </p>
-        <button className="btn btn--primary" onClick={handleGoHome}>
+        <button className="btn btn--primary" onClick={() => router.push('/')}>
           Go to Home
         </button>
       </div>
@@ -53,11 +39,17 @@ function CanvasLoadingView() {
   );
 }
 
-function CanvasContent() {
+export default function CanvasPage() {
+  const pathname = usePathname();
   const { initialCanvasError, isLoading, currentCanvas } = useCanvas();
+  const requestedCanvasId = pathname.match(/^\/c\/([^/]+)$/)?.[1];
+  const isResolvingRequestedCanvas = Boolean(
+    requestedCanvasId &&
+    !initialCanvasError &&
+    currentCanvas?._id !== decodeURIComponent(requestedCanvasId)
+  );
 
-  // Show loading while resolving initial canvas
-  if (isLoading && !initialCanvasError && !currentCanvas) {
+  if ((isLoading && !initialCanvasError && !currentCanvas) || isResolvingRequestedCanvas) {
     return <CanvasLoadingView />;
   }
 
@@ -66,14 +58,4 @@ function CanvasContent() {
   }
 
   return <AppLayout />;
-}
-
-export default function CanvasPage({ params }: CanvasPageProps) {
-  const { id } = use(params);
-
-  return (
-    <AppProviders initialCanvasId={id}>
-      <CanvasContent />
-    </AppProviders>
-  );
 }

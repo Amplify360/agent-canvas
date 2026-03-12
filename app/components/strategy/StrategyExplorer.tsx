@@ -9,17 +9,9 @@
 
 import React, { useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { Sidebar } from '@/components/layout/Sidebar';
-import {
-  DEFAULT_SIDEBAR_COLLAPSED,
-  DEFAULT_SIDEBAR_WIDTH,
-  useAppState,
-} from '@/contexts/AppStateContext';
+import { useAppState } from '@/contexts/AppStateContext';
 import { Icon } from '@/components/ui/Icon';
-import { Tooltip } from '@/components/ui/Tooltip';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
-import { ToastContainer } from '@/components/ui/Toast';
-import { ConnectionRecoveryBanner } from '@/components/ui/ConnectionRecoveryBanner';
 import { StrategyBreadcrumb, type BreadcrumbItem } from './StrategyBreadcrumb';
 import { OverviewView } from './OverviewView';
 import { DepartmentView } from './DepartmentView';
@@ -59,10 +51,7 @@ interface DeleteState {
 export function StrategyExplorer() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { isSidebarCollapsed, toggleSidebar, sidebarWidth, showToast } = useAppState();
-  const [hasMounted, setHasMounted] = useState(false);
-  const effectiveSidebarCollapsed = hasMounted ? isSidebarCollapsed : DEFAULT_SIDEBAR_COLLAPSED;
-  const effectiveSidebarWidth = hasMounted ? sidebarWidth : DEFAULT_SIDEBAR_WIDTH;
+  const { showToast } = useAppState();
 
   const mapSlug = searchParams.get('map');
   const departmentId = searchParams.get('department');
@@ -84,10 +73,6 @@ export function StrategyExplorer() {
   const shouldCanonicalizeMapSlug = shouldCanonicalizeTransformationMapSlug(mapSlug, resolvedMapSlug);
   const hasMismatchedDepartmentService =
     Boolean(department && service && service.departmentId !== department.id);
-
-  useEffect(() => {
-    setHasMounted(true);
-  }, []);
 
   useEffect(() => {
     if ((!shouldCanonicalizeServiceUrl || !serviceId || !service) && !shouldCanonicalizeMapSlug) {
@@ -377,41 +362,21 @@ export function StrategyExplorer() {
 
   return (
     <>
-      <ConnectionRecoveryBanner />
-      <Sidebar />
-      <div
-        className={`main-wrapper ${effectiveSidebarCollapsed ? 'sidebar-collapsed' : ''}`}
-        style={
-          !effectiveSidebarCollapsed
-            ? ({ '--sidebar-width': `${effectiveSidebarWidth}px` } as React.CSSProperties)
-            : undefined
-        }
-      >
-        {effectiveSidebarCollapsed && (
-          <Tooltip content="Expand sidebar" placement="right" triggerClassName="sidebar-expand-tooltip">
-            <button className="sidebar-expand-btn" onClick={toggleSidebar}>
-              <Icon name="panel-left-open" />
-            </button>
-          </Tooltip>
-        )}
+      <header className="toolbar">
+        <div className="toolbar__left">
+          <StrategyBreadcrumb items={breadcrumbItems} onNavigate={navigate} />
+        </div>
+        <div className="toolbar__right">
+          <span className="toolbar__badge">
+            <Icon name="map" size={14} />
+            Transformation Map
+          </span>
+        </div>
+      </header>
 
-        {/* Strategy toolbar */}
-        <header className="toolbar">
-          <div className="toolbar__left">
-            <StrategyBreadcrumb items={breadcrumbItems} onNavigate={navigate} />
-          </div>
-          <div className="toolbar__right">
-            <span className="toolbar__badge">
-              <Icon name="map" size={14} />
-              Transformation Map
-            </span>
-          </div>
-        </header>
-
-        <main className="main-content">
-          {content}
-        </main>
-      </div>
+      <main className="main-content">
+        {content}
+      </main>
       <PressureEditModal
         isOpen={Boolean(editingPressure)}
         pressure={editingPressure}
@@ -494,7 +459,6 @@ export function StrategyExplorer() {
         onConfirm={handleDeleteConfirm}
         onCancel={() => setDeleteState(null)}
       />
-      <ToastContainer />
     </>
   );
 }
