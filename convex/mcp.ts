@@ -773,18 +773,36 @@ export const applyTransformationMapChanges = mutation({
 
     for (const op of args.operations) {
       if (op.type === "update_map") {
+        const previousData = {
+          title: map.title,
+          description: map.description,
+          slug: map.slug,
+        };
         const nextSlug = op.slug !== undefined ? normalizeSlug(op.slug) : map.slug;
         if (!nextSlug) throw new Error("Validation: slug is required");
         if (nextSlug !== map.slug) {
           await ensureUniqueTransformationMapSlug(ctx, token.workosOrgId, nextSlug, map._id);
         }
+        const nextData = {
+          title: op.title ?? map.title,
+          description: op.description ?? map.description,
+          slug: nextSlug,
+        };
         if (!isDryRun) {
           await ctx.db.patch(map._id, {
-            ...(op.title !== undefined ? { title: op.title } : {}),
-            ...(op.description !== undefined ? { description: op.description } : {}),
-            ...(op.slug !== undefined ? { slug: nextSlug } : {}),
+            ...nextData,
             updatedBy: actor,
             updatedAt: now,
+          });
+          await recordTransformationHistory(ctx, {
+            workosOrgId: token.workosOrgId,
+            mapId: map._id,
+            entityType: "map",
+            entityId: `${map._id}`,
+            changedBy: actor,
+            changeType: "update",
+            previousData,
+            nextData,
           });
         }
         summary.push("updated map");
@@ -812,19 +830,55 @@ export const applyTransformationMapChanges = mutation({
             createdAt: now,
             updatedAt: now,
           });
+          await recordTransformationHistory(ctx, {
+            workosOrgId: token.workosOrgId,
+            mapId: map._id,
+            entityType: "department",
+            entityId: op.key,
+            changedBy: actor,
+            changeType: "create",
+            nextData: {
+              key: op.key,
+              order: op.order ?? now,
+              name: op.name,
+              description: op.description ?? "",
+              keyIssues: op.keyIssues ?? [],
+              improvementMandates: op.improvementMandates ?? [],
+            },
+          });
         }
         summary.push("created department");
       } else if (op.type === "update_department") {
         const department = await getTransformationDepartmentByKey(ctx, map._id, op.departmentKey);
+        const previousData = {
+          name: department.name,
+          description: department.description,
+          keyIssues: department.keyIssues,
+          improvementMandates: department.improvementMandates,
+          order: department.order,
+        };
+        const nextData = {
+          name: op.name ?? department.name,
+          description: op.description ?? department.description,
+          keyIssues: op.keyIssues ?? department.keyIssues,
+          improvementMandates: op.improvementMandates ?? department.improvementMandates,
+          order: op.order ?? department.order,
+        };
         if (!isDryRun) {
           await ctx.db.patch(department._id, {
-            ...(op.name !== undefined ? { name: op.name } : {}),
-            ...(op.description !== undefined ? { description: op.description } : {}),
-            ...(op.keyIssues !== undefined ? { keyIssues: op.keyIssues } : {}),
-            ...(op.improvementMandates !== undefined ? { improvementMandates: op.improvementMandates } : {}),
-            ...(op.order !== undefined ? { order: op.order } : {}),
+            ...nextData,
             updatedBy: actor,
             updatedAt: now,
+          });
+          await recordTransformationHistory(ctx, {
+            workosOrgId: token.workosOrgId,
+            mapId: map._id,
+            entityType: "department",
+            entityId: department.key,
+            changedBy: actor,
+            changeType: "update",
+            previousData,
+            nextData,
           });
         }
         summary.push("updated department");
@@ -834,6 +888,16 @@ export const applyTransformationMapChanges = mutation({
           for (const [index, departmentKey] of op.departmentKeys.entries()) {
             const department = await getTransformationDepartmentByKey(ctx, map._id, departmentKey);
             await ctx.db.patch(department._id, { order: index, updatedBy: actor, updatedAt: now });
+            await recordTransformationHistory(ctx, {
+              workosOrgId: token.workosOrgId,
+              mapId: map._id,
+              entityType: "department",
+              entityId: department.key,
+              changedBy: actor,
+              changeType: "update",
+              previousData: { order: department.order },
+              nextData: { order: index },
+            });
           }
         }
         summary.push("reordered departments");
@@ -865,25 +929,73 @@ export const applyTransformationMapChanges = mutation({
             createdAt: now,
             updatedAt: now,
           });
+          await recordTransformationHistory(ctx, {
+            workosOrgId: token.workosOrgId,
+            mapId: map._id,
+            entityType: "service",
+            entityId: op.key,
+            changedBy: actor,
+            changeType: "create",
+            nextData: {
+              key: op.key,
+              departmentKey: op.departmentKey,
+              order: op.order ?? now,
+              name: op.name,
+              purpose: op.purpose ?? "",
+              customer: op.customer ?? "",
+              trigger: op.trigger ?? "",
+              outcome: op.outcome ?? "",
+              constraints: op.constraints ?? [],
+              status: op.status ?? "not-analyzed",
+              effectivenessMetric: op.effectivenessMetric ?? "Not yet assessed.",
+              efficiencyMetric: op.efficiencyMetric ?? "Not yet assessed.",
+            },
+          });
         }
         summary.push("created service");
       } else if (op.type === "update_service") {
         const service = await getTransformationServiceByKey(ctx, map._id, op.serviceKey);
+        const previousData = {
+          name: service.name,
+          departmentKey: service.departmentKey,
+          purpose: service.purpose,
+          customer: service.customer,
+          trigger: service.trigger,
+          outcome: service.outcome,
+          constraints: service.constraints,
+          status: service.status,
+          effectivenessMetric: service.effectivenessMetric,
+          efficiencyMetric: service.efficiencyMetric,
+          order: service.order,
+        };
+        const nextData = {
+          name: op.name ?? service.name,
+          departmentKey: op.departmentKey ?? service.departmentKey,
+          purpose: op.purpose ?? service.purpose,
+          customer: op.customer ?? service.customer,
+          trigger: op.trigger ?? service.trigger,
+          outcome: op.outcome ?? service.outcome,
+          constraints: op.constraints ?? service.constraints,
+          status: op.status ?? service.status,
+          effectivenessMetric: op.effectivenessMetric ?? service.effectivenessMetric,
+          efficiencyMetric: op.efficiencyMetric ?? service.efficiencyMetric,
+          order: op.order ?? service.order,
+        };
         if (!isDryRun) {
           await ctx.db.patch(service._id, {
-            ...(op.name !== undefined ? { name: op.name } : {}),
-            ...(op.departmentKey !== undefined ? { departmentKey: op.departmentKey } : {}),
-            ...(op.purpose !== undefined ? { purpose: op.purpose } : {}),
-            ...(op.customer !== undefined ? { customer: op.customer } : {}),
-            ...(op.trigger !== undefined ? { trigger: op.trigger } : {}),
-            ...(op.outcome !== undefined ? { outcome: op.outcome } : {}),
-            ...(op.constraints !== undefined ? { constraints: op.constraints } : {}),
-            ...(op.status !== undefined ? { status: op.status } : {}),
-            ...(op.effectivenessMetric !== undefined ? { effectivenessMetric: op.effectivenessMetric } : {}),
-            ...(op.efficiencyMetric !== undefined ? { efficiencyMetric: op.efficiencyMetric } : {}),
-            ...(op.order !== undefined ? { order: op.order } : {}),
+            ...nextData,
             updatedBy: actor,
             updatedAt: now,
+          });
+          await recordTransformationHistory(ctx, {
+            workosOrgId: token.workosOrgId,
+            mapId: map._id,
+            entityType: "service",
+            entityId: service.key,
+            changedBy: actor,
+            changeType: "update",
+            previousData,
+            nextData,
           });
         }
         summary.push("updated service");
@@ -895,6 +1007,22 @@ export const applyTransformationMapChanges = mutation({
           for (const [index, serviceKey] of op.serviceKeys.entries()) {
             const service = await getTransformationServiceByKey(ctx, map._id, serviceKey);
             await ctx.db.patch(service._id, { order: index, departmentKey: op.departmentKey, updatedBy: actor, updatedAt: now });
+            await recordTransformationHistory(ctx, {
+              workosOrgId: token.workosOrgId,
+              mapId: map._id,
+              entityType: "service",
+              entityId: service.key,
+              changedBy: actor,
+              changeType: "update",
+              previousData: {
+                order: service.order,
+                departmentKey: service.departmentKey,
+              },
+              nextData: {
+                order: index,
+                departmentKey: op.departmentKey,
+              },
+            });
           }
         }
         summary.push("reordered services");

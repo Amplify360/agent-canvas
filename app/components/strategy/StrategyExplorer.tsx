@@ -166,18 +166,18 @@ export function StrategyExplorer() {
           </Tooltip>
         )}
 
-      {/* Strategy toolbar */}
-      <header className="toolbar">
-        <div className="toolbar__left">
-          <StrategyBreadcrumb items={breadcrumbItems} onNavigate={navigate} />
-        </div>
-        <div className="toolbar__right">
-          <span className="toolbar__badge">
-            <Icon name="map" size={14} />
-            Transformation Map
-          </span>
-        </div>
-      </header>
+        {/* Strategy toolbar */}
+        <header className="toolbar">
+          <div className="toolbar__left">
+            <StrategyBreadcrumb items={breadcrumbItems} onNavigate={navigate} />
+          </div>
+          <div className="toolbar__right">
+            <span className="toolbar__badge">
+              <Icon name="map" size={14} />
+              Transformation Map
+            </span>
+          </div>
+        </header>
 
         <main className="main-content">
           {content}
