@@ -346,26 +346,16 @@ export function Sidebar() {
     router.push(`/transformation-map?map=${encodeURIComponent(slug)}`);
   };
 
-  const handleCanvasSectionTrigger = () => {
-    if (isTransformationRoute) {
-      const targetCanvasId = currentCanvasId ?? canvases[0]?._id;
-      setIsCanvasPanelOpen(true);
-      router.push(targetCanvasId ? `/c/${targetCanvasId}` : '/');
-      return;
-    }
-
-    setIsCanvasPanelOpen((open) => !open);
+  const handleSelectCanvasWorkspace = () => {
+    const targetCanvasId = currentCanvasId ?? canvases[0]?._id;
+    setIsCanvasPanelOpen(true);
+    router.push(targetCanvasId ? `/c/${targetCanvasId}` : '/');
   };
 
-  const handleTransformationSectionTrigger = () => {
-    if (!isTransformationRoute) {
-      const targetMapSlug = activeTransformationMap?.slug ?? transformationMaps[0]?.slug;
-      setIsTransformationPanelOpen(true);
-      router.push(targetMapSlug ? `/transformation-map?map=${encodeURIComponent(targetMapSlug)}` : '/transformation-map');
-      return;
-    }
-
-    setIsTransformationPanelOpen((open) => !open);
+  const handleSelectTransformationWorkspace = () => {
+    const targetMapSlug = activeTransformationMap?.slug ?? transformationMaps[0]?.slug;
+    setIsTransformationPanelOpen(true);
+    router.push(targetMapSlug ? `/transformation-map?map=${encodeURIComponent(targetMapSlug)}` : '/transformation-map');
   };
 
   const handleCreateCanvas = async () => {
@@ -531,9 +521,8 @@ export function Sidebar() {
               <div className="sidebar__accordion-header">
                 <button
                   type="button"
-                  className={`sidebar__accordion-trigger ${!isTransformationRoute ? 'is-active' : ''}`}
-                  onClick={handleCanvasSectionTrigger}
-                  aria-expanded={isCanvasPanelOpen}
+                  className={`sidebar__accordion-link ${!isTransformationRoute ? 'is-active' : ''}`}
+                  onClick={handleSelectCanvasWorkspace}
                 >
                   <span className="sidebar__accordion-label">
                     <Icon name="layout-grid" />
@@ -541,10 +530,6 @@ export function Sidebar() {
                   </span>
                   <span className="sidebar__accordion-meta">
                     <span className="sidebar__accordion-count">{canvases.length}</span>
-                    <Icon
-                      name="chevron-down"
-                      className={`sidebar__accordion-chevron ${isCanvasPanelOpen ? 'is-open' : ''}`}
-                    />
                   </span>
                 </button>
                 <div className="sidebar__section-actions" ref={canvasActionsRef}>
@@ -581,6 +566,18 @@ export function Sidebar() {
                     </button>
                   </div>
                 </div>
+                <button
+                  type="button"
+                  className="sidebar__accordion-toggle"
+                  onClick={() => setIsCanvasPanelOpen((open) => !open)}
+                  aria-expanded={isCanvasPanelOpen}
+                  aria-label={isCanvasPanelOpen ? 'Collapse canvases' : 'Expand canvases'}
+                >
+                  <Icon
+                    name="chevron-down"
+                    className={`sidebar__accordion-chevron ${isCanvasPanelOpen ? 'is-open' : ''}`}
+                  />
+                </button>
               </div>
 
               {isCanvasPanelOpen && (
@@ -607,9 +604,8 @@ export function Sidebar() {
               <div className="sidebar__accordion-header">
                 <button
                   type="button"
-                  className={`sidebar__accordion-trigger ${isTransformationRoute ? 'is-active' : ''}`}
-                  onClick={handleTransformationSectionTrigger}
-                  aria-expanded={isTransformationPanelOpen}
+                  className={`sidebar__accordion-link ${isTransformationRoute ? 'is-active' : ''}`}
+                  onClick={handleSelectTransformationWorkspace}
                 >
                   <span className="sidebar__accordion-label">
                     <Icon name="compass" />
@@ -617,11 +613,19 @@ export function Sidebar() {
                   </span>
                   <span className="sidebar__accordion-meta">
                     <span className="sidebar__accordion-count">{transformationMaps.length}</span>
-                    <Icon
-                      name="chevron-down"
-                      className={`sidebar__accordion-chevron ${isTransformationPanelOpen ? 'is-open' : ''}`}
-                    />
                   </span>
+                </button>
+                <button
+                  type="button"
+                  className="sidebar__accordion-toggle"
+                  onClick={() => setIsTransformationPanelOpen((open) => !open)}
+                  aria-expanded={isTransformationPanelOpen}
+                  aria-label={isTransformationPanelOpen ? 'Collapse transformation maps' : 'Expand transformation maps'}
+                >
+                  <Icon
+                    name="chevron-down"
+                    className={`sidebar__accordion-chevron ${isTransformationPanelOpen ? 'is-open' : ''}`}
+                  />
                 </button>
               </div>
 

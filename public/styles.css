@@ -586,7 +586,7 @@ body.is-resizing-sidebar .main-wrapper {
     gap: var(--space-2);
 }
 
-.sidebar__accordion-trigger {
+.sidebar__accordion-link {
     flex: 1;
     display: flex;
     align-items: center;
@@ -602,12 +602,12 @@ body.is-resizing-sidebar .main-wrapper {
     text-align: left;
 }
 
-.sidebar__accordion-trigger:hover {
+.sidebar__accordion-link:hover {
     background: var(--bg-hover);
     color: var(--text-primary);
 }
 
-.sidebar__accordion-trigger.is-active {
+.sidebar__accordion-link.is-active {
     background: var(--accent-primary-muted);
     color: var(--accent-primary);
 }
@@ -645,9 +645,29 @@ body.is-resizing-sidebar .main-wrapper {
     text-align: center;
 }
 
-.sidebar__accordion-trigger.is-active .sidebar__accordion-count {
+.sidebar__accordion-link.is-active .sidebar__accordion-count {
     background: rgba(var(--accent-primary-rgb), 0.14);
     color: var(--accent-primary);
+}
+
+.sidebar__accordion-toggle {
+    width: 32px;
+    height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    border-radius: var(--radius-md);
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all var(--duration-fast) var(--ease-out);
+    flex-shrink: 0;
+}
+
+.sidebar__accordion-toggle:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
 }
 
 .sidebar__accordion-chevron {
