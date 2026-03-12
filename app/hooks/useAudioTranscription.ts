@@ -36,9 +36,7 @@ export function useAudioTranscription({
     onErrorRef.current = onError;
   }, [onError]);
 
-  const cleanup = useCallback(() => {
-    transcribeAbortRef.current?.abort();
-    transcribeAbortRef.current = null;
+  const releaseRecordingResources = useCallback(() => {
     processorNodeRef.current?.disconnect();
     sourceNodeRef.current?.disconnect();
     mediaStreamRef.current?.getTracks().forEach((track) => track.stop());
@@ -48,11 +46,17 @@ export function useAudioTranscription({
     mediaStreamRef.current = null;
     audioContextRef.current = null;
     captureFramesRef.current = [];
+  }, []);
+
+  const cleanup = useCallback(() => {
+    transcribeAbortRef.current?.abort();
+    transcribeAbortRef.current = null;
+    releaseRecordingResources();
     if (isMountedRef.current) {
       setIsRecording(false);
       setIsTranscribing(false);
     }
-  }, []);
+  }, [releaseRecordingResources]);
 
   useEffect(() => {
     return () => {
@@ -67,7 +71,7 @@ export function useAudioTranscription({
 
       const capturedFrames = captureFramesRef.current;
       const sampleRate = captureSampleRateRef.current;
-      cleanup();
+      releaseRecordingResources();
 
       if (capturedFrames.length === 0) {
         return;
@@ -109,7 +113,7 @@ export function useAudioTranscription({
         if (transcribeAbortRef.current === abortController) {
           transcribeAbortRef.current = null;
         }
-        if (isMountedRef.current && transcribeRequestRef.current === requestId) {
+        if (isMountedRef.current) {
           setIsTranscribing(false);
         }
       }

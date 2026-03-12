@@ -88,10 +88,14 @@ export function FormAssistPanel<Field extends string>({
                   type="button"
                   className={`btn btn--sm btn--ghost ${isRecording ? 'strategy-ai-assist__recording-btn' : ''}`.trim()}
                   onClick={onToggleRecording}
-                  disabled={isAiBusy && !isRecording}
+                  disabled={isAiBusy}
                 >
-                  <Icon name={isRecording ? 'square' : 'mic'} size={14} />
-                  {isRecording ? 'Stop recording' : 'Record'}
+                  <Icon
+                    name={isTranscribing ? 'loader-2' : isRecording ? 'square' : 'mic'}
+                    size={14}
+                    className={isTranscribing ? 'loading-icon' : undefined}
+                  />
+                  {isTranscribing ? 'Transcribing...' : isRecording ? 'Stop recording' : 'Record'}
                 </button>
                 <button
                   type="button"
@@ -104,14 +108,31 @@ export function FormAssistPanel<Field extends string>({
                 </button>
               </div>
             </div>
-            <textarea
-              className="form-textarea"
-              value={assistNotes}
-              onChange={(event) => onNotesChange(event.target.value)}
-              disabled={isAiBusy}
-              rows={6}
-              placeholder="Paste a narrative, workshop notes, or a transcript here."
-            />
+            {isTranscribing && (
+              <div className="strategy-ai-assist__status" role="status" aria-live="polite">
+                <Icon name="loader-2" size={16} className="loading-icon" />
+                <div>
+                  <strong>Transcribing audio...</strong>
+                  <p className="form-help">Your recording has stopped. The transcript will appear in the notes box when it is ready.</p>
+                </div>
+              </div>
+            )}
+            <div className="strategy-ai-assist__notes-shell">
+              <textarea
+                className="form-textarea"
+                value={assistNotes}
+                onChange={(event) => onNotesChange(event.target.value)}
+                disabled={isAiBusy}
+                rows={6}
+                placeholder="Paste a narrative, workshop notes, or a transcript here."
+              />
+              {isTranscribing && (
+                <div className="strategy-ai-assist__notes-overlay" aria-hidden="true">
+                  <Icon name="loader-2" size={18} className="loading-icon" />
+                  <span>Processing recording...</span>
+                </div>
+              )}
+            </div>
             <div className="strategy-ai-assist__options">
               <label className="checkbox-label">
                 <input
@@ -122,7 +143,6 @@ export function FormAssistPanel<Field extends string>({
                 />
                 <span>Fill empty fields only</span>
               </label>
-              {isTranscribing && <span className="form-help">Transcribing audio...</span>}
             </div>
           </div>
           <div className="strategy-ai-assist__advanced">
