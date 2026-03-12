@@ -172,7 +172,6 @@ export default defineSchema({
     updatedAt: v.number(),
   })
     .index("by_org", ["workosOrgId"])
-    .index("by_slug", ["slug"])
     .index("by_org_slug", ["workosOrgId", "slug"]),
 
   transformationPressures: defineTable({

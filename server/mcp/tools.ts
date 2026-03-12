@@ -205,7 +205,7 @@ export const MCP_TOOLS = [
   },
   {
     name: "apply_transformation_map_changes",
-    description: "Applies structural edits to a Transformation Map such as creating, updating, reordering, and relocating departments, pressures, objectives, and services.",
+    description: "Applies structural edits to a Transformation Map such as creating, updating, reordering, and relocating departments and services.",
     inputSchema: {
       type: "object",
       properties: {

@@ -413,3 +413,19 @@ export async function listMapChildren(ctx: QueryCtx | MutationCtx, mapId: Id<"tr
 
   return { pressures, objectives, departments, services, analyses };
 }
+
+export async function listServiceAnalysesForServices(
+  ctx: QueryCtx | MutationCtx,
+  services: Array<{ _id: Id<"transformationServices"> }>
+) {
+  const analyses = await Promise.all(
+    services.map((service) =>
+      ctx.db
+        .query("transformationServiceAnalyses")
+        .withIndex("by_service", (q) => q.eq("serviceId", service._id))
+        .first()
+    )
+  );
+
+  return analyses.filter((analysis): analysis is ServiceAnalysisDocument => analysis !== null);
+}

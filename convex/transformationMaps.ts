@@ -8,6 +8,7 @@ import {
   buildOverviewSnapshot,
   buildServiceSnapshot,
   departmentAnalysisPayloadValidator,
+  listServiceAnalysesForServices,
   listMapChildren,
   normalizeSlug,
   recordTransformationHistory,
@@ -22,7 +23,7 @@ import {
   MOCK_OBJECTIVES,
   MOCK_PRESSURES,
   MOCK_SERVICES,
-} from "../app/strategy/mockData";
+} from "../shared/transformationMapPrototype";
 
 function buildArtifactMeta(actor: string, now: number, sourceType: "human" | "imported" | "system" | "ai_generated" | "ai_edited" = "human") {
   return {
@@ -409,7 +410,7 @@ export const getDepartmentSnapshot = query({
     if (!department) {
       return null;
     }
-    const [objectives, services, analyses] = await Promise.all([
+    const [objectives, services] = await Promise.all([
       ctx.db
         .query("transformationObjectives")
         .withIndex("by_map_department", (q) => q.eq("mapId", mapId).eq("departmentKey", departmentKey))
@@ -418,8 +419,8 @@ export const getDepartmentSnapshot = query({
         .query("transformationServices")
         .withIndex("by_department", (q) => q.eq("mapId", mapId).eq("departmentKey", departmentKey))
         .collect(),
-      ctx.db.query("transformationServiceAnalyses").withIndex("by_map", (q) => q.eq("mapId", mapId)).collect(),
     ]);
+    const analyses = await listServiceAnalysesForServices(ctx, services);
 
     return buildDepartmentSnapshot({ map, department, objectives, services, analyses });
   },
