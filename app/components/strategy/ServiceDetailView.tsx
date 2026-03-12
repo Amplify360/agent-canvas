@@ -125,7 +125,7 @@ export function ServiceDetailView({
           onClick={() => setActiveTab('initiatives')}
         >
           <Icon name="rocket" size={16} />
-          Initiatives
+          Service Initiatives
           {initiatives.length > 0 && <span className="strategy-tab__count">{initiatives.length}</span>}
         </button>
       </div>
@@ -138,7 +138,7 @@ export function ServiceDetailView({
         <DeviationTable deviations={deviations} />
       )}
       {activeTab === 'initiatives' && (
-        <InitiativeList initiatives={initiatives} deviations={deviations} />
+        <InitiativeList initiatives={initiatives} />
       )}
     </div>
   );
@@ -297,25 +297,20 @@ function DeviationTable({ deviations }: { deviations: Deviation[] }) {
   );
 }
 
-function InitiativeList({ initiatives, deviations }: { initiatives: Initiative[]; deviations: Deviation[] }) {
+function InitiativeList({ initiatives }: { initiatives: Initiative[] }) {
   if (initiatives.length === 0) {
     return (
       <div className="strategy-empty">
         <Icon name="rocket" size={32} />
-        <p>No initiatives linked to this service yet.</p>
+        <p>No initiatives defined for this service yet.</p>
       </div>
     );
   }
-
-  const deviationMap = new Map(deviations.map((d) => [d.id, d]));
 
   return (
     <div className="strategy-initiative-list">
       {initiatives.map((init) => {
         const status = INITIATIVE_STATUS_CONFIG[init.status];
-        const addressedDeviations = init.deviationIds
-          .map((id) => deviationMap.get(id))
-          .filter(Boolean) as Deviation[];
 
         return (
           <div key={init.id} className="strategy-initiative-card">
@@ -324,16 +319,6 @@ function InitiativeList({ initiatives, deviations }: { initiatives: Initiative[]
               <span className={status.badgeClass}>{status.label}</span>
             </div>
             <p className="strategy-initiative-card__description">{init.description}</p>
-
-            {addressedDeviations.length > 0 && (
-              <div className="strategy-initiative-card__deviations">
-                <Icon name="alert-triangle" size={14} />
-                <span>Addresses:</span>
-                {addressedDeviations.map((d) => (
-                  <span key={d.id} className="chip chip--sm">{d.what}</span>
-                ))}
-              </div>
-            )}
 
             {init.linkedAgents.length > 0 && (
               <div className="strategy-initiative-card__agents">

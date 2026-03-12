@@ -103,9 +103,8 @@ export interface LinkedAgent {
 
 export interface Initiative {
   id: string;
+  /** Initiatives are scoped to a service and may be informed by many factors, not only deviations. */
   serviceId: string;
-  /** Deviations this initiative addresses (zero, one, or many) */
-  deviationIds: string[];
   title: string;
   description: string;
   status: 'proposed' | 'approved' | 'in-progress' | 'done';

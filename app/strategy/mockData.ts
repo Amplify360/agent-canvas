@@ -509,7 +509,6 @@ export const MOCK_INITIATIVES: Initiative[] = [
   {
     id: 'init-1',
     serviceId: 'svc-onboarding',
-    deviationIds: ['dev-1', 'dev-2'],
     title: 'CRM-Triggered Onboarding Automation',
     description: 'Build CRM workflow that automatically notifies CS, creates onboarding task, and auto-assigns CSM based on territory and capacity when a deal closes.',
     status: 'approved',
@@ -521,7 +520,6 @@ export const MOCK_INITIATIVES: Initiative[] = [
   {
     id: 'init-2',
     serviceId: 'svc-onboarding',
-    deviationIds: ['dev-3'],
     title: 'Single-API Account Provisioning',
     description: 'Develop unified provisioning service that creates accounts across all 3 systems via one API call.',
     status: 'proposed',
@@ -532,7 +530,6 @@ export const MOCK_INITIATIVES: Initiative[] = [
   {
     id: 'init-3',
     serviceId: 'svc-onboarding',
-    deviationIds: ['dev-4', 'dev-5'],
     title: 'Guided Onboarding Redesign',
     description: 'Redesign onboarding so CSM delivers training directly with gate-based progression — eliminates enablement handoff and prevents incomplete setup.',
     status: 'in-progress',
@@ -545,7 +542,6 @@ export const MOCK_INITIATIVES: Initiative[] = [
   {
     id: 'init-4',
     serviceId: 'svc-deal',
-    deviationIds: ['dev-6'],
     title: 'CPQ Implementation',
     description: 'Deploy configure-price-quote tool to auto-generate proposals from pricing rules and deal parameters.',
     status: 'proposed',
@@ -556,7 +552,6 @@ export const MOCK_INITIATIVES: Initiative[] = [
   {
     id: 'init-5',
     serviceId: 'svc-deal',
-    deviationIds: ['dev-7', 'dev-8'],
     title: 'CRM-to-Billing Integration',
     description: 'Integrate CRM with billing system to auto-create invoices when deals close, eliminating manual handoff and data entry.',
     status: 'approved',
@@ -570,7 +565,6 @@ export const MOCK_INITIATIVES: Initiative[] = [
   {
     id: 'init-6',
     serviceId: 'svc-invoice',
-    deviationIds: ['dev-9', 'dev-11'],
     title: 'Automated Invoice Generation',
     description: 'Auto-generate invoices from deal data with integrated tax engine — eliminates manual data entry and tax lookup.',
     status: 'approved',
@@ -582,7 +576,6 @@ export const MOCK_INITIATIVES: Initiative[] = [
   {
     id: 'init-7',
     serviceId: 'svc-invoice',
-    deviationIds: ['dev-10'],
     title: 'Automated AR Tracking & Alerts',
     description: 'Configure billing system to automatically track payment status and send alerts for overdue invoices.',
     status: 'proposed',
@@ -593,7 +586,6 @@ export const MOCK_INITIATIVES: Initiative[] = [
   {
     id: 'init-8',
     serviceId: 'svc-invoice',
-    deviationIds: ['dev-12'],
     title: 'Billing-to-RevRec Auto-Sync',
     description: 'Connect billing system to revenue recognition so payment events automatically update rev rec schedules.',
     status: 'approved',

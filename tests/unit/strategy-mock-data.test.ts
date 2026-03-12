@@ -8,7 +8,6 @@ describe('countUniqueLinkedAgentsForService', () => {
       {
         id: 'init-1',
         serviceId: 'svc-a',
-        deviationIds: ['dev-1'],
         title: 'Initiative One',
         description: 'First initiative',
         status: 'approved',
@@ -20,7 +19,6 @@ describe('countUniqueLinkedAgentsForService', () => {
       {
         id: 'init-2',
         serviceId: 'svc-a',
-        deviationIds: ['dev-2'],
         title: 'Initiative Two',
         description: 'Second initiative',
         status: 'proposed',
@@ -32,7 +30,6 @@ describe('countUniqueLinkedAgentsForService', () => {
       {
         id: 'init-3',
         serviceId: 'svc-b',
-        deviationIds: ['dev-3'],
         title: 'Other Service Initiative',
         description: 'Different service',
         status: 'done',

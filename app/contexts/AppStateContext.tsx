@@ -16,6 +16,9 @@ interface Toast {
   type: 'success' | 'error' | 'info';
 }
 
+const DEFAULT_SIDEBAR_COLLAPSED = false;
+const DEFAULT_SIDEBAR_WIDTH = 280;
+
 interface AppStateContextValue {
   isLoading: boolean;
   loadingMessage: string;
@@ -49,11 +52,29 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
     message: '',
   });
   const [toasts, setToasts] = useState<Toast[]>([]);
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useLocalStorage(STORAGE_KEYS.SIDEBAR_COLLAPSED, false);
-  const [sidebarWidth, setSidebarWidth] = useLocalStorage(STORAGE_KEYS.SIDEBAR_WIDTH, 280);
+  const [storedSidebarCollapsed, setStoredSidebarCollapsed] = useLocalStorage(
+    STORAGE_KEYS.SIDEBAR_COLLAPSED,
+    DEFAULT_SIDEBAR_COLLAPSED
+  );
+  const [storedSidebarWidth, setStoredSidebarWidth] = useLocalStorage(
+    STORAGE_KEYS.SIDEBAR_WIDTH,
+    DEFAULT_SIDEBAR_WIDTH
+  );
   const [quickLookAgent, setQuickLookAgent] = useState<Agent | null>(null);
   const [themePreference, setThemePreference] = useLocalStorage<ThemePreference>(STORAGE_KEYS.THEME, 'system');
   const [resolvedTheme, setResolvedTheme] = useState<ThemeValue>('light');
+  const [hasHydratedUiPreferences, setHasHydratedUiPreferences] = useState(false);
+
+  useEffect(() => {
+    setHasHydratedUiPreferences(true);
+  }, []);
+
+  const isSidebarCollapsed = hasHydratedUiPreferences
+    ? storedSidebarCollapsed
+    : DEFAULT_SIDEBAR_COLLAPSED;
+  const sidebarWidth = hasHydratedUiPreferences
+    ? storedSidebarWidth
+    : DEFAULT_SIDEBAR_WIDTH;
 
   // Resolve theme preference to actual theme value
   useEffect(() => {
@@ -130,12 +151,12 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
   }, [hideToast]);
 
   const toggleSidebar = useCallback(() => {
-    setIsSidebarCollapsed((prev) => !prev);
-  }, [setIsSidebarCollapsed]);
+    setStoredSidebarCollapsed((prev) => !prev);
+  }, [setStoredSidebarCollapsed]);
 
   const setSidebarCollapsed = useCallback((collapsed: boolean) => {
-    setIsSidebarCollapsed(collapsed);
-  }, [setIsSidebarCollapsed]);
+    setStoredSidebarCollapsed(collapsed);
+  }, [setStoredSidebarCollapsed]);
 
   const value = useMemo<AppStateContextValue>(() => ({
     isLoading,
@@ -152,13 +173,13 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
     hideToast,
     toggleSidebar,
     setSidebarCollapsed,
-    setSidebarWidth,
+    setSidebarWidth: setStoredSidebarWidth,
     setQuickLookAgent,
     setThemePreference,
   }), [
     isLoading, loadingMessage, toasts, isSidebarCollapsed, sidebarWidth,
     quickLookAgent, themePreference, resolvedTheme, showLoading, hideLoading,
-    showToast, hideToast, toggleSidebar, setSidebarCollapsed, setSidebarWidth,
+    showToast, hideToast, toggleSidebar, setSidebarCollapsed, setStoredSidebarWidth,
     setQuickLookAgent, setThemePreference,
   ]);
 
