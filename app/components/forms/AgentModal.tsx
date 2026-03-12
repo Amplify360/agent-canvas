@@ -4,14 +4,13 @@
 
 'use client';
 
-import React, { useState, useEffect, useId, useRef } from 'react';
+import React, { useState, useEffect, useId } from 'react';
 import { Agent, AgentCreateDefaults, AgentFormData, AgentMetrics } from '@/types/agent';
 import { Modal } from '../ui/Modal';
 import { useAgents } from '@/contexts/AgentContext';
 import { useAppState } from '@/contexts/AppStateContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAsyncOperation } from '@/hooks/useAsyncOperation';
-import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useQuery, useCanQuery } from '@/hooks/useConvex';
 import { validateAgentForm } from '@/utils/validation';
 import { getAvailableTools, getToolDisplay, DEFAULT_PHASE } from '@/utils/config';
@@ -19,22 +18,19 @@ import { AGENT_STATUS, AGENT_STATUS_OPTIONS, AgentStatus } from '@/types/validat
 import { buildAgentMutationInput, getAgentCoreFields } from '@/utils/agentModel';
 import { STORAGE_KEYS } from '@/constants/storageKeys';
 import {
+  AGENT_ASSIST_FIELD_CONFIG,
   AGENT_ASSIST_MODEL_FALLBACK,
   DEFAULT_AGENT_GLOBAL_ASSIST_PROMPT,
+  type AgentAssistFormData,
   buildAgentAssistFormData,
-  createEmptyAgentAssistSelection,
-  filterAgentAssistPatch,
-  getAgentAssistDiff,
   applyAgentAssistPatch,
-  AGENT_ASSIST_FIELD_LABELS,
   type AgentAssistField,
   type AgentAssistRequest,
-  type AgentAssistResult,
-  type AgentTranscribeResult,
 } from '@/agents/aiAssist';
-import { encodeWavAudio } from '@/strategy/audioRecording';
+import { FormAssistPanel } from '@/components/ai/FormAssistPanel';
 import { Icon } from '@/components/ui/Icon';
 import { Tooltip } from '@/components/ui/Tooltip';
+import { useStructuredFormAssist } from '@/hooks/useStructuredFormAssist';
 import { api } from '../../../convex/_generated/api';
 
 interface AgentModalProps {
@@ -92,10 +88,6 @@ export function AgentModal({ isOpen, onClose, agent, defaults }: AgentModalProps
   const { createAgent, updateAgent } = useAgents();
   const { showToast } = useAppState();
   const { currentOrgId } = useAuth();
-  const [assistPrompt, setAssistPrompt] = useLocalStorage(
-    STORAGE_KEYS.AGENT_ASSIST_PROMPT,
-    DEFAULT_AGENT_GLOBAL_ASSIST_PROMPT
-  );
   // Use Convex's auth state to gate queries - this ensures token is actually set
   const { canQuery } = useCanQuery();
   const executeOperation = useAsyncOperation();
@@ -116,24 +108,44 @@ export function AgentModal({ isOpen, onClose, agent, defaults }: AgentModalProps
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [newJourneyStep, setNewJourneyStep] = useState('');
-  const [isAssistOpen, setIsAssistOpen] = useState(false);
-  const [isAdvancedPromptOpen, setIsAdvancedPromptOpen] = useState(false);
-  const [assistNotes, setAssistNotes] = useState('');
-  const [fillEmptyOnly, setFillEmptyOnly] = useState(false);
-  const [assistError, setAssistError] = useState<string | null>(null);
-  const [isGeneratingAssist, setIsGeneratingAssist] = useState(false);
-  const [isTranscribing, setIsTranscribing] = useState(false);
-  const [isRecording, setIsRecording] = useState(false);
-  const [assistResult, setAssistResult] = useState<AgentAssistResult | null>(null);
-  const [selectedPatchFields, setSelectedPatchFields] = useState<Record<AgentAssistField, boolean>>(
-    createEmptyAgentAssistSelection({})
-  );
-  const mediaStreamRef = useRef<MediaStream | null>(null);
-  const audioContextRef = useRef<AudioContext | null>(null);
-  const processorNodeRef = useRef<ScriptProcessorNode | null>(null);
-  const sourceNodeRef = useRef<MediaStreamAudioSourceNode | null>(null);
-  const captureFramesRef = useRef<Float32Array[]>([]);
-  const captureSampleRateRef = useRef(16000);
+  const availableTools = getAvailableTools();
+  const availableToolOptions = availableTools.map((tool) => ({
+    id: tool,
+    label: getToolDisplay(tool).label,
+  }));
+  const agentAssistContext = {
+    current: buildAgentAssistFormData(formData),
+    availableTools: availableToolOptions,
+    availableStatuses: AGENT_STATUS_OPTIONS,
+    existingCategories,
+  };
+  const agentAssist = useStructuredFormAssist<
+    AgentAssistFormData,
+    AgentAssistField,
+    AgentAssistRequest
+  >({
+    storageKey: STORAGE_KEYS.AGENT_ASSIST_PROMPT,
+    defaultPrompt: DEFAULT_AGENT_GLOBAL_ASSIST_PROMPT,
+    modelFallback: AGENT_ASSIST_MODEL_FALLBACK,
+    current: agentAssistContext.current,
+    fields: AGENT_ASSIST_FIELD_CONFIG,
+    buildRequest: (notes, promptOverride) => ({
+      promptOverride,
+      notes,
+      context: agentAssistContext,
+    }),
+    onApplyPatch: (patch) => {
+      setFormData((current) => ({
+        ...current,
+        ...applyAgentAssistPatch(buildAgentAssistFormData(current), patch),
+      }));
+    },
+    requestEndpoint: '/api/agents/assist',
+    transcribeEndpoint: '/api/ai/transcribe',
+    onToast: showToast,
+    enabled: isOpen,
+  });
+  const { resetAssistState } = agentAssist;
 
   // Load agent data when editing
   useEffect(() => {
@@ -161,21 +173,8 @@ export function AgentModal({ isOpen, onClose, agent, defaults }: AgentModalProps
       setErrors({});
     }
     setNewJourneyStep('');
-    setAssistNotes('');
-    setFillEmptyOnly(false);
-    setAssistError(null);
-    setAssistResult(null);
-    setSelectedPatchFields(createEmptyAgentAssistSelection({}));
-  }, [agent, defaults, isOpen]);
-
-  useEffect(() => {
-    if (isOpen) {
-      return;
-    }
-
-    cleanupAudioCapture();
-    setIsRecording(false);
-  }, [isOpen]);
+    resetAssistState();
+  }, [agent, defaults, isOpen, resetAssistState]);
 
   const validateField = (field: string, value: string) => {
     const testData = { ...formData, [field]: value };
@@ -265,372 +264,44 @@ export function AgentModal({ isOpen, onClose, agent, defaults }: AgentModalProps
     }));
   };
 
-  const availableTools = getAvailableTools();
-  const availableToolOptions = availableTools.map((tool) => ({
-    id: tool,
-    label: getToolDisplay(tool).label,
-  }));
-  const assistContext = {
-    current: buildAgentAssistFormData(formData),
-    availableTools: availableToolOptions,
-    availableStatuses: AGENT_STATUS_OPTIONS,
-    existingCategories,
-  };
-  const assistDiff = assistResult ? getAgentAssistDiff(assistContext.current, assistResult.patch) : [];
-  const isAiBusy = isGeneratingAssist || isSubmitting || isTranscribing;
+  const isAiBusy = agentAssist.isAiBusy || isSubmitting;
 
   const getInputClassName = (field: string, baseClass: string = 'form-input') => {
     return errors[field] ? `${baseClass} ${baseClass}--error` : baseClass;
   };
 
-  const applySelectedPatch = () => {
-    if (!assistResult) {
-      return;
-    }
-
-    const patch = Object.entries(assistResult.patch).reduce<Partial<typeof assistContext.current>>((acc, [field, value]) => {
-      const typedField = field as AgentAssistField;
-      if (selectedPatchFields[typedField]) {
-        acc[typedField] = value as never;
-      }
-      return acc;
-    }, {});
-
-    setFormData((current) => ({
-      ...current,
-      ...applyAgentAssistPatch(buildAgentAssistFormData(current), patch),
-    }));
-    setAssistResult(null);
-    setSelectedPatchFields(createEmptyAgentAssistSelection({}));
-    showToast('Applied AI suggestions to the form', 'success');
-  };
-
-  const handleGlobalAssist = async () => {
-    if (!assistNotes.trim()) {
-      setAssistError('Paste notes or a transcript before populating the form.');
-      return;
-    }
-
-    setAssistError(null);
-    setIsGeneratingAssist(true);
-    setAssistResult(null);
-    try {
-      const response = await fetch('/api/agents/assist', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          promptOverride: assistPrompt,
-          notes: assistNotes,
-          context: assistContext,
-        } satisfies AgentAssistRequest),
-      });
-
-      const payload = await response.json() as Partial<AgentAssistResult> & { error?: string };
-      if (!response.ok || !payload.patch) {
-        throw new Error(payload.error || 'Failed to populate form');
-      }
-
-      const patch = filterAgentAssistPatch(assistContext.current, payload.patch, fillEmptyOnly);
-      const nextResult: AgentAssistResult = {
-        patch,
-        fieldMeta: payload.fieldMeta ?? {},
-        warnings: payload.warnings ?? [],
-        unmappedNotes: payload.unmappedNotes ?? [],
-        model: payload.model ?? 'unknown',
-      };
-
-      setAssistResult(nextResult);
-      setSelectedPatchFields(createEmptyAgentAssistSelection(nextResult.patch));
-      if (Object.keys(nextResult.patch).length === 0) {
-        showToast('No field updates were suggested from those notes', 'info');
-      } else {
-        showToast('AI suggestions are ready to review', 'success');
-      }
-    } catch (assistRequestError) {
-      setAssistError(assistRequestError instanceof Error ? assistRequestError.message : 'Failed to populate form.');
-    } finally {
-      setIsGeneratingAssist(false);
-    }
-  };
-
-  const handleToggleRecording = async () => {
-    if (isRecording) {
-      stopAudioCapture();
-      return;
-    }
-
-    if (!navigator.mediaDevices?.getUserMedia || typeof AudioContext === 'undefined') {
-      setAssistError('Audio recording is not supported in this browser.');
-      return;
-    }
-
-    try {
-      setAssistError(null);
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      mediaStreamRef.current = stream;
-      captureFramesRef.current = [];
-
-      const audioContext = new AudioContext();
-      const sourceNode = audioContext.createMediaStreamSource(stream);
-      const processorNode = audioContext.createScriptProcessor(4096, 1, 1);
-      const sinkNode = audioContext.createGain();
-      sinkNode.gain.value = 0;
-
-      captureSampleRateRef.current = audioContext.sampleRate;
-      audioContextRef.current = audioContext;
-      sourceNodeRef.current = sourceNode;
-      processorNodeRef.current = processorNode;
-
-      processorNode.onaudioprocess = (event) => {
-        const channel = event.inputBuffer.getChannelData(0);
-        captureFramesRef.current.push(new Float32Array(channel));
-      };
-
-      sourceNode.connect(processorNode);
-      processorNode.connect(sinkNode);
-      sinkNode.connect(audioContext.destination);
-
-      setIsRecording(true);
-    } catch (recordingError) {
-      cleanupAudioCapture();
-      setAssistError(recordingError instanceof Error ? recordingError.message : 'Failed to start recording.');
-    }
-  };
-
-  const stopAudioCapture = async () => {
-    if (!isRecording) {
-      return;
-    }
-
-    setIsRecording(false);
-
-    const capturedFrames = captureFramesRef.current;
-    const sampleRate = captureSampleRateRef.current;
-    cleanupAudioCapture();
-
-    if (capturedFrames.length === 0) {
-      return;
-    }
-
-    const audioBlob = encodeWavAudio(capturedFrames, sampleRate);
-    setIsTranscribing(true);
-    try {
-      const formPayload = new FormData();
-      formPayload.append('audio', new File([audioBlob], 'agent-notes.wav', { type: audioBlob.type }));
-      const response = await fetch('/api/agents/transcribe', {
-        method: 'POST',
-        body: formPayload,
-      });
-      const payload = await response.json() as Partial<AgentTranscribeResult> & { error?: string };
-      if (!response.ok || !payload.transcript) {
-        throw new Error(payload.error || 'Failed to transcribe audio');
-      }
-
-      setAssistNotes((current) => current.trim()
-        ? `${current.trim()}\n\n${payload.transcript?.trim() ?? ''}`.trim()
-        : payload.transcript?.trim() ?? '');
-      showToast('Transcript added to notes', 'success');
-    } catch (transcribeError) {
-      setAssistError(transcribeError instanceof Error ? transcribeError.message : 'Failed to transcribe audio.');
-    } finally {
-      setIsTranscribing(false);
-    }
-  };
-
-  const cleanupAudioCapture = () => {
-    processorNodeRef.current?.disconnect();
-    sourceNodeRef.current?.disconnect();
-    mediaStreamRef.current?.getTracks().forEach((track) => track.stop());
-    audioContextRef.current?.close().catch(() => undefined);
-    processorNodeRef.current = null;
-    sourceNodeRef.current = null;
-    mediaStreamRef.current = null;
-    audioContextRef.current = null;
-    captureFramesRef.current = [];
-  };
-
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={agent ? 'Edit Agent' : 'New Agent'} size="large" closeOnOverlayClick={false}>
       <form onSubmit={handleSubmit} className="agent-form">
-        <section className="strategy-ai-assist">
-          <button
-            type="button"
-            className="strategy-ai-assist__toggle"
-            onClick={() => setIsAssistOpen((current) => !current)}
-            aria-expanded={isAssistOpen}
-          >
-            <span className="strategy-ai-assist__toggle-main">
-              <Icon name="sparkles" size={16} />
-              <span>AI Assist</span>
-            </span>
-            <div className="strategy-ai-assist__toggle-meta">
-              <span className="form-help">Paste notes or transcript and populate this form with {AGENT_ASSIST_MODEL_FALLBACK.replace(/^openai\//, '')}.</span>
-              <Icon name={isAssistOpen ? 'chevron-up' : 'chevron-down'} size={16} />
-            </div>
-          </button>
-          {isAssistOpen && (
-            <div className="strategy-ai-assist__body">
-              <div className="form-group">
-                <div className="strategy-ai-assist__label-row">
-                  <label htmlFor="agent-assist-notes" className="form-label">Notes / transcript</label>
-                  <div className="strategy-ai-assist__actions">
-                    <button
-                      type="button"
-                      className={`btn btn--sm btn--ghost ${isRecording ? 'strategy-ai-assist__recording-btn' : ''}`.trim()}
-                      onClick={handleToggleRecording}
-                      disabled={isAiBusy && !isRecording}
-                    >
-                      <Icon name={isRecording ? 'square' : 'mic'} size={14} />
-                      {isRecording ? 'Stop recording' : 'Record'}
-                    </button>
-                    <button
-                      type="button"
-                      className="btn btn--sm btn--secondary"
-                      onClick={handleGlobalAssist}
-                      disabled={isAiBusy}
-                    >
-                      <Icon name={isGeneratingAssist ? 'loader-2' : 'sparkles'} size={14} className={isGeneratingAssist ? 'loading-icon' : undefined} />
-                      {isGeneratingAssist ? 'Populating...' : 'Populate form'}
-                    </button>
-                  </div>
-                </div>
-                <textarea
-                  id="agent-assist-notes"
-                  className="form-textarea"
-                  value={assistNotes}
-                  onChange={(event) => setAssistNotes(event.target.value)}
-                  disabled={isSubmitting || isGeneratingAssist || isTranscribing}
-                  rows={6}
-                  placeholder="Paste a narrative, workshop notes, or a transcript here."
-                />
-                <div className="strategy-ai-assist__options">
-                  <label className="checkbox-label">
-                    <input
-                      type="checkbox"
-                      checked={fillEmptyOnly}
-                      onChange={(event) => setFillEmptyOnly(event.target.checked)}
-                      disabled={isAiBusy}
-                    />
-                    <span>Fill empty fields only</span>
-                  </label>
-                  {isTranscribing && <span className="form-help">Transcribing audio...</span>}
-                </div>
-              </div>
-              <div className="strategy-ai-assist__advanced">
-                <button
-                  type="button"
-                  className="btn btn--sm btn--ghost"
-                  onClick={() => setIsAdvancedPromptOpen((current) => !current)}
-                  aria-expanded={isAdvancedPromptOpen}
-                >
-                  <Icon name={isAdvancedPromptOpen ? 'chevron-up' : 'chevron-down'} size={14} />
-                  Advanced prompt
-                </button>
-                {isAdvancedPromptOpen && (
-                  <div className="strategy-ai-assist__advanced-body">
-                    <div className="form-group">
-                      <label htmlFor="agent-assist-prompt" className="form-label">Assist instructions</label>
-                      <textarea
-                        id="agent-assist-prompt"
-                        className="form-textarea"
-                        value={assistPrompt}
-                        onChange={(event) => setAssistPrompt(event.target.value)}
-                        rows={4}
-                        disabled={isAiBusy}
-                      />
-                    </div>
-                    <div className="strategy-ai-assist__prompt-actions">
-                      <button
-                        type="button"
-                        className="btn btn--sm btn--ghost"
-                        onClick={() => setAssistPrompt(DEFAULT_AGENT_GLOBAL_ASSIST_PROMPT)}
-                      >
-                        Reset prompt
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-              {assistError && <div className="form-error">{assistError}</div>}
-              {assistResult && (
-                <div className="strategy-ai-assist__proposal">
-                  <div className="strategy-ai-assist__proposal-header">
-                    <div>
-                      <h3 className="strategy-ai-assist__proposal-title">Proposed updates</h3>
-                      <p className="form-help">Review and apply the suggested field changes before saving the form.</p>
-                    </div>
-                    <span className="badge badge--info">{assistResult.model.replace(/^openai\//, '')}</span>
-                  </div>
-                  {assistDiff.length > 0 ? (
-                    <div className="strategy-ai-assist__proposal-list">
-                      {assistDiff.map((item) => (
-                        <label key={item.field} className="strategy-ai-assist__proposal-item">
-                          <input
-                            type="checkbox"
-                            checked={selectedPatchFields[item.field]}
-                            onChange={(event) =>
-                              setSelectedPatchFields((current) => ({
-                                ...current,
-                                [item.field]: event.target.checked,
-                              }))
-                            }
-                          />
-                          <div className="strategy-ai-assist__proposal-item-body">
-                            <div className="strategy-ai-assist__proposal-item-header">
-                              <strong>{AGENT_ASSIST_FIELD_LABELS[item.field]}</strong>
-                              {assistResult.fieldMeta[item.field]?.reason && (
-                                <span className="form-help">{assistResult.fieldMeta[item.field]?.reason}</span>
-                              )}
-                            </div>
-                            <div className="strategy-ai-assist__proposal-values">
-                              <div>
-                                <span className="form-help">Current</span>
-                                <pre>{item.currentValue}</pre>
-                              </div>
-                              <div>
-                                <span className="form-help">Proposed</span>
-                                <pre>{item.proposedValue}</pre>
-                              </div>
-                            </div>
-                          </div>
-                        </label>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="form-help">No field changes were proposed from the current notes and form state.</p>
-                  )}
-                  {assistResult.warnings.length > 0 && (
-                    <div className="strategy-ai-assist__messages">
-                      {assistResult.warnings.map((warning, index) => (
-                        <p key={`${warning}-${index}`} className="form-help">{warning}</p>
-                      ))}
-                    </div>
-                  )}
-                  <div className="strategy-ai-assist__proposal-actions">
-                    <button
-                      type="button"
-                      className="btn btn--secondary btn--sm"
-                      onClick={applySelectedPatch}
-                      disabled={!assistDiff.some((item) => selectedPatchFields[item.field])}
-                    >
-                      Apply selected
-                    </button>
-                    <button
-                      type="button"
-                      className="btn btn--ghost btn--sm"
-                      onClick={() => {
-                        setAssistResult(null);
-                        setSelectedPatchFields(createEmptyAgentAssistSelection({}));
-                      }}
-                    >
-                      Dismiss
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-        </section>
+        <FormAssistPanel
+          modelFallback={agentAssist.modelFallback}
+          prompt={agentAssist.prompt}
+          onPromptChange={agentAssist.setPrompt}
+          onResetPrompt={agentAssist.resetPrompt}
+          isAssistOpen={agentAssist.isAssistOpen}
+          onToggleOpen={() => agentAssist.setIsAssistOpen(!agentAssist.isAssistOpen)}
+          isAdvancedPromptOpen={agentAssist.isAdvancedPromptOpen}
+          onToggleAdvanced={() => agentAssist.setIsAdvancedPromptOpen(!agentAssist.isAdvancedPromptOpen)}
+          assistNotes={agentAssist.assistNotes}
+          onNotesChange={agentAssist.setAssistNotes}
+          fillEmptyOnly={agentAssist.fillEmptyOnly}
+          onFillEmptyOnlyChange={agentAssist.setFillEmptyOnly}
+          assistError={agentAssist.assistError}
+          isGeneratingAssist={agentAssist.isGeneratingAssist}
+          isRecording={agentAssist.isRecording}
+          isTranscribing={agentAssist.isTranscribing}
+          isAiBusy={isAiBusy}
+          onToggleRecording={agentAssist.toggleRecording}
+          onGenerateAssist={agentAssist.generateAssist}
+          assistResult={agentAssist.assistResult}
+          assistDiff={agentAssist.assistDiff}
+          selectedPatchFields={agentAssist.selectedPatchFields}
+          onSelectionChange={(field, checked) =>
+            agentAssist.setSelectedPatchFields((current) => ({ ...current, [field]: checked }))
+          }
+          onApplySelected={agentAssist.applySelectedPatch}
+          onDismiss={agentAssist.dismissAssist}
+        />
         {/* Basic Info Section */}
         <FormSection title="Basic Info">
           <div className="form-group">

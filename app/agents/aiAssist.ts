@@ -1,5 +1,6 @@
 import type { AgentFormData, AgentMetrics } from '@/types/agent';
 import { AGENT_STATUS, type AgentStatus } from '@/types/validationConstants';
+import type { StructuredAssistFieldConfig } from '@/ai/formAssist';
 
 export const DEFAULT_AGENT_GLOBAL_ASSIST_PROMPT =
   'Translate the notes into concrete agent form fields. Prefer specific, operational language. Preserve facts from the notes and context. Leave uncertain fields unchanged.';
@@ -62,11 +63,6 @@ export interface AgentAssistRequest {
   context: AgentAssistContext;
 }
 
-export interface AgentTranscribeResult {
-  transcript: string;
-  model: string;
-}
-
 export const AGENT_ASSIST_FIELD_LABELS: Record<AgentAssistField, string> = {
   name: 'Agent Name',
   phase: 'Implementation Phase',
@@ -94,6 +90,25 @@ export const AGENT_ASSIST_FIELDS: AgentAssistField[] = [
   'category',
   'status',
 ];
+
+export const AGENT_ASSIST_FIELD_CONFIG: ReadonlyArray<StructuredAssistFieldConfig<AgentAssistFormData, AgentAssistField>> = [
+  { key: 'name', label: AGENT_ASSIST_FIELD_LABELS.name },
+  { key: 'phase', label: AGENT_ASSIST_FIELD_LABELS.phase },
+  { key: 'objective', label: AGENT_ASSIST_FIELD_LABELS.objective },
+  { key: 'description', label: AGENT_ASSIST_FIELD_LABELS.description },
+  { key: 'tools', label: AGENT_ASSIST_FIELD_LABELS.tools, formatValue: (value) => formatAgentAssistValue('tools', value) },
+  { key: 'journeySteps', label: AGENT_ASSIST_FIELD_LABELS.journeySteps, formatValue: (value) => formatAgentAssistValue('journeySteps', value) },
+  { key: 'demoLink', label: AGENT_ASSIST_FIELD_LABELS.demoLink },
+  { key: 'videoLink', label: AGENT_ASSIST_FIELD_LABELS.videoLink },
+  {
+    key: 'metrics',
+    label: AGENT_ASSIST_FIELD_LABELS.metrics,
+    formatValue: (value) => formatAgentAssistValue('metrics', value),
+    isEqual: (currentValue, proposedValue) => areAgentAssistValuesEqual(currentValue, proposedValue),
+  },
+  { key: 'category', label: AGENT_ASSIST_FIELD_LABELS.category },
+  { key: 'status', label: AGENT_ASSIST_FIELD_LABELS.status },
+] as const;
 
 const AGENT_METRIC_LABELS: Record<keyof AgentMetrics, string> = {
   numberOfUsers: 'Number of users',

@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { FormAssistPanel } from '@/components/ai/FormAssistPanel';
 import { Modal } from '@/components/ui/Modal';
 import { Icon } from '@/components/ui/Icon';
 import { useAppState } from '@/contexts/AppStateContext';
+import { useAudioTranscription } from '@/hooks/useAudioTranscription';
 import { useStructuredFormAssist } from '@/hooks/useStructuredFormAssist';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { STORAGE_KEYS } from '@/constants/storageKeys';
@@ -23,9 +24,7 @@ import {
   type ServiceAssistResult,
   type ServiceEditorFormData,
   type ServiceFieldImproveResult,
-  type ServiceTranscribeResult,
 } from '@/strategy/aiAssist';
-import { encodeWavAudio } from '@/strategy/audioRecording';
 import {
   DEFAULT_DEPARTMENT_ASSIST_PROMPT,
   DEFAULT_DEVIATION_ASSIST_PROMPT,
@@ -675,8 +674,6 @@ export function ServiceEditModal({
   const [fillEmptyOnly, setFillEmptyOnly] = useState(false);
   const [assistError, setAssistError] = useState<string | null>(null);
   const [isGeneratingAssist, setIsGeneratingAssist] = useState(false);
-  const [isTranscribing, setIsTranscribing] = useState(false);
-  const [isRecording, setIsRecording] = useState(false);
   const [activeFieldImprove, setActiveFieldImprove] = useState<ServiceAssistField | null>(null);
   const [fieldImproveError, setFieldImproveError] = useState<string | null>(null);
   const [fieldImproveSuggestion, setFieldImproveSuggestion] = useState<ServiceFieldImproveResult | null>(null);
@@ -684,12 +681,21 @@ export function ServiceEditModal({
   const [selectedPatchFields, setSelectedPatchFields] = useState<Record<ServiceAssistField, boolean>>(
     createEmptyServiceAssistSelection({})
   );
-  const mediaStreamRef = useRef<MediaStream | null>(null);
-  const audioContextRef = useRef<AudioContext | null>(null);
-  const processorNodeRef = useRef<ScriptProcessorNode | null>(null);
-  const sourceNodeRef = useRef<MediaStreamAudioSourceNode | null>(null);
-  const captureFramesRef = useRef<Float32Array[]>([]);
-  const captureSampleRateRef = useRef(16000);
+  const {
+    isRecording,
+    isTranscribing,
+    toggleRecording,
+    cleanup: cleanupAudioCapture,
+  } = useAudioTranscription({
+    endpoint: '/api/transformation-map/service-transcribe',
+    onTranscript: (transcript) => {
+      setAssistNotes((current) => current.trim()
+        ? `${current.trim()}\n\n${transcript}`.trim()
+        : transcript);
+      showToast('Transcript added to notes', 'success');
+    },
+    onError: (message) => setAssistError(message),
+  });
 
   useEffect(() => {
     if (!isOpen || !service) return;
@@ -709,17 +715,8 @@ export function ServiceEditModal({
       return;
     }
 
-    processorNodeRef.current?.disconnect();
-    sourceNodeRef.current?.disconnect();
-    mediaStreamRef.current?.getTracks().forEach((track) => track.stop());
-    audioContextRef.current?.close().catch(() => undefined);
-    mediaStreamRef.current = null;
-    processorNodeRef.current = null;
-    sourceNodeRef.current = null;
-    audioContextRef.current = null;
-    captureFramesRef.current = [];
-    setIsRecording(false);
-  }, [isOpen]);
+    cleanupAudioCapture();
+  }, [cleanupAudioCapture, isOpen]);
 
   if (!service) return null;
 
@@ -901,102 +898,6 @@ export function ServiceEditModal({
     setFieldImproveSuggestion(null);
   };
 
-  const handleToggleRecording = async () => {
-    if (isRecording) {
-      stopAudioCapture();
-      return;
-    }
-
-    if (!navigator.mediaDevices?.getUserMedia || typeof AudioContext === 'undefined') {
-      setAssistError('Audio recording is not supported in this browser.');
-      return;
-    }
-
-    try {
-      setAssistError(null);
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      mediaStreamRef.current = stream;
-      captureFramesRef.current = [];
-
-      const audioContext = new AudioContext();
-      const sourceNode = audioContext.createMediaStreamSource(stream);
-      const processorNode = audioContext.createScriptProcessor(4096, 1, 1);
-      const sinkNode = audioContext.createGain();
-      sinkNode.gain.value = 0;
-
-      captureSampleRateRef.current = audioContext.sampleRate;
-      audioContextRef.current = audioContext;
-      sourceNodeRef.current = sourceNode;
-      processorNodeRef.current = processorNode;
-
-      processorNode.onaudioprocess = (event) => {
-        const channel = event.inputBuffer.getChannelData(0);
-        captureFramesRef.current.push(new Float32Array(channel));
-      };
-
-      sourceNode.connect(processorNode);
-      processorNode.connect(sinkNode);
-      sinkNode.connect(audioContext.destination);
-
-      setIsRecording(true);
-    } catch (recordingError) {
-      cleanupAudioCapture();
-      setAssistError(recordingError instanceof Error ? recordingError.message : 'Failed to start recording.');
-    }
-  };
-
-  const stopAudioCapture = async () => {
-    if (!isRecording) {
-      return;
-    }
-
-    setIsRecording(false);
-
-    const capturedFrames = captureFramesRef.current;
-    const sampleRate = captureSampleRateRef.current;
-    cleanupAudioCapture();
-
-    if (capturedFrames.length === 0) {
-      return;
-    }
-
-    const audioBlob = encodeWavAudio(capturedFrames, sampleRate);
-    setIsTranscribing(true);
-    try {
-      const formPayload = new FormData();
-      formPayload.append('audio', new File([audioBlob], 'service-notes.wav', { type: audioBlob.type }));
-      const response = await fetch('/api/transformation-map/service-transcribe', {
-        method: 'POST',
-        body: formPayload,
-      });
-      const payload = await response.json() as Partial<ServiceTranscribeResult> & { error?: string };
-      if (!response.ok || !payload.transcript) {
-        throw new Error(payload.error || 'Failed to transcribe audio');
-      }
-
-      setAssistNotes((current) => current.trim()
-        ? `${current.trim()}\n\n${payload.transcript?.trim() ?? ''}`.trim()
-        : payload.transcript?.trim() ?? '');
-      showToast('Transcript added to notes', 'success');
-    } catch (transcribeError) {
-      setAssistError(transcribeError instanceof Error ? transcribeError.message : 'Failed to transcribe audio.');
-    } finally {
-      setIsTranscribing(false);
-    }
-  };
-
-  const cleanupAudioCapture = () => {
-    processorNodeRef.current?.disconnect();
-    sourceNodeRef.current?.disconnect();
-    mediaStreamRef.current?.getTracks().forEach((track) => track.stop());
-    audioContextRef.current?.close().catch(() => undefined);
-    processorNodeRef.current = null;
-    sourceNodeRef.current = null;
-    mediaStreamRef.current = null;
-    audioContextRef.current = null;
-    captureFramesRef.current = [];
-  };
-
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Edit Service" size="large" closeOnOverlayClick={false}>
       <form onSubmit={handleSubmit} className="strategy-editor-form">
@@ -1025,7 +926,7 @@ export function ServiceEditModal({
                     <button
                       type="button"
                       className={`btn btn--sm btn--ghost ${isRecording ? 'strategy-ai-assist__recording-btn' : ''}`.trim()}
-                      onClick={handleToggleRecording}
+                      onClick={toggleRecording}
                       disabled={isAiBusy && !isRecording}
                     >
                       <Icon name={isRecording ? 'square' : 'mic'} size={14} />

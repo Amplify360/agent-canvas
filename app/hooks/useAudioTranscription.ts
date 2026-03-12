@@ -16,14 +16,29 @@ export function useAudioTranscription({
 }: UseAudioTranscriptionOptions) {
   const [isRecording, setIsRecording] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
+  const isMountedRef = useRef(true);
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const processorNodeRef = useRef<ScriptProcessorNode | null>(null);
   const sourceNodeRef = useRef<MediaStreamAudioSourceNode | null>(null);
   const captureFramesRef = useRef<Float32Array[]>([]);
   const captureSampleRateRef = useRef(16000);
+  const transcribeAbortRef = useRef<AbortController | null>(null);
+  const transcribeRequestRef = useRef(0);
+  const onTranscriptRef = useRef(onTranscript);
+  const onErrorRef = useRef(onError);
+
+  useEffect(() => {
+    onTranscriptRef.current = onTranscript;
+  }, [onTranscript]);
+
+  useEffect(() => {
+    onErrorRef.current = onError;
+  }, [onError]);
 
   const cleanup = useCallback(() => {
+    transcribeAbortRef.current?.abort();
+    transcribeAbortRef.current = null;
     processorNodeRef.current?.disconnect();
     sourceNodeRef.current?.disconnect();
     mediaStreamRef.current?.getTracks().forEach((track) => track.stop());
@@ -33,9 +48,18 @@ export function useAudioTranscription({
     mediaStreamRef.current = null;
     audioContextRef.current = null;
     captureFramesRef.current = [];
+    if (isMountedRef.current) {
+      setIsRecording(false);
+      setIsTranscribing(false);
+    }
   }, []);
 
-  useEffect(() => cleanup, [cleanup]);
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+      cleanup();
+    };
+  }, [cleanup]);
 
   const toggleRecording = async () => {
     if (isRecording) {
@@ -50,6 +74,11 @@ export function useAudioTranscription({
       }
 
       const audioBlob = encodeWavAudio(capturedFrames, sampleRate);
+      const requestId = transcribeRequestRef.current + 1;
+      transcribeRequestRef.current = requestId;
+      transcribeAbortRef.current?.abort();
+      const abortController = new AbortController();
+      transcribeAbortRef.current = abortController;
       setIsTranscribing(true);
       try {
         const formPayload = new FormData();
@@ -57,16 +86,32 @@ export function useAudioTranscription({
         const response = await fetch(endpoint, {
           method: 'POST',
           body: formPayload,
+          signal: abortController.signal,
         });
         const payload = await response.json() as { transcript?: string; error?: string };
         if (!response.ok || !payload.transcript) {
           throw new Error(payload.error || 'Failed to transcribe audio');
         }
-        onTranscript(payload.transcript.trim());
+        if (!abortController.signal.aborted && isMountedRef.current && transcribeRequestRef.current === requestId) {
+          onTranscriptRef.current(payload.transcript.trim());
+        }
       } catch (error) {
-        onError(error instanceof Error ? error.message : 'Failed to transcribe audio.');
+        if (
+          abortController.signal.aborted ||
+          (error instanceof DOMException && error.name === 'AbortError')
+        ) {
+          return;
+        }
+        if (isMountedRef.current) {
+          onErrorRef.current(error instanceof Error ? error.message : 'Failed to transcribe audio.');
+        }
       } finally {
-        setIsTranscribing(false);
+        if (transcribeAbortRef.current === abortController) {
+          transcribeAbortRef.current = null;
+        }
+        if (isMountedRef.current && transcribeRequestRef.current === requestId) {
+          setIsTranscribing(false);
+        }
       }
       return;
     }
@@ -103,7 +148,9 @@ export function useAudioTranscription({
       setIsRecording(true);
     } catch (error) {
       cleanup();
-      onError(error instanceof Error ? error.message : 'Failed to start recording.');
+      if (isMountedRef.current) {
+        onErrorRef.current(error instanceof Error ? error.message : 'Failed to start recording.');
+      }
     }
   };
 
