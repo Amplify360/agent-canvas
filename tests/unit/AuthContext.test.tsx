@@ -59,7 +59,7 @@ vi.mock('@/utils/authDebug', () => ({
   authDebug: () => undefined,
 }));
 
-globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+(globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
 
 function Probe({
   onStateChange,

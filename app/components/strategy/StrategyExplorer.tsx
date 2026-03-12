@@ -25,10 +25,10 @@ export function StrategyExplorer() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { isSidebarCollapsed, toggleSidebar, sidebarWidth } = useAppState();
-  const data = useStrategyData();
 
   const departmentId = searchParams.get('department');
   const serviceId = searchParams.get('service');
+  const data = useStrategyData(departmentId, serviceId);
   const department = departmentId ? data.getDepartment(departmentId) : undefined;
   const service = serviceId ? data.getService(serviceId) : undefined;
   const shouldCanonicalizeServiceUrl =
@@ -41,28 +41,28 @@ export function StrategyExplorer() {
       return;
     }
 
-    router.replace(`/strategy?department=${service.departmentId}&service=${serviceId}`);
+    router.replace(`/transformation-map?department=${service.departmentId}&service=${serviceId}`);
   }, [router, service, serviceId, shouldCanonicalizeServiceUrl]);
 
   // Navigation helpers
   const navigate = (path: string) => router.push(path);
 
   const navigateToDepartment = (id: string) => {
-    router.push(`/strategy?department=${id}`);
+    router.push(`/transformation-map?department=${id}`);
   };
 
   const navigateToService = (deptId: string, svcId: string) => {
-    router.push(`/strategy?department=${deptId}&service=${svcId}`);
+    router.push(`/transformation-map?department=${deptId}&service=${svcId}`);
   };
 
   // Build breadcrumb
-  const breadcrumbItems: BreadcrumbItem[] = [{ label: 'Strategy', href: '/strategy' }];
+  const breadcrumbItems: BreadcrumbItem[] = [{ label: 'Transformation Map', href: '/transformation-map' }];
 
   if (department) {
     if (!hasMismatchedDepartmentService) {
       breadcrumbItems.push({
         label: department.name,
-        href: serviceId ? `/strategy?department=${departmentId}` : undefined,
+        href: serviceId ? `/transformation-map?department=${departmentId}` : undefined,
       });
     }
   }
@@ -76,7 +76,26 @@ export function StrategyExplorer() {
   // Determine which view to render
   let content: React.ReactNode;
 
-  if (shouldCanonicalizeServiceUrl) {
+  if (data.isLoading) {
+    content = (
+      <div className="empty-state">
+        <div className="empty-state__icon">
+          <Icon name="loader-2" className="loading-icon" />
+        </div>
+        <h2 className="empty-state__title">Loading transformation map...</h2>
+      </div>
+    );
+  } else if (!data.hasMap) {
+    content = (
+      <div className="empty-state">
+        <div className="empty-state__icon">
+          <Icon name="map" size={32} />
+        </div>
+        <h2 className="empty-state__title">No transformation maps yet</h2>
+        <p className="empty-state__description">Create a Transformation Map or connect via MCP to start capturing pressures, services, and change initiatives.</p>
+      </div>
+    );
+  } else if (shouldCanonicalizeServiceUrl) {
     content = (
       <div className="empty-state">
         <div className="empty-state__icon">
@@ -154,8 +173,8 @@ export function StrategyExplorer() {
           </div>
           <div className="toolbar__right">
             <span className="toolbar__badge">
-              <Icon name="flask-conical" size={14} />
-              Prototype
+              <Icon name="map" size={14} />
+              Transformation Map
             </span>
           </div>
         </header>
@@ -176,7 +195,7 @@ function NotFound({ message }: { message: string }) {
         <Icon name="search-x" size={32} />
       </div>
       <h2 className="empty-state__title">{message}</h2>
-      <p className="empty-state__description">The item you&apos;re looking for doesn&apos;t exist in the mock data.</p>
+      <p className="empty-state__description">The item you&apos;re looking for doesn&apos;t exist in the current Transformation Map.</p>
     </div>
   );
 }

@@ -8,16 +8,16 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { McpAccessModal } from '@/components/org/McpAccessModal';
 
 const useQueryMock = vi.fn();
-const useMutationMock = vi.fn(() => vi.fn());
+const useMutationMock = vi.fn((..._args: any[]) => vi.fn());
 const useCanQueryMock = vi.fn(() => ({ canQuery: true, isConvexAuthenticated: true, isConvexAuthLoading: false }));
 
 vi.mock('@/hooks/useConvex', () => ({
-  useQuery: (...args: unknown[]) => useQueryMock(...args),
-  useMutation: (...args: unknown[]) => useMutationMock(...args),
+  useQuery: (query: unknown, args: unknown) => useQueryMock(query, args),
+  useMutation: (mutation: unknown) => useMutationMock(mutation),
   useCanQuery: () => useCanQueryMock(),
 }));
 
-globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+(globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
 
 describe('McpAccessModal', () => {
   let container: HTMLDivElement;

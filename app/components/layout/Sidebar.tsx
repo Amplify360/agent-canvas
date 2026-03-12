@@ -321,17 +321,17 @@ export function Sidebar() {
         <nav className="sidebar__nav">
           <Link
             href="/"
-            className={`sidebar__nav-item ${!pathname.startsWith('/strategy') ? 'is-active' : ''}`}
+            className={`sidebar__nav-item ${!pathname.startsWith('/transformation-map') && !pathname.startsWith('/strategy') ? 'is-active' : ''}`}
           >
             <Icon name="layout-grid" />
             <span>Canvases</span>
           </Link>
           <Link
-            href="/strategy"
-            className={`sidebar__nav-item ${pathname.startsWith('/strategy') ? 'is-active' : ''}`}
+            href="/transformation-map"
+            className={`sidebar__nav-item ${pathname.startsWith('/transformation-map') || pathname.startsWith('/strategy') ? 'is-active' : ''}`}
           >
             <Icon name="compass" />
-            <span>Strategy</span>
+            <span>Transformation Map</span>
           </Link>
         </nav>
 

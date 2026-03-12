@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { countUniqueLinkedAgentsForService } from '@/strategy/useStrategyMockData';
+import { countUniqueLinkedAgentsForService } from '@/strategy/utils';
 import type { Initiative } from '@/strategy/types';
 
 describe('countUniqueLinkedAgentsForService', () => {

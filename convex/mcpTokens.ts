@@ -2,7 +2,15 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { requireAuth, requireOrgAdmin } from "./lib/auth";
 
-const MCP_SCOPES = ["canvas:read", "canvas:write", "canvas:comment", "canvas:export"] as const;
+const MCP_SCOPES = [
+  "canvas:read",
+  "canvas:write",
+  "canvas:comment",
+  "canvas:export",
+  "transformation:read",
+  "transformation:write",
+  "transformation:review",
+] as const;
 
 function toBase64Url(bytes: Uint8Array): string {
   let binary = "";

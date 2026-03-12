@@ -113,7 +113,7 @@ export interface Initiative {
   serviceId: string;
   title: string;
   description: string;
-  status: 'proposed' | 'approved' | 'in-progress' | 'done';
+  status: 'proposed' | 'approved' | 'in-progress' | 'done' | 'parked';
   linkedAgents: LinkedAgent[];
 }
 

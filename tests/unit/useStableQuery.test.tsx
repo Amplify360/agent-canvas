@@ -9,10 +9,10 @@ import { useStableQuery } from '@/hooks/useStableQuery';
 const useQueryMock = vi.fn();
 
 vi.mock('@/hooks/useConvex', () => ({
-  useQuery: (...args: unknown[]) => useQueryMock(...args),
+  useQuery: (...args: any[]) => useQueryMock(...args),
 }));
 
-globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+(globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
 
 function Probe({
   args,

@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { MembersWidget } from '@/components/org/MembersWidget';
 
-const useWidgetTokenMock = vi.fn(() => ({
+const useWidgetTokenMock = vi.fn((..._args: any[]) => ({
   token: null,
   loading: false,
   error: null,
@@ -15,14 +15,14 @@ const useWidgetTokenMock = vi.fn(() => ({
 }));
 
 vi.mock('@/hooks/useWidgetToken', () => ({
-  useWidgetToken: (...args: unknown[]) => useWidgetTokenMock(...args),
+  useWidgetToken: (orgId: string | null, options: { scopes: string[] }) => useWidgetTokenMock(orgId, options),
 }));
 
 vi.mock('@workos-inc/widgets', () => ({
   UsersManagement: () => null,
 }));
 
-globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+(globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
 
 describe('MembersWidget', () => {
   let container: HTMLDivElement;

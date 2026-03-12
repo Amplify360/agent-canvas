@@ -1,4 +1,9 @@
-export type McpScope = "canvas:read" | "canvas:write";
+export type McpScope =
+  | "canvas:read"
+  | "canvas:write"
+  | "transformation:read"
+  | "transformation:write"
+  | "transformation:review";
 
 export interface JsonRpcRequest {
   jsonrpc: "2.0";
