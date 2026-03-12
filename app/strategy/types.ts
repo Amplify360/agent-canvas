@@ -26,7 +26,7 @@ export interface Department {
   id: string;
   name: string;
   description: string;
-  /** Top pain points / improvement areas surfaced to the overview level */
+  /** Pain points retained for detailed department analysis */
   keyIssues: string[];
 }
 
@@ -113,6 +113,7 @@ export interface Initiative {
 
 /** Computed summary for department cards */
 export interface DepartmentSummary extends Department {
+  improvementMandates: StrategicObjective[];
   serviceCount: number;
   deviationCount: number;
   analyzedCount: number;

@@ -6332,7 +6332,38 @@ body.is-resizing-sidebar .main-wrapper {
     font-weight: 500;
 }
 
-/* Key Issues (department cards — pain points instead of description) */
+.strategy-card__mandates {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    padding-top: var(--space-2);
+    border-top: 1px solid var(--border-subtle);
+}
+
+.strategy-card__mandates-label {
+    font-size: var(--text-xs);
+    color: var(--text-muted);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.strategy-card__mandate-item {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-2);
+    font-size: var(--text-xs);
+    color: var(--text-secondary);
+    line-height: 1.4;
+}
+
+.strategy-card__mandate-item svg {
+    color: var(--accent-primary);
+    flex-shrink: 0;
+    margin-top: 1px;
+}
+
+/* Key Issues (used in detailed department analysis) */
 .strategy-card__issues {
     display: flex;
     flex-direction: column;
