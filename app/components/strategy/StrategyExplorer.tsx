@@ -10,7 +10,11 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Sidebar } from '@/components/layout/Sidebar';
-import { useAppState } from '@/contexts/AppStateContext';
+import {
+  DEFAULT_SIDEBAR_COLLAPSED,
+  DEFAULT_SIDEBAR_WIDTH,
+  useAppState,
+} from '@/contexts/AppStateContext';
 import { Icon } from '@/components/ui/Icon';
 import { Tooltip } from '@/components/ui/Tooltip';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
@@ -52,6 +56,9 @@ export function StrategyExplorer() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { isSidebarCollapsed, toggleSidebar, sidebarWidth, showToast } = useAppState();
+  const [hasMounted, setHasMounted] = useState(false);
+  const effectiveSidebarCollapsed = hasMounted ? isSidebarCollapsed : DEFAULT_SIDEBAR_COLLAPSED;
+  const effectiveSidebarWidth = hasMounted ? sidebarWidth : DEFAULT_SIDEBAR_WIDTH;
 
   const mapSlug = searchParams.get('map');
   const departmentId = searchParams.get('department');
@@ -71,6 +78,10 @@ export function StrategyExplorer() {
     Boolean(serviceId && !departmentId && service);
   const hasMismatchedDepartmentService =
     Boolean(department && service && service.departmentId !== department.id);
+
+  useEffect(() => {
+    setHasMounted(true);
+  }, []);
 
   useEffect(() => {
     if (!shouldCanonicalizeServiceUrl || !serviceId || !service) {
@@ -364,10 +375,14 @@ export function StrategyExplorer() {
       <ConnectionRecoveryBanner />
       <Sidebar />
       <div
-        className={`main-wrapper ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}
-        style={!isSidebarCollapsed ? { '--sidebar-width': `${sidebarWidth}px` } as React.CSSProperties : undefined}
+        className={`main-wrapper ${effectiveSidebarCollapsed ? 'sidebar-collapsed' : ''}`}
+        style={
+          !effectiveSidebarCollapsed
+            ? ({ '--sidebar-width': `${effectiveSidebarWidth}px` } as React.CSSProperties)
+            : undefined
+        }
       >
-        {isSidebarCollapsed && (
+        {effectiveSidebarCollapsed && (
           <Tooltip content="Expand sidebar" placement="right" triggerClassName="sidebar-expand-tooltip">
             <button className="sidebar-expand-btn" onClick={toggleSidebar}>
               <Icon name="panel-left-open" />

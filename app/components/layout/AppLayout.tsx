@@ -4,7 +4,7 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Agent, type AgentCreateDefaults } from '@/types/agent';
 import { Sidebar } from './Sidebar';
 import { MainToolbar } from './MainToolbar';
@@ -15,7 +15,11 @@ import { ToastContainer } from '../ui/Toast';
 import { ConnectionRecoveryBanner } from '../ui/ConnectionRecoveryBanner';
 import { QuickLookPanel } from '../ui/QuickLookPanel';
 import { CommentsPanel } from '../ui/CommentsPanel';
-import { useAppState } from '@/contexts/AppStateContext';
+import {
+  DEFAULT_SIDEBAR_COLLAPSED,
+  DEFAULT_SIDEBAR_WIDTH,
+  useAppState,
+} from '@/contexts/AppStateContext';
 import { useDeleteAgent } from '@/hooks/useDeleteAgent';
 import { Icon } from '@/components/ui/Icon';
 import { Tooltip } from '@/components/ui/Tooltip';
@@ -27,6 +31,13 @@ export function AppLayout() {
   const [editingAgent, setEditingAgent] = useState<Agent | null>(null);
   const [createDefaults, setCreateDefaults] = useState<AgentCreateDefaults | undefined>();
   const [commentsAgent, setCommentsAgent] = useState<Agent | null>(null);
+  const [hasMounted, setHasMounted] = useState(false);
+  const effectiveSidebarCollapsed = hasMounted ? isSidebarCollapsed : DEFAULT_SIDEBAR_COLLAPSED;
+  const effectiveSidebarWidth = hasMounted ? sidebarWidth : DEFAULT_SIDEBAR_WIDTH;
+
+  useEffect(() => {
+    setHasMounted(true);
+  }, []);
 
   const handleOpenAgentModal = (agent?: Agent, defaults?: AgentCreateDefaults) => {
     setEditingAgent(agent || null);
@@ -79,10 +90,14 @@ export function AppLayout() {
       <ConnectionRecoveryBanner />
       <Sidebar />
       <div
-        className={`main-wrapper ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}
-        style={!isSidebarCollapsed ? { '--sidebar-width': `${sidebarWidth}px` } as React.CSSProperties : undefined}
+        className={`main-wrapper ${effectiveSidebarCollapsed ? 'sidebar-collapsed' : ''}`}
+        style={
+          !effectiveSidebarCollapsed
+            ? ({ '--sidebar-width': `${effectiveSidebarWidth}px` } as React.CSSProperties)
+            : undefined
+        }
       >
-        {isSidebarCollapsed && (
+        {effectiveSidebarCollapsed && (
           <Tooltip content="Expand sidebar" placement="right" triggerClassName="sidebar-expand-tooltip">
             <button
               className="sidebar-expand-btn"

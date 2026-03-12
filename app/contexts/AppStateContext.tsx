@@ -16,8 +16,8 @@ interface Toast {
   type: 'success' | 'error' | 'info';
 }
 
-const DEFAULT_SIDEBAR_COLLAPSED = false;
-const DEFAULT_SIDEBAR_WIDTH = 280;
+export const DEFAULT_SIDEBAR_COLLAPSED = false;
+export const DEFAULT_SIDEBAR_WIDTH = 280;
 
 interface AppStateContextValue {
   isLoading: boolean;

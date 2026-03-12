@@ -9,7 +9,11 @@ import { usePathname, useSearchParams, useRouter } from 'next/navigation';
 import { useAuth, useIsOrgAdmin, useCurrentOrg } from '@/contexts/AuthContext';
 import { useAgents } from '@/contexts/AgentContext';
 import { useCanvas } from '@/contexts/CanvasContext';
-import { useAppState } from '@/contexts/AppStateContext';
+import {
+  DEFAULT_SIDEBAR_COLLAPSED,
+  DEFAULT_SIDEBAR_WIDTH,
+  useAppState,
+} from '@/contexts/AppStateContext';
 import { useAction, useCanQuery, useConvex, useMutation, useQuery } from '@/hooks/useConvex';
 import { api } from '../../../convex/_generated/api';
 import { useResizable } from '@/hooks/useResizable';
@@ -108,11 +112,14 @@ export function Sidebar() {
   const convex = useConvex();
   const { isSidebarCollapsed, toggleSidebar, showToast, sidebarWidth, setSidebarWidth, themePreference, setThemePreference } = useAppState();
   const { canQuery } = useCanQuery();
+  const [hasMounted, setHasMounted] = useState(false);
+  const effectiveSidebarCollapsed = hasMounted ? isSidebarCollapsed : DEFAULT_SIDEBAR_COLLAPSED;
+  const effectiveSidebarWidth = hasMounted ? sidebarWidth : DEFAULT_SIDEBAR_WIDTH;
 
   const { isDragging, resizeHandleProps } = useResizable({
     minWidth: SIDEBAR_MIN_WIDTH,
     maxWidth: SIDEBAR_MAX_WIDTH,
-    currentWidth: sidebarWidth,
+    currentWidth: effectiveSidebarWidth,
     onResize: setSidebarWidth,
   });
   const isOrgAdmin = useIsOrgAdmin();
@@ -194,6 +201,10 @@ export function Sidebar() {
   useClickOutside(orgDropdownRef, closeOrgDropdown, orgDropdownOpen);
   useClickOutside(userMenuRef, closeUserMenu, userMenuOpen);
   useClickOutside(canvasActionsRef, closeCanvasActions, canvasActionsOpen);
+
+  useEffect(() => {
+    setHasMounted(true);
+  }, []);
 
   useEffect(() => {
     if (isTransformationRoute) {
@@ -328,12 +339,33 @@ export function Sidebar() {
   // Update URL when canvas changes and select it
   const handleSelectCanvas = (canvasId: string) => {
     setCurrentCanvasId(canvasId);
-    // Update URL for shareable links
-    window.history.replaceState(null, '', `/c/${canvasId}`);
+    router.push(`/c/${canvasId}`);
   };
 
   const handleSelectTransformationMap = (slug: string) => {
     router.push(`/transformation-map?map=${encodeURIComponent(slug)}`);
+  };
+
+  const handleCanvasSectionTrigger = () => {
+    if (isTransformationRoute) {
+      const targetCanvasId = currentCanvasId ?? canvases[0]?._id;
+      setIsCanvasPanelOpen(true);
+      router.push(targetCanvasId ? `/c/${targetCanvasId}` : '/');
+      return;
+    }
+
+    setIsCanvasPanelOpen((open) => !open);
+  };
+
+  const handleTransformationSectionTrigger = () => {
+    if (!isTransformationRoute) {
+      const targetMapSlug = activeTransformationMap?.slug ?? transformationMaps[0]?.slug;
+      setIsTransformationPanelOpen(true);
+      router.push(targetMapSlug ? `/transformation-map?map=${encodeURIComponent(targetMapSlug)}` : '/transformation-map');
+      return;
+    }
+
+    setIsTransformationPanelOpen((open) => !open);
   };
 
   const handleCreateCanvas = async () => {
@@ -423,8 +455,8 @@ export function Sidebar() {
   return (
     <>
       <aside
-        className={`sidebar ${isSidebarCollapsed ? 'is-collapsed' : ''}`}
-        style={{ '--sidebar-width': `${sidebarWidth}px` } as React.CSSProperties}
+        className={`sidebar ${effectiveSidebarCollapsed ? 'is-collapsed' : ''}`}
+        style={{ '--sidebar-width': `${effectiveSidebarWidth}px` } as React.CSSProperties}
       >
         <div className="sidebar__header">
           <div className="sidebar__logo">
@@ -500,7 +532,7 @@ export function Sidebar() {
                 <button
                   type="button"
                   className={`sidebar__accordion-trigger ${!isTransformationRoute ? 'is-active' : ''}`}
-                  onClick={() => setIsCanvasPanelOpen((open) => !open)}
+                  onClick={handleCanvasSectionTrigger}
                   aria-expanded={isCanvasPanelOpen}
                 >
                   <span className="sidebar__accordion-label">
@@ -576,7 +608,7 @@ export function Sidebar() {
                 <button
                   type="button"
                   className={`sidebar__accordion-trigger ${isTransformationRoute ? 'is-active' : ''}`}
-                  onClick={() => setIsTransformationPanelOpen((open) => !open)}
+                  onClick={handleTransformationSectionTrigger}
                   aria-expanded={isTransformationPanelOpen}
                 >
                   <span className="sidebar__accordion-label">
