@@ -319,9 +319,9 @@ export const MOCK_SERVICES: Service[] = [
     trigger: 'Invoice issued or payment received',
     outcome: 'Revenue correctly recognized in financial statements',
     constraints: ['Must comply with ASC 606', 'Multi-year deals require allocation across performance obligations'],
-    status: 'not-analyzed',
-    effectivenessMetric: 'Not yet assessed.',
-    efficiencyMetric: 'Not yet assessed.',
+    status: 'has-deviations',
+    effectivenessMetric: 'Standard contracts are usually recognized correctly, but multi-year deals and contract changes still trigger close adjustments and audit follow-up.',
+    efficiencyMetric: 'Revenue schedules are maintained in spreadsheets with manual journal prep and controller review. This adds 1-2 days of work during month-end close.',
   },
 ];
 
@@ -390,6 +390,24 @@ export const MOCK_FLOW_STEPS: FlowStep[] = [
   { id: 'fs-43', serviceId: 'svc-invoice', flowType: 'current', order: 7, stepType: 'exception', description: 'Escalate overdue invoices to account manager' },
   { id: 'fs-44', serviceId: 'svc-invoice', flowType: 'current', order: 8, stepType: 'output', description: 'Payment matched manually in bank reconciliation' },
   { id: 'fs-45', serviceId: 'svc-invoice', flowType: 'current', order: 9, stepType: 'handoff', description: 'Finance emails rev rec team to update schedules' },
+
+  // Revenue Recognition - Ideal
+  { id: 'fs-46', serviceId: 'svc-revrec', flowType: 'ideal', order: 1, stepType: 'input', description: 'Signed contract and billing events synced into revenue recognition workspace', parallelGroup: 'revrec-inputs', groupLabel: 'Inputs' },
+  { id: 'fs-46b', serviceId: 'svc-revrec', flowType: 'ideal', order: 2, stepType: 'input', description: 'Performance obligations and allocation rules resolved from approved contract terms', parallelGroup: 'revrec-inputs' },
+  { id: 'fs-47', serviceId: 'svc-revrec', flowType: 'ideal', order: 3, stepType: 'process', description: 'Generate revenue schedule according to ASC 606 policy', parallelGroup: 'revrec-schedule', groupLabel: 'Schedule generation' },
+  { id: 'fs-47b', serviceId: 'svc-revrec', flowType: 'ideal', order: 4, stepType: 'process', description: 'Apply allocation and recognition timing rules automatically for standard deal structures', parallelGroup: 'revrec-schedule' },
+  { id: 'fs-48', serviceId: 'svc-revrec', flowType: 'ideal', order: 5, stepType: 'control', description: 'Controller reviews only flagged exceptions and high-risk contracts' },
+  { id: 'fs-49', serviceId: 'svc-revrec', flowType: 'ideal', order: 6, stepType: 'output', description: 'Revenue journal entries posted to ERP', parallelGroup: 'revrec-outputs', groupLabel: 'Outputs' },
+  { id: 'fs-49b', serviceId: 'svc-revrec', flowType: 'ideal', order: 7, stepType: 'output', description: 'Audit-ready schedule and evidence trail stored with the close package', parallelGroup: 'revrec-outputs' },
+
+  // Revenue Recognition - Current
+  { id: 'fs-50', serviceId: 'svc-revrec', flowType: 'current', order: 1, stepType: 'input', description: 'Revenue accountant exports invoice activity and contract terms from billing and CRM' },
+  { id: 'fs-51', serviceId: 'svc-revrec', flowType: 'current', order: 2, stepType: 'process', description: 'Accountant updates revenue schedule spreadsheet for the month', hasDeviation: true },
+  { id: 'fs-52', serviceId: 'svc-revrec', flowType: 'current', order: 3, stepType: 'process', description: 'Accountant manually allocates multi-year deals across performance obligations', hasDeviation: true },
+  { id: 'fs-53', serviceId: 'svc-revrec', flowType: 'current', order: 4, stepType: 'approval', description: 'Controller reviews schedules and asks for support on exceptions' },
+  { id: 'fs-54', serviceId: 'svc-revrec', flowType: 'current', order: 5, stepType: 'handoff', description: 'Accountant sends journal entry package to ERP specialist for upload', hasDeviation: true },
+  { id: 'fs-55', serviceId: 'svc-revrec', flowType: 'current', order: 6, stepType: 'rework', description: 'Schedules are revised after close-review questions or audit comments', hasDeviation: true },
+  { id: 'fs-56', serviceId: 'svc-revrec', flowType: 'current', order: 7, stepType: 'output', description: 'Revenue entries posted and evidence files saved in shared folders' },
 ];
 
 // ── Deviations ─────────────────────────────────────────────
@@ -532,6 +550,52 @@ export const MOCK_DEVIATIONS: Deviation[] = [
     treatment: 'eliminate',
     classification: 'handoff',
   },
+
+  // Revenue Recognition
+  {
+    id: 'dev-13',
+    serviceId: 'svc-revrec',
+    flowStepId: 'fs-51',
+    what: 'Revenue schedules maintained manually in spreadsheets',
+    why: 'No system of record automates rev rec schedules from contract and billing events',
+    necessary: false,
+    impact: 'high',
+    treatment: 'automate',
+    classification: 'system-constraint',
+  },
+  {
+    id: 'dev-14',
+    serviceId: 'svc-revrec',
+    flowStepId: 'fs-52',
+    what: 'Manual allocation of multi-year deals and performance obligations',
+    why: 'Allocation rules are documented in policy but not encoded in tooling',
+    necessary: false,
+    impact: 'high',
+    treatment: 'automate',
+    classification: 'control',
+  },
+  {
+    id: 'dev-15',
+    serviceId: 'svc-revrec',
+    flowStepId: 'fs-54',
+    what: 'Separate handoff for journal entry upload into ERP',
+    why: 'Revenue schedules and ERP journal posting happen in disconnected systems',
+    necessary: false,
+    impact: 'medium',
+    treatment: 'simplify',
+    classification: 'handoff',
+  },
+  {
+    id: 'dev-16',
+    serviceId: 'svc-revrec',
+    flowStepId: 'fs-55',
+    what: 'Late rework after controller review and audit questions',
+    why: 'Supporting evidence and exception handling are assembled after schedules are built, not during schedule generation',
+    necessary: false,
+    impact: 'medium',
+    treatment: 'eliminate',
+    classification: 'rework',
+  },
 ];
 
 // ── Initiatives ────────────────────────────────────────────
@@ -624,6 +688,29 @@ export const MOCK_INITIATIVES: Initiative[] = [
     linkedAgents: [
       { id: 'agent-data-mapping', name: 'Data Mapping Agent', role: 'Deep research — map billing events to rev rec schedule entries' },
       { id: 'agent-integration-builder', name: 'Integration Builder', role: 'Process automation — build the event-driven sync' },
+    ],
+  },
+  {
+    id: 'init-9',
+    serviceId: 'svc-revrec',
+    title: 'ASC 606 Schedule Automation',
+    description: 'Implement a rev rec engine that generates standard revenue schedules automatically from signed contract terms, billing events, and allocation rules.',
+    status: 'approved',
+    linkedAgents: [
+      { id: 'agent-revrec-policy-mapper', name: 'RevRec Policy Mapper', role: 'Deep research — translate ASC 606 policy into explicit schedule rules' },
+      { id: 'agent-data-mapping', name: 'Data Mapping Agent', role: 'Deep research — map contract and billing fields into the rev rec engine' },
+      { id: 'agent-finance-automation-builder', name: 'Finance Automation Builder', role: 'Process automation — generate schedules and exception flags automatically' },
+    ],
+  },
+  {
+    id: 'init-10',
+    serviceId: 'svc-revrec',
+    title: 'ERP Journal Posting and Exception Workflow',
+    description: 'Automate journal posting for standard schedules and route only flagged exceptions to controller review with an audit-ready evidence package.',
+    status: 'proposed',
+    linkedAgents: [
+      { id: 'agent-erp-integration-analyst', name: 'ERP Integration Analyst', role: 'Deep research — document journal posting requirements and ERP constraints' },
+      { id: 'agent-exception-workflow-designer', name: 'Exception Workflow Designer', role: 'Analysis — define controller review triggers and evidence requirements' },
     ],
   },
 ];

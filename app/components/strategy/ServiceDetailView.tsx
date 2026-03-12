@@ -125,7 +125,7 @@ export function ServiceDetailView({
           onClick={() => setActiveTab('initiatives')}
         >
           <Icon name="rocket" size={16} />
-          Service Initiatives
+          Improvement Initiatives
           {initiatives.length > 0 && <span className="strategy-tab__count">{initiatives.length}</span>}
         </button>
       </div>
@@ -302,7 +302,7 @@ function InitiativeList({ initiatives }: { initiatives: Initiative[] }) {
     return (
       <div className="strategy-empty">
         <Icon name="rocket" size={32} />
-        <p>No initiatives defined for this service yet.</p>
+        <p>No improvement initiatives defined for this service yet.</p>
       </div>
     );
   }

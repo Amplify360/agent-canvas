@@ -31,12 +31,12 @@ export function DepartmentView({ department, services, objectives, onSelectServi
         <p className="strategy-department__description">{department.description}</p>
       </div>
 
-      {/* Department objectives */}
+      {/* Department improvement priorities */}
       {objectives.length > 0 && (
         <section className="strategy-section">
           <div className="strategy-section__header">
             <Icon name="target" size={18} />
-            <h3 className="strategy-section__title">Department Objectives</h3>
+            <h3 className="strategy-section__title">Improvement Priorities</h3>
           </div>
           <div className="strategy-objectives-list">
             {objectives.map((obj) => (

@@ -1,3 +1,5 @@
+import type { Id } from '../../convex/_generated/dataModel';
+
 /**
  * Strategy layer domain types
  *
@@ -95,7 +97,11 @@ export interface Deviation {
 }
 
 export interface LinkedAgent {
+  /** Stable identifier for this linked/suggested agent entry within strategy data. */
   id: string;
+  /** Optional foreign key to a real Canvas agent when the strategy layer is backed by Convex. */
+  /** Future backend contract: resolve this to agents._id and derive display fields from the canonical Canvas agent record when present. */
+  canvasAgentId?: Id<"agents">;
   name: string;
   /** What this agent does for this initiative */
   role: string;
