@@ -141,6 +141,38 @@ async function ensureUniqueTransformationServiceKey(
   }
 }
 
+async function ensureUniqueTransformationPressureKey(
+  ctx: any,
+  mapId: Id<"transformationMaps">,
+  pressureKey: string,
+  excludePressureId?: Id<"transformationPressures">
+) {
+  const existing = await ctx.db
+    .query("transformationPressures")
+    .withIndex("by_map_key", (q: any) => q.eq("mapId", mapId).eq("key", pressureKey))
+    .first();
+
+  if (existing && existing._id !== excludePressureId) {
+    throw new Error(`Validation: Pressure key already exists: ${pressureKey}`);
+  }
+}
+
+async function ensureUniqueTransformationObjectiveKey(
+  ctx: any,
+  mapId: Id<"transformationMaps">,
+  objectiveKey: string,
+  excludeObjectiveId?: Id<"transformationObjectives">
+) {
+  const existing = await ctx.db
+    .query("transformationObjectives")
+    .withIndex("by_map_key", (q: any) => q.eq("mapId", mapId).eq("key", objectiveKey))
+    .first();
+
+  if (existing && existing._id !== excludeObjectiveId) {
+    throw new Error(`Validation: Objective key already exists: ${objectiveKey}`);
+  }
+}
+
 async function getTransformationDepartmentByKey(ctx: any, mapId: Id<"transformationMaps">, departmentKey: string) {
   const department = await ctx.db
     .query("transformationDepartments")
@@ -152,6 +184,28 @@ async function getTransformationDepartmentByKey(ctx: any, mapId: Id<"transformat
   return department;
 }
 
+async function getTransformationPressureByKey(ctx: any, mapId: Id<"transformationMaps">, pressureKey: string) {
+  const pressure = await ctx.db
+    .query("transformationPressures")
+    .withIndex("by_map_key", (q: any) => q.eq("mapId", mapId).eq("key", pressureKey))
+    .first();
+  if (!pressure) {
+    throw new Error("NotFound: Pressure not found");
+  }
+  return pressure;
+}
+
+async function getTransformationObjectiveByKey(ctx: any, mapId: Id<"transformationMaps">, objectiveKey: string) {
+  const objective = await ctx.db
+    .query("transformationObjectives")
+    .withIndex("by_map_key", (q: any) => q.eq("mapId", mapId).eq("key", objectiveKey))
+    .first();
+  if (!objective) {
+    throw new Error("NotFound: Objective not found");
+  }
+  return objective;
+}
+
 async function getTransformationServiceByKey(ctx: any, mapId: Id<"transformationMaps">, serviceKey: string) {
   const service = await ctx.db
     .query("transformationServices")
@@ -161,6 +215,39 @@ async function getTransformationServiceByKey(ctx: any, mapId: Id<"transformation
     throw new Error("NotFound: Service not found");
   }
   return service;
+}
+
+async function syncTransformationDepartmentMandates(
+  ctx: any,
+  mapId: Id<"transformationMaps">,
+  departmentKey: string,
+  actor: string,
+  now: number
+) {
+  const [department, objectives] = await Promise.all([
+    ctx.db
+      .query("transformationDepartments")
+      .withIndex("by_map_key", (q: any) => q.eq("mapId", mapId).eq("key", departmentKey))
+      .first(),
+    ctx.db
+      .query("transformationObjectives")
+      .withIndex("by_map_department", (q: any) => q.eq("mapId", mapId).eq("departmentKey", departmentKey))
+      .collect(),
+  ]);
+
+  if (!department) {
+    return;
+  }
+
+  const titles = [...objectives]
+    .sort((left: any, right: any) => left.order - right.order)
+    .map((objective: any) => objective.title);
+
+  await ctx.db.patch(department._id, {
+    improvementMandates: titles,
+    updatedBy: actor,
+    updatedAt: now,
+  });
 }
 
 function normalizeUpdateAgentOperation(op: any, existingFieldValues: Record<string, unknown>) {
@@ -909,6 +996,264 @@ export const applyTransformationMapChanges = mutation({
           }
         }
         summary.push("reordered departments");
+      } else if (op.type === "create_pressure") {
+        if (!op.key || !op.pressureType || !op.title) {
+          throw new Error("Validation: create_pressure requires key, pressureType, and title");
+        }
+        if (op.pressureType !== "external" && op.pressureType !== "internal") {
+          throw new Error("Validation: create_pressure pressureType must be external or internal");
+        }
+        await ensureUniqueTransformationPressureKey(ctx, map._id, op.key);
+        if (!isDryRun) {
+          await ctx.db.insert("transformationPressures", {
+            mapId: map._id,
+            key: op.key,
+            order: op.order ?? now,
+            type: op.pressureType,
+            title: op.title,
+            description: op.description ?? "",
+            evidence: op.evidence ?? [],
+            artifactStatus: "reviewed",
+            sourceType: "system",
+            sourceRef: "mcp.apply_transformation_map_changes",
+            createdBy: actor,
+            updatedBy: actor,
+            createdAt: now,
+            updatedAt: now,
+          });
+          await recordTransformationHistory(ctx, {
+            workosOrgId: token.workosOrgId,
+            mapId: map._id,
+            entityType: "pressure",
+            entityId: op.key,
+            changedBy: actor,
+            changeType: "create",
+            nextData: {
+              key: op.key,
+              order: op.order ?? now,
+              type: op.pressureType,
+              title: op.title,
+              description: op.description ?? "",
+              evidence: op.evidence ?? [],
+            },
+          });
+        }
+        summary.push("created pressure");
+      } else if (op.type === "update_pressure") {
+        if (!op.pressureKey) {
+          throw new Error("Validation: update_pressure requires pressureKey");
+        }
+        const pressure = await getTransformationPressureByKey(ctx, map._id, op.pressureKey);
+        if (op.pressureType !== undefined && op.pressureType !== "external" && op.pressureType !== "internal") {
+          throw new Error("Validation: update_pressure pressureType must be external or internal");
+        }
+        const previousData = {
+          type: pressure.type,
+          title: pressure.title,
+          description: pressure.description,
+          evidence: pressure.evidence,
+          order: pressure.order,
+        };
+        const nextData = {
+          type: op.pressureType ?? pressure.type,
+          title: op.title ?? pressure.title,
+          description: op.description ?? pressure.description,
+          evidence: op.evidence ?? pressure.evidence,
+          order: op.order ?? pressure.order,
+        };
+        if (!isDryRun) {
+          await ctx.db.patch(pressure._id, {
+            ...nextData,
+            updatedBy: actor,
+            updatedAt: now,
+          });
+          await recordTransformationHistory(ctx, {
+            workosOrgId: token.workosOrgId,
+            mapId: map._id,
+            entityType: "pressure",
+            entityId: pressure.key,
+            changedBy: actor,
+            changeType: "update",
+            previousData,
+            nextData,
+          });
+        }
+        summary.push("updated pressure");
+      } else if (op.type === "delete_pressure") {
+        if (!op.pressureKey) {
+          throw new Error("Validation: delete_pressure requires pressureKey");
+        }
+        const pressure = await getTransformationPressureByKey(ctx, map._id, op.pressureKey);
+        const objectives = await ctx.db
+          .query("transformationObjectives")
+          .withIndex("by_map", (q: any) => q.eq("mapId", map._id))
+          .collect();
+        if (!isDryRun) {
+          for (const objective of objectives) {
+            if (!objective.linkedPressureKeys.includes(op.pressureKey)) {
+              continue;
+            }
+            const nextLinkedPressureKeys = objective.linkedPressureKeys.filter((key: string) => key !== op.pressureKey);
+            await ctx.db.patch(objective._id, {
+              linkedPressureKeys: nextLinkedPressureKeys,
+              updatedBy: actor,
+              updatedAt: now,
+            });
+            await recordTransformationHistory(ctx, {
+              workosOrgId: token.workosOrgId,
+              mapId: map._id,
+              entityType: "objective",
+              entityId: objective.key,
+              changedBy: actor,
+              changeType: "update",
+              previousData: { linkedPressureKeys: objective.linkedPressureKeys },
+              nextData: { linkedPressureKeys: nextLinkedPressureKeys },
+            });
+          }
+          await ctx.db.delete(pressure._id);
+          await recordTransformationHistory(ctx, {
+            workosOrgId: token.workosOrgId,
+            mapId: map._id,
+            entityType: "pressure",
+            entityId: pressure.key,
+            changedBy: actor,
+            changeType: "delete",
+            previousData: {
+              type: pressure.type,
+              title: pressure.title,
+              description: pressure.description,
+              evidence: pressure.evidence,
+              order: pressure.order,
+            },
+          });
+        }
+        summary.push("deleted pressure");
+      } else if (op.type === "create_objective") {
+        if (!op.key || !op.scope || !op.title || !op.description) {
+          throw new Error("Validation: create_objective requires key, scope, title, and description");
+        }
+        if (op.scope !== "enterprise" && op.scope !== "department") {
+          throw new Error("Validation: create_objective scope must be enterprise or department");
+        }
+        if (op.scope === "department") {
+          if (!op.departmentKey) {
+            throw new Error("Validation: create_objective requires departmentKey when scope is department");
+          }
+          await getTransformationDepartmentByKey(ctx, map._id, op.departmentKey);
+        }
+        await ensureUniqueTransformationObjectiveKey(ctx, map._id, op.key);
+        if (!isDryRun) {
+          await ctx.db.insert("transformationObjectives", {
+            mapId: map._id,
+            key: op.key,
+            order: op.order ?? now,
+            scope: op.scope,
+            departmentKey: op.scope === "department" ? op.departmentKey : undefined,
+            title: op.title,
+            description: op.description,
+            linkedPressureKeys: op.linkedPressureKeys ?? [],
+            artifactStatus: "reviewed",
+            sourceType: "system",
+            sourceRef: "mcp.apply_transformation_map_changes",
+            createdBy: actor,
+            updatedBy: actor,
+            createdAt: now,
+            updatedAt: now,
+          });
+          if (op.scope === "department" && op.departmentKey) {
+            await syncTransformationDepartmentMandates(ctx, map._id, op.departmentKey, actor, now);
+          }
+          await recordTransformationHistory(ctx, {
+            workosOrgId: token.workosOrgId,
+            mapId: map._id,
+            entityType: "objective",
+            entityId: op.key,
+            changedBy: actor,
+            changeType: "create",
+            nextData: {
+              key: op.key,
+              order: op.order ?? now,
+              scope: op.scope,
+              departmentKey: op.scope === "department" ? op.departmentKey : undefined,
+              title: op.title,
+              description: op.description,
+              linkedPressureKeys: op.linkedPressureKeys ?? [],
+            },
+          });
+        }
+        summary.push("created objective");
+      } else if (op.type === "update_objective") {
+        if (!op.objectiveKey) {
+          throw new Error("Validation: update_objective requires objectiveKey");
+        }
+        const objective = await getTransformationObjectiveByKey(ctx, map._id, op.objectiveKey);
+        if (op.scope !== undefined && op.scope !== objective.scope) {
+          throw new Error("Validation: update_objective does not support changing scope");
+        }
+        if (op.departmentKey !== undefined && op.departmentKey !== objective.departmentKey) {
+          throw new Error("Validation: update_objective does not support changing departmentKey");
+        }
+        const previousData = {
+          title: objective.title,
+          description: objective.description,
+          linkedPressureKeys: objective.linkedPressureKeys,
+          order: objective.order,
+        };
+        const nextData = {
+          title: op.title ?? objective.title,
+          description: op.description ?? objective.description,
+          linkedPressureKeys: op.linkedPressureKeys ?? objective.linkedPressureKeys,
+          order: op.order ?? objective.order,
+        };
+        if (!isDryRun) {
+          await ctx.db.patch(objective._id, {
+            ...nextData,
+            updatedBy: actor,
+            updatedAt: now,
+          });
+          if (objective.scope === "department" && objective.departmentKey) {
+            await syncTransformationDepartmentMandates(ctx, map._id, objective.departmentKey, actor, now);
+          }
+          await recordTransformationHistory(ctx, {
+            workosOrgId: token.workosOrgId,
+            mapId: map._id,
+            entityType: "objective",
+            entityId: objective.key,
+            changedBy: actor,
+            changeType: "update",
+            previousData,
+            nextData,
+          });
+        }
+        summary.push("updated objective");
+      } else if (op.type === "delete_objective") {
+        if (!op.objectiveKey) {
+          throw new Error("Validation: delete_objective requires objectiveKey");
+        }
+        const objective = await getTransformationObjectiveByKey(ctx, map._id, op.objectiveKey);
+        if (!isDryRun) {
+          await ctx.db.delete(objective._id);
+          if (objective.scope === "department" && objective.departmentKey) {
+            await syncTransformationDepartmentMandates(ctx, map._id, objective.departmentKey, actor, now);
+          }
+          await recordTransformationHistory(ctx, {
+            workosOrgId: token.workosOrgId,
+            mapId: map._id,
+            entityType: "objective",
+            entityId: objective.key,
+            changedBy: actor,
+            changeType: "delete",
+            previousData: {
+              scope: objective.scope,
+              departmentKey: objective.departmentKey,
+              title: objective.title,
+              description: objective.description,
+              linkedPressureKeys: objective.linkedPressureKeys,
+              order: objective.order,
+            },
+          });
+        }
+        summary.push("deleted objective");
       } else if (op.type === "create_service") {
         if (!op.key || !op.departmentKey || !op.name) {
           throw new Error("Validation: create_service requires key, departmentKey, and name");

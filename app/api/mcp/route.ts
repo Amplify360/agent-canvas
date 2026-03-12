@@ -1,7 +1,9 @@
 import { ConvexHttpClient } from "convex/browser";
 import { NextResponse } from "next/server";
 import { authenticateMcpRequest } from "@/server/mcp/auth";
+import { buildToolCallErrorResult, shouldExposeToolCallErrorResult } from "@/server/mcp/responses";
 import { executeTool, MCP_TOOLS } from "@/server/mcp/tools";
+import { McpInvalidParamsError, validateToolArguments } from "@/server/mcp/validation";
 import { JsonRpcRequest } from "@/server/mcp/types";
 
 export const runtime = "nodejs";
@@ -92,6 +94,7 @@ export async function POST(request: Request) {
       const params = body.params ?? {};
       const name = String(params.name ?? "");
       const args = (params.arguments as Record<string, unknown>) ?? {};
+      validateToolArguments(name, args);
       const data = await executeTool(convex, auth, name, args);
       return withProtocolHeader(jsonRpcResult(body.id, {
         content: [{ type: "text", text: JSON.stringify(data) }],
@@ -103,6 +106,7 @@ export async function POST(request: Request) {
     return withProtocolHeader(jsonRpcError(body.id, -32601, `Method not found: ${body.method}`), protocolVersion);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
+    const code = error instanceof McpInvalidParamsError ? -32602 : -32000;
     const toolName =
       body.method === "tools/call" && typeof body.params?.name === "string"
         ? body.params.name
@@ -112,6 +116,12 @@ export async function POST(request: Request) {
       toolName,
       error: message,
     });
-    return withProtocolHeader(jsonRpcError(body.id, -32000, message), protocolVersion);
+    if (body.method === "tools/call" && shouldExposeToolCallErrorResult(message, code)) {
+      return withProtocolHeader(
+        jsonRpcResult(body.id, buildToolCallErrorResult(message, code)),
+        protocolVersion
+      );
+    }
+    return withProtocolHeader(jsonRpcError(body.id, code, message), protocolVersion);
   }
 }
