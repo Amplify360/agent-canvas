@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 
-globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+(globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
 
 function Probe({
   storageKey,

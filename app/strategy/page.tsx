@@ -1,19 +1,5 @@
-/**
- * Strategy page - Strategic reasoning layer entry point
- */
+import { redirect } from 'next/navigation';
 
-'use client';
-
-import { Suspense } from 'react';
-import { AppProviders } from '@/components/AppProviders';
-import { StrategyExplorer } from '@/components/strategy/StrategyExplorer';
-
-export default function StrategyPage() {
-  return (
-    <AppProviders>
-      <Suspense>
-        <StrategyExplorer />
-      </Suspense>
-    </AppProviders>
-  );
+export default function StrategyRedirectPage() {
+  redirect('/transformation-map');
 }

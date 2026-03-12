@@ -154,4 +154,321 @@ export default defineSchema({
   })
     .index("by_prefix", ["tokenPrefix"])
     .index("by_org", ["workosOrgId"]),
+
+  transformationMaps: defineTable({
+    workosOrgId: v.string(),
+    title: v.string(),
+    slug: v.string(),
+    description: v.optional(v.string()),
+    status: v.union(
+      v.literal("draft"),
+      v.literal("in_review"),
+      v.literal("active"),
+      v.literal("archived")
+    ),
+    createdBy: v.string(),
+    updatedBy: v.string(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_org", ["workosOrgId"])
+    .index("by_slug", ["slug"])
+    .index("by_org_slug", ["workosOrgId", "slug"]),
+
+  transformationPressures: defineTable({
+    mapId: v.id("transformationMaps"),
+    key: v.string(),
+    order: v.number(),
+    type: v.union(v.literal("external"), v.literal("internal")),
+    title: v.string(),
+    description: v.string(),
+    evidence: v.array(v.string()),
+    artifactStatus: v.union(
+      v.literal("draft"),
+      v.literal("reviewed"),
+      v.literal("approved"),
+      v.literal("archived")
+    ),
+    sourceType: v.union(
+      v.literal("human"),
+      v.literal("ai_generated"),
+      v.literal("ai_edited"),
+      v.literal("imported"),
+      v.literal("system")
+    ),
+    sourceRef: v.optional(v.string()),
+    generatedAt: v.optional(v.number()),
+    lastReviewedBy: v.optional(v.string()),
+    lastReviewedAt: v.optional(v.number()),
+    createdBy: v.string(),
+    updatedBy: v.string(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_map", ["mapId"])
+    .index("by_map_order", ["mapId", "order"])
+    .index("by_map_key", ["mapId", "key"]),
+
+  transformationObjectives: defineTable({
+    mapId: v.id("transformationMaps"),
+    key: v.string(),
+    order: v.number(),
+    scope: v.union(v.literal("enterprise"), v.literal("department")),
+    departmentKey: v.optional(v.string()),
+    title: v.string(),
+    description: v.string(),
+    linkedPressureKeys: v.array(v.string()),
+    artifactStatus: v.union(
+      v.literal("draft"),
+      v.literal("reviewed"),
+      v.literal("approved"),
+      v.literal("archived")
+    ),
+    sourceType: v.union(
+      v.literal("human"),
+      v.literal("ai_generated"),
+      v.literal("ai_edited"),
+      v.literal("imported"),
+      v.literal("system")
+    ),
+    sourceRef: v.optional(v.string()),
+    generatedAt: v.optional(v.number()),
+    lastReviewedBy: v.optional(v.string()),
+    lastReviewedAt: v.optional(v.number()),
+    createdBy: v.string(),
+    updatedBy: v.string(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_map", ["mapId"])
+    .index("by_map_order", ["mapId", "order"])
+    .index("by_map_key", ["mapId", "key"])
+    .index("by_map_scope_order", ["mapId", "scope", "order"])
+    .index("by_map_department", ["mapId", "departmentKey"]),
+
+  transformationDepartments: defineTable({
+    mapId: v.id("transformationMaps"),
+    key: v.string(),
+    order: v.number(),
+    name: v.string(),
+    description: v.string(),
+    keyIssues: v.array(v.string()),
+    improvementMandates: v.array(v.string()),
+    artifactStatus: v.union(
+      v.literal("draft"),
+      v.literal("reviewed"),
+      v.literal("approved"),
+      v.literal("archived")
+    ),
+    sourceType: v.union(
+      v.literal("human"),
+      v.literal("ai_generated"),
+      v.literal("ai_edited"),
+      v.literal("imported"),
+      v.literal("system")
+    ),
+    sourceRef: v.optional(v.string()),
+    generatedAt: v.optional(v.number()),
+    lastReviewedBy: v.optional(v.string()),
+    lastReviewedAt: v.optional(v.number()),
+    createdBy: v.string(),
+    updatedBy: v.string(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_map", ["mapId"])
+    .index("by_map_order", ["mapId", "order"])
+    .index("by_map_key", ["mapId", "key"]),
+
+  transformationServices: defineTable({
+    mapId: v.id("transformationMaps"),
+    key: v.string(),
+    departmentKey: v.string(),
+    order: v.number(),
+    name: v.string(),
+    purpose: v.string(),
+    customer: v.string(),
+    trigger: v.string(),
+    outcome: v.string(),
+    constraints: v.array(v.string()),
+    status: v.union(
+      v.literal("not-analyzed"),
+      v.literal("analyzed"),
+      v.literal("has-deviations")
+    ),
+    effectivenessMetric: v.string(),
+    efficiencyMetric: v.string(),
+    artifactStatus: v.union(
+      v.literal("draft"),
+      v.literal("reviewed"),
+      v.literal("approved"),
+      v.literal("archived")
+    ),
+    sourceType: v.union(
+      v.literal("human"),
+      v.literal("ai_generated"),
+      v.literal("ai_edited"),
+      v.literal("imported"),
+      v.literal("system")
+    ),
+    sourceRef: v.optional(v.string()),
+    generatedAt: v.optional(v.number()),
+    lastReviewedBy: v.optional(v.string()),
+    lastReviewedAt: v.optional(v.number()),
+    createdBy: v.string(),
+    updatedBy: v.string(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_map", ["mapId"])
+    .index("by_map_key", ["mapId", "key"])
+    .index("by_department", ["mapId", "departmentKey"])
+    .index("by_department_order", ["mapId", "departmentKey", "order"]),
+
+  transformationServiceAnalyses: defineTable({
+    mapId: v.id("transformationMaps"),
+    serviceId: v.id("transformationServices"),
+    reviewStatus: v.union(
+      v.literal("draft"),
+      v.literal("reviewed"),
+      v.literal("approved"),
+      v.literal("archived")
+    ),
+    sourceType: v.union(
+      v.literal("human"),
+      v.literal("ai_generated"),
+      v.literal("ai_edited"),
+      v.literal("imported"),
+      v.literal("system")
+    ),
+    sourceRef: v.optional(v.string()),
+    generatedAt: v.optional(v.number()),
+    lastReviewedBy: v.optional(v.string()),
+    lastReviewedAt: v.optional(v.number()),
+    idealFlowSteps: v.array(
+      v.object({
+        id: v.string(),
+        serviceId: v.string(),
+        flowType: v.union(v.literal("ideal"), v.literal("current")),
+        order: v.number(),
+        description: v.string(),
+        stepType: v.union(
+          v.literal("input"),
+          v.literal("process"),
+          v.literal("output"),
+          v.literal("control"),
+          v.literal("approval"),
+          v.literal("handoff"),
+          v.literal("rework"),
+          v.literal("exception")
+        ),
+        hasDeviation: v.optional(v.boolean()),
+        parallelGroup: v.optional(v.string()),
+        groupLabel: v.optional(v.string()),
+      })
+    ),
+    currentFlowSteps: v.array(
+      v.object({
+        id: v.string(),
+        serviceId: v.string(),
+        flowType: v.union(v.literal("ideal"), v.literal("current")),
+        order: v.number(),
+        description: v.string(),
+        stepType: v.union(
+          v.literal("input"),
+          v.literal("process"),
+          v.literal("output"),
+          v.literal("control"),
+          v.literal("approval"),
+          v.literal("handoff"),
+          v.literal("rework"),
+          v.literal("exception")
+        ),
+        hasDeviation: v.optional(v.boolean()),
+        parallelGroup: v.optional(v.string()),
+        groupLabel: v.optional(v.string()),
+      })
+    ),
+    deviations: v.array(
+      v.object({
+        id: v.string(),
+        serviceId: v.string(),
+        flowStepId: v.optional(v.string()),
+        what: v.string(),
+        why: v.string(),
+        necessary: v.boolean(),
+        impact: v.union(v.literal("high"), v.literal("medium"), v.literal("low")),
+        treatment: v.union(
+          v.literal("automate"),
+          v.literal("eliminate"),
+          v.literal("simplify"),
+          v.literal("accept")
+        ),
+        classification: v.union(
+          v.literal("approval"),
+          v.literal("handoff"),
+          v.literal("rework"),
+          v.literal("system-constraint"),
+          v.literal("exception"),
+          v.literal("control")
+        ),
+      })
+    ),
+    initiatives: v.array(
+      v.object({
+        id: v.string(),
+        serviceId: v.string(),
+        title: v.string(),
+        description: v.string(),
+        status: v.union(
+          v.literal("proposed"),
+          v.literal("approved"),
+          v.literal("in-progress"),
+          v.literal("done"),
+          v.literal("parked")
+        ),
+        linkedAgents: v.array(
+          v.object({
+            id: v.string(),
+            canvasAgentId: v.optional(v.id("agents")),
+            name: v.string(),
+            role: v.string(),
+          })
+        ),
+      })
+    ),
+    createdBy: v.string(),
+    updatedBy: v.string(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_map", ["mapId"])
+    .index("by_service", ["serviceId"])
+    .index("by_map_service", ["mapId", "serviceId"]),
+
+  transformationHistory: defineTable({
+    workosOrgId: v.string(),
+    mapId: v.id("transformationMaps"),
+    entityType: v.union(
+      v.literal("map"),
+      v.literal("pressure"),
+      v.literal("objective"),
+      v.literal("department"),
+      v.literal("service"),
+      v.literal("service_analysis")
+    ),
+    entityId: v.string(),
+    changedBy: v.string(),
+    changedAt: v.number(),
+    changeType: v.union(
+      v.literal("create"),
+      v.literal("update"),
+      v.literal("delete")
+    ),
+    previousData: v.optional(v.any()),
+    nextData: v.optional(v.any()),
+  })
+    .index("by_map_time", ["mapId", "changedAt"])
+    .index("by_entity_time", ["entityType", "entityId", "changedAt"])
+    .index("by_org_time", ["workosOrgId", "changedAt"]),
 });

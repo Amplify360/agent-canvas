@@ -133,6 +133,156 @@ export const MCP_TOOLS = [
       additionalProperties: false,
     },
   },
+  {
+    name: "list_transformation_maps",
+    description: "Lists Transformation Maps in the token's organization.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        text: { type: "string" },
+        limit: { type: "number", minimum: 1, maximum: 100 },
+      },
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "get_transformation_map_snapshot",
+    description: "Gets a Transformation Map snapshot. If mapId and mapSlug are omitted, uses the most recently updated map in the token's organization.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        mapId: { type: "string" },
+        mapSlug: { type: "string" },
+        view: {
+          type: "string",
+          enum: ["compact", "full"],
+        },
+      },
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "get_transformation_department_snapshot",
+    description: "Gets a department snapshot within a Transformation Map.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        mapId: { type: "string" },
+        mapSlug: { type: "string" },
+        departmentKey: { type: "string" },
+      },
+      required: ["departmentKey"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "get_transformation_service_snapshot",
+    description: "Gets a service snapshot within a Transformation Map.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        mapId: { type: "string" },
+        mapSlug: { type: "string" },
+        serviceKey: { type: "string" },
+      },
+      required: ["serviceKey"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "create_transformation_map",
+    description: "Creates a new Transformation Map in the token's organization.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        title: { type: "string" },
+        slug: { type: "string" },
+        description: { type: "string" },
+      },
+      required: ["title"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "apply_transformation_map_changes",
+    description: "Applies structural edits to a Transformation Map such as creating, updating, and reordering departments, pressures, objectives, and services.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        mapId: { type: "string" },
+        mapSlug: { type: "string" },
+        dryRun: { type: "boolean" },
+        expectedUpdatedAt: { type: "number" },
+        operations: {
+          type: "array",
+          items: {
+            type: "object",
+            additionalProperties: true,
+          },
+        },
+      },
+      required: ["operations"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "apply_department_analysis",
+    description: "Applies a department-level analysis bundle to a Transformation Map.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        mapId: { type: "string" },
+        mapSlug: { type: "string" },
+        departmentKey: { type: "string" },
+        dryRun: { type: "boolean" },
+        expectedUpdatedAt: { type: "number" },
+        payload: {
+          type: "object",
+          additionalProperties: true,
+        },
+      },
+      required: ["departmentKey", "payload"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "apply_service_analysis",
+    description: "Applies a service-level analysis bundle to a Transformation Map.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        mapId: { type: "string" },
+        mapSlug: { type: "string" },
+        serviceKey: { type: "string" },
+        dryRun: { type: "boolean" },
+        expectedUpdatedAt: { type: "number" },
+        payload: {
+          type: "object",
+          additionalProperties: true,
+        },
+      },
+      required: ["serviceKey", "payload"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "set_transformation_review_status",
+    description: "Updates the review status of a service analysis within a Transformation Map.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        mapId: { type: "string" },
+        mapSlug: { type: "string" },
+        serviceKey: { type: "string" },
+        reviewStatus: {
+          type: "string",
+          enum: ["draft", "reviewed", "approved", "archived"],
+        },
+      },
+      required: ["serviceKey", "reviewStatus"],
+      additionalProperties: false,
+    },
+  },
 ];
 
 export async function executeTool(convex: ConvexHttpClient, auth: AuthContext, name: string, args: Record<string, unknown>) {
@@ -200,6 +350,113 @@ export async function executeTool(convex: ConvexHttpClient, auth: AuthContext, n
       canvasSlug: args.canvasSlug,
       limit: args.limit,
       updatedSince: args.updatedSince,
+    });
+  }
+
+  if (name === "list_transformation_maps") {
+    requireScope(auth, "transformation:read");
+    return convex.query((api as any).mcp.listTransformationMaps, {
+      tokenPrefix: auth.tokenPrefix,
+      tokenHash: auth.tokenHash,
+      text: args.text,
+      limit: args.limit,
+    });
+  }
+
+  if (name === "get_transformation_map_snapshot") {
+    requireScope(auth, "transformation:read");
+    return convex.query((api as any).mcp.getTransformationMapSnapshot, {
+      tokenPrefix: auth.tokenPrefix,
+      tokenHash: auth.tokenHash,
+      mapId: args.mapId,
+      mapSlug: args.mapSlug,
+      view: args.view,
+    });
+  }
+
+  if (name === "get_transformation_department_snapshot") {
+    requireScope(auth, "transformation:read");
+    return convex.query((api as any).mcp.getTransformationDepartmentSnapshot, {
+      tokenPrefix: auth.tokenPrefix,
+      tokenHash: auth.tokenHash,
+      mapId: args.mapId,
+      mapSlug: args.mapSlug,
+      departmentKey: args.departmentKey,
+    });
+  }
+
+  if (name === "get_transformation_service_snapshot") {
+    requireScope(auth, "transformation:read");
+    return convex.query((api as any).mcp.getTransformationServiceSnapshot, {
+      tokenPrefix: auth.tokenPrefix,
+      tokenHash: auth.tokenHash,
+      mapId: args.mapId,
+      mapSlug: args.mapSlug,
+      serviceKey: args.serviceKey,
+    });
+  }
+
+  if (name === "create_transformation_map") {
+    requireScope(auth, "transformation:write");
+    return convex.mutation((api as any).mcp.createTransformationMap, {
+      tokenPrefix: auth.tokenPrefix,
+      tokenHash: auth.tokenHash,
+      title: args.title,
+      slug: args.slug,
+      description: args.description,
+    });
+  }
+
+  if (name === "apply_transformation_map_changes") {
+    requireScope(auth, "transformation:write");
+    return convex.mutation((api as any).mcp.applyTransformationMapChanges, {
+      tokenPrefix: auth.tokenPrefix,
+      tokenHash: auth.tokenHash,
+      mapId: args.mapId,
+      mapSlug: args.mapSlug,
+      dryRun: args.dryRun,
+      expectedUpdatedAt: args.expectedUpdatedAt,
+      operations: args.operations,
+    });
+  }
+
+  if (name === "apply_department_analysis") {
+    requireScope(auth, "transformation:write");
+    return convex.mutation((api as any).mcp.applyTransformationDepartmentAnalysis, {
+      tokenPrefix: auth.tokenPrefix,
+      tokenHash: auth.tokenHash,
+      mapId: args.mapId,
+      mapSlug: args.mapSlug,
+      dryRun: args.dryRun,
+      expectedUpdatedAt: args.expectedUpdatedAt,
+      departmentKey: args.departmentKey,
+      payload: args.payload,
+    });
+  }
+
+  if (name === "apply_service_analysis") {
+    requireScope(auth, "transformation:write");
+    return convex.mutation((api as any).mcp.applyTransformationServiceAnalysis, {
+      tokenPrefix: auth.tokenPrefix,
+      tokenHash: auth.tokenHash,
+      mapId: args.mapId,
+      mapSlug: args.mapSlug,
+      dryRun: args.dryRun,
+      expectedUpdatedAt: args.expectedUpdatedAt,
+      serviceKey: args.serviceKey,
+      payload: args.payload,
+    });
+  }
+
+  if (name === "set_transformation_review_status") {
+    requireScope(auth, "transformation:review");
+    return convex.mutation((api as any).mcp.setTransformationReviewStatus, {
+      tokenPrefix: auth.tokenPrefix,
+      tokenHash: auth.tokenHash,
+      mapId: args.mapId,
+      mapSlug: args.mapSlug,
+      serviceKey: args.serviceKey,
+      reviewStatus: args.reviewStatus,
     });
   }
 

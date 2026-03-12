@@ -12,12 +12,12 @@ const useMutationMock = vi.fn(() => vi.fn());
 const useCanQueryMock = vi.fn(() => ({ canQuery: true, isConvexAuthenticated: true, isConvexAuthLoading: false }));
 
 vi.mock('@/hooks/useConvex', () => ({
-  useQuery: (...args: unknown[]) => useQueryMock(...args),
-  useMutation: (...args: unknown[]) => useMutationMock(...args),
+  useQuery: (...args: any[]) => (useQueryMock as any).apply(null, args),
+  useMutation: (...args: any[]) => (useMutationMock as any).apply(null, args),
   useCanQuery: () => useCanQueryMock(),
 }));
 
-globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+(globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
 
 describe('McpAccessModal', () => {
   let container: HTMLDivElement;

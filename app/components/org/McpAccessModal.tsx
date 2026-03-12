@@ -31,7 +31,9 @@ export function McpAccessModal({ isOpen, onClose, workosOrgId, canvases }: Props
   const [secret, setSecret] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
-  const scopes = canWrite ? ['canvas:read', 'canvas:write'] : ['canvas:read'];
+  const scopes = canWrite
+    ? ['canvas:read', 'canvas:write', 'transformation:read', 'transformation:write', 'transformation:review']
+    : ['canvas:read', 'transformation:read'];
 
   const activeTokens = tokens.filter((t: any) => !t.revokedAt);
   const revokedTokens = tokens.filter((t: any) => t.revokedAt);
