@@ -1,8 +1,28 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Modal } from '@/components/ui/Modal';
 import { Icon } from '@/components/ui/Icon';
+import { useAppState } from '@/contexts/AppStateContext';
+import { useLocalStorage } from '@/hooks/useLocalStorage';
+import { STORAGE_KEYS } from '@/constants/storageKeys';
+import {
+  DEFAULT_SERVICE_FIELD_IMPROVE_PROMPT,
+  DEFAULT_SERVICE_GLOBAL_ASSIST_PROMPT,
+  SERVICE_ASSIST_MODEL_FALLBACK,
+  SERVICE_ASSIST_FIELD_LABELS,
+  buildServiceEditorFormData,
+  createEmptyServiceAssistSelection,
+  filterServiceAssistPatch,
+  getServiceAssistDiff,
+  type ServiceAssistContext,
+  type ServiceAssistField,
+  type ServiceAssistRequest,
+  type ServiceAssistResult,
+  type ServiceEditorFormData,
+  type ServiceFieldImproveResult,
+  type ServiceTranscribeResult,
+} from '@/strategy/aiAssist';
 import {
   type Department,
   type Deviation,
@@ -403,42 +423,148 @@ export function DepartmentEditModal({ isOpen, department, onClose, onSave }: Dep
 interface ServiceEditModalProps {
   isOpen: boolean;
   service: Service | null;
+  department: Department | null;
+  pressures: StrategicPressure[];
+  enterpriseObjectives: StrategicObjective[];
+  departmentObjectives: StrategicObjective[];
+  mapTitle?: string;
   onClose: () => void;
   onSave: (updates: Pick<Service, 'name' | 'purpose' | 'customer' | 'trigger' | 'outcome' | 'constraints' | 'status' | 'effectivenessMetric' | 'efficiencyMetric'>) => Promise<void>;
 }
 
-export function ServiceEditModal({ isOpen, service, onClose, onSave }: ServiceEditModalProps) {
-  const [formData, setFormData] = useState({
+export function ServiceEditModal({
+  isOpen,
+  service,
+  department,
+  pressures,
+  enterpriseObjectives,
+  departmentObjectives,
+  mapTitle,
+  onClose,
+  onSave,
+}: ServiceEditModalProps) {
+  const { showToast } = useAppState();
+  const [assistPrompt, setAssistPrompt] = useLocalStorage(
+    STORAGE_KEYS.TRANSFORMATION_MAP_SERVICE_ASSIST_PROMPT,
+    DEFAULT_SERVICE_GLOBAL_ASSIST_PROMPT
+  );
+  const [fieldPrompt, setFieldPrompt] = useLocalStorage(
+    STORAGE_KEYS.TRANSFORMATION_MAP_SERVICE_FIELD_PROMPT,
+    DEFAULT_SERVICE_FIELD_IMPROVE_PROMPT
+  );
+  const [formData, setFormData] = useState<ServiceEditorFormData>({
     name: '',
     purpose: '',
     customer: '',
     trigger: '',
     outcome: '',
     constraintsText: '',
-    status: 'not-analyzed' as Service['status'],
+    status: 'not-analyzed',
     effectivenessMetric: '',
     efficiencyMetric: '',
   });
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isAssistOpen, setIsAssistOpen] = useState(false);
+  const [isAdvancedPromptOpen, setIsAdvancedPromptOpen] = useState(false);
+  const [assistNotes, setAssistNotes] = useState('');
+  const [fillEmptyOnly, setFillEmptyOnly] = useState(false);
+  const [assistError, setAssistError] = useState<string | null>(null);
+  const [isGeneratingAssist, setIsGeneratingAssist] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [activeFieldImprove, setActiveFieldImprove] = useState<ServiceAssistField | null>(null);
+  const [fieldImproveError, setFieldImproveError] = useState<string | null>(null);
+  const [fieldImproveSuggestion, setFieldImproveSuggestion] = useState<ServiceFieldImproveResult | null>(null);
+  const [assistResult, setAssistResult] = useState<ServiceAssistResult | null>(null);
+  const [selectedPatchFields, setSelectedPatchFields] = useState<Record<ServiceAssistField, boolean>>(
+    createEmptyServiceAssistSelection({})
+  );
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const mediaStreamRef = useRef<MediaStream | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
 
   useEffect(() => {
     if (!isOpen || !service) return;
-    setFormData({
-      name: service.name,
-      purpose: service.purpose,
-      customer: service.customer,
-      trigger: service.trigger,
-      outcome: service.outcome,
-      constraintsText: linesToText(service.constraints),
-      status: service.status,
-      effectivenessMetric: service.effectivenessMetric,
-      efficiencyMetric: service.efficiencyMetric,
-    });
+    setFormData(buildServiceEditorFormData(service));
+    setAssistNotes('');
+    setFillEmptyOnly(false);
     setError(null);
+    setAssistError(null);
+    setFieldImproveError(null);
+    setFieldImproveSuggestion(null);
+    setAssistResult(null);
+    setSelectedPatchFields(createEmptyServiceAssistSelection({}));
   }, [isOpen, service]);
 
+  useEffect(() => {
+    if (isOpen) {
+      return;
+    }
+
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop();
+    }
+    mediaStreamRef.current?.getTracks().forEach((track) => track.stop());
+    mediaRecorderRef.current = null;
+    mediaStreamRef.current = null;
+    audioChunksRef.current = [];
+    setIsRecording(false);
+  }, [isOpen]);
+
   if (!service) return null;
+
+  const assistContext: ServiceAssistContext = {
+    mapTitle,
+    pressures: pressures.map((pressure) => ({
+      type: pressure.type,
+      title: pressure.title,
+      description: pressure.description,
+    })),
+    enterpriseObjectives: enterpriseObjectives.map((objective) => ({
+      title: objective.title,
+      description: objective.description,
+    })),
+    department: department
+      ? {
+          id: department.id,
+          name: department.name,
+          description: department.description,
+          keyIssues: department.keyIssues,
+        }
+      : null,
+    departmentObjectives: departmentObjectives.map((objective) => ({
+      title: objective.title,
+      description: objective.description,
+    })),
+    service: formData,
+  };
+
+  const assistDiff = assistResult ? getServiceAssistDiff(formData, assistResult.patch) : [];
+  const isFieldImproveBusy = Boolean(activeFieldImprove);
+  const isAiBusy = isFieldImproveBusy || isGeneratingAssist || isSubmitting || isTranscribing;
+
+  const applySelectedPatch = () => {
+    if (!assistResult) {
+      return;
+    }
+
+    const patch = Object.entries(assistResult.patch).reduce<Partial<ServiceEditorFormData>>((acc, [field, value]) => {
+      const typedField = field as ServiceAssistField;
+      if (selectedPatchFields[typedField]) {
+        acc[typedField] = value as never;
+      }
+      return acc;
+    }, {});
+
+    setFormData((current) => ({
+      ...current,
+      ...patch,
+    }));
+    setAssistResult(null);
+    setSelectedPatchFields(createEmptyServiceAssistSelection({}));
+    showToast('Applied AI suggestions to the form', 'success');
+  };
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -469,12 +595,409 @@ export function ServiceEditModal({ isOpen, service, onClose, onSave }: ServiceEd
     }
   };
 
+  const handleGlobalAssist = async () => {
+    if (!assistNotes.trim()) {
+      setAssistError('Paste notes or a transcript before populating the form.');
+      return;
+    }
+
+    setAssistError(null);
+    setIsGeneratingAssist(true);
+    setAssistResult(null);
+    setFieldImproveSuggestion(null);
+    try {
+      const response = await fetch('/api/transformation-map/service-assist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          mode: 'global_extract',
+          promptOverride: assistPrompt,
+          notes: assistNotes,
+          context: assistContext,
+        } satisfies ServiceAssistRequest),
+      });
+
+      const payload = await response.json() as Partial<ServiceAssistResult> & { error?: string };
+      if (!response.ok || !payload.patch) {
+        throw new Error(payload.error || 'Failed to populate form');
+      }
+
+      const patch = filterServiceAssistPatch(formData, payload.patch, fillEmptyOnly);
+      const nextResult: ServiceAssistResult = {
+        patch,
+        fieldMeta: payload.fieldMeta ?? {},
+        warnings: payload.warnings ?? [],
+        unmappedNotes: payload.unmappedNotes ?? [],
+        model: payload.model ?? 'unknown',
+      };
+
+      setAssistResult(nextResult);
+      setSelectedPatchFields(createEmptyServiceAssistSelection(nextResult.patch));
+      if (Object.keys(nextResult.patch).length === 0) {
+        showToast('No field updates were suggested from those notes', 'info');
+      } else {
+        showToast('AI suggestions are ready to review', 'success');
+      }
+    } catch (assistRequestError) {
+      setAssistError(assistRequestError instanceof Error ? assistRequestError.message : 'Failed to populate form.');
+    } finally {
+      setIsGeneratingAssist(false);
+    }
+  };
+
+  const handleImproveField = async (targetField: ServiceAssistField) => {
+    setActiveFieldImprove(targetField);
+    setFieldImproveError(null);
+    setFieldImproveSuggestion(null);
+    try {
+      const response = await fetch('/api/transformation-map/service-assist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          mode: 'field_improve',
+          promptOverride: fieldPrompt,
+          targetField,
+          context: assistContext,
+        } satisfies ServiceAssistRequest),
+      });
+
+      const payload = await response.json() as Partial<ServiceFieldImproveResult> & { error?: string };
+      if (!response.ok || !payload.suggestionText || !payload.targetField) {
+        throw new Error(payload.error || 'Failed to improve field');
+      }
+
+      setFieldImproveSuggestion({
+        targetField: payload.targetField,
+        suggestionText: payload.suggestionText,
+        reason: payload.reason,
+        model: payload.model ?? 'unknown',
+      });
+    } catch (improveError) {
+      setFieldImproveError(improveError instanceof Error ? improveError.message : 'Failed to improve field.');
+    } finally {
+      setActiveFieldImprove(null);
+    }
+  };
+
+  const applyFieldSuggestion = () => {
+    if (!fieldImproveSuggestion) {
+      return;
+    }
+
+    setFormData((current) => ({
+      ...current,
+      [fieldImproveSuggestion.targetField]: fieldImproveSuggestion.suggestionText,
+    }));
+    showToast(`Updated ${SERVICE_ASSIST_FIELD_LABELS[fieldImproveSuggestion.targetField]}`, 'success');
+    setFieldImproveSuggestion(null);
+  };
+
+  const handleToggleRecording = async () => {
+    if (isRecording) {
+      mediaRecorderRef.current?.stop();
+      return;
+    }
+
+    if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
+      setAssistError('Audio recording is not supported in this browser.');
+      return;
+    }
+
+    try {
+      setAssistError(null);
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const preferredMimeType = getPreferredRecordingMimeType();
+      const recorder = preferredMimeType
+        ? new MediaRecorder(stream, { mimeType: preferredMimeType })
+        : new MediaRecorder(stream);
+      mediaStreamRef.current = stream;
+      mediaRecorderRef.current = recorder;
+      audioChunksRef.current = [];
+
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+
+      recorder.onstop = async () => {
+        setIsRecording(false);
+        const audioBlob = new Blob(audioChunksRef.current, { type: recorder.mimeType || 'audio/webm' });
+        audioChunksRef.current = [];
+        mediaStreamRef.current?.getTracks().forEach((track) => track.stop());
+        mediaStreamRef.current = null;
+        mediaRecorderRef.current = null;
+        if (audioBlob.size === 0) {
+          return;
+        }
+
+        setIsTranscribing(true);
+        try {
+          const formPayload = new FormData();
+          formPayload.append('audio', new File([audioBlob], 'service-notes.webm', { type: audioBlob.type }));
+          const response = await fetch('/api/transformation-map/service-transcribe', {
+            method: 'POST',
+            body: formPayload,
+          });
+          const payload = await response.json() as Partial<ServiceTranscribeResult> & { error?: string };
+          if (!response.ok || !payload.transcript) {
+            throw new Error(payload.error || 'Failed to transcribe audio');
+          }
+
+          setAssistNotes((current) => current.trim()
+            ? `${current.trim()}\n\n${payload.transcript?.trim() ?? ''}`.trim()
+            : payload.transcript?.trim() ?? '');
+          showToast('Transcript added to notes', 'success');
+        } catch (transcribeError) {
+          setAssistError(transcribeError instanceof Error ? transcribeError.message : 'Failed to transcribe audio.');
+        } finally {
+          setIsTranscribing(false);
+        }
+      };
+
+      recorder.start();
+      setIsRecording(true);
+    } catch (recordingError) {
+      mediaStreamRef.current?.getTracks().forEach((track) => track.stop());
+      mediaStreamRef.current = null;
+      setAssistError(recordingError instanceof Error ? recordingError.message : 'Failed to start recording.');
+    }
+  };
+
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Edit Service" size="large" closeOnOverlayClick={false}>
       <form onSubmit={handleSubmit} className="strategy-editor-form">
+        <section className="strategy-ai-assist">
+          <button
+            type="button"
+            className="strategy-ai-assist__toggle"
+            onClick={() => setIsAssistOpen((current) => !current)}
+            aria-expanded={isAssistOpen}
+          >
+            <span className="strategy-ai-assist__toggle-main">
+              <Icon name="sparkles" size={16} />
+              <span>AI Assist</span>
+            </span>
+            <div className="strategy-ai-assist__toggle-meta">
+              <span className="form-help">Paste notes or transcript and populate this form with {SERVICE_ASSIST_MODEL_FALLBACK.replace(/^openai\//, '')}.</span>
+              <Icon name={isAssistOpen ? 'chevron-up' : 'chevron-down'} size={16} />
+            </div>
+          </button>
+          {isAssistOpen && (
+            <div className="strategy-ai-assist__body">
+              <div className="form-group">
+                <div className="strategy-ai-assist__label-row">
+                  <label htmlFor="service-assist-notes" className="form-label">Notes / transcript</label>
+                  <div className="strategy-ai-assist__actions">
+                    <button
+                      type="button"
+                      className={`btn btn--sm btn--ghost ${isRecording ? 'strategy-ai-assist__recording-btn' : ''}`.trim()}
+                      onClick={handleToggleRecording}
+                      disabled={isAiBusy && !isRecording}
+                    >
+                      <Icon name={isRecording ? 'square' : 'mic'} size={14} />
+                      {isRecording ? 'Stop recording' : 'Record'}
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn--sm btn--secondary"
+                      onClick={handleGlobalAssist}
+                      disabled={isAiBusy}
+                    >
+                      <Icon name={isGeneratingAssist ? 'loader-2' : 'sparkles'} size={14} className={isGeneratingAssist ? 'loading-icon' : undefined} />
+                      {isGeneratingAssist ? 'Populating...' : 'Populate form'}
+                    </button>
+                  </div>
+                </div>
+                <textarea
+                  id="service-assist-notes"
+                  className="form-textarea"
+                  value={assistNotes}
+                  onChange={(event) => setAssistNotes(event.target.value)}
+                  disabled={isSubmitting || isGeneratingAssist || isTranscribing}
+                  rows={6}
+                  placeholder="Paste a narrative, workshop notes, or a transcript here."
+                />
+                <div className="strategy-ai-assist__options">
+                  <label className="checkbox-label">
+                    <input
+                      type="checkbox"
+                      checked={fillEmptyOnly}
+                      onChange={(event) => setFillEmptyOnly(event.target.checked)}
+                      disabled={isAiBusy}
+                    />
+                    <span>Fill empty fields only</span>
+                  </label>
+                  {isTranscribing && <span className="form-help">Transcribing audio...</span>}
+                </div>
+              </div>
+              <div className="strategy-ai-assist__advanced">
+                <button
+                  type="button"
+                  className="btn btn--sm btn--ghost"
+                  onClick={() => setIsAdvancedPromptOpen((current) => !current)}
+                  aria-expanded={isAdvancedPromptOpen}
+                >
+                  <Icon name={isAdvancedPromptOpen ? 'chevron-up' : 'chevron-down'} size={14} />
+                  Advanced prompt
+                </button>
+                {isAdvancedPromptOpen && (
+                  <div className="strategy-ai-assist__advanced-body">
+                    <div className="form-group">
+                      <label htmlFor="service-assist-prompt" className="form-label">Global assist instructions</label>
+                      <textarea
+                        id="service-assist-prompt"
+                        className="form-textarea"
+                        value={assistPrompt}
+                        onChange={(event) => setAssistPrompt(event.target.value)}
+                        rows={4}
+                        disabled={isAiBusy}
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label htmlFor="service-field-prompt" className="form-label">Field improve instructions</label>
+                      <textarea
+                        id="service-field-prompt"
+                        className="form-textarea"
+                        value={fieldPrompt}
+                        onChange={(event) => setFieldPrompt(event.target.value)}
+                        rows={3}
+                        disabled={isAiBusy}
+                      />
+                    </div>
+                    <div className="strategy-ai-assist__prompt-actions">
+                      <button
+                        type="button"
+                        className="btn btn--sm btn--ghost"
+                        onClick={() => {
+                          setAssistPrompt(DEFAULT_SERVICE_GLOBAL_ASSIST_PROMPT);
+                          setFieldPrompt(DEFAULT_SERVICE_FIELD_IMPROVE_PROMPT);
+                        }}
+                      >
+                        Reset prompts
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+              {assistError && <FormError message={assistError} />}
+              {assistResult && (
+                <div className="strategy-ai-assist__proposal">
+                  <div className="strategy-ai-assist__proposal-header">
+                    <div>
+                      <h3 className="strategy-ai-assist__proposal-title">Proposed updates</h3>
+                      <p className="form-help">Review and apply the suggested field changes before saving the form.</p>
+                    </div>
+                    <span className="badge badge--info">{assistResult.model.replace(/^openai\//, '')}</span>
+                  </div>
+                  {assistDiff.length > 0 ? (
+                    <div className="strategy-ai-assist__proposal-list">
+                      {assistDiff.map((item) => (
+                        <label key={item.field} className="strategy-ai-assist__proposal-item">
+                          <input
+                            type="checkbox"
+                            checked={selectedPatchFields[item.field]}
+                            onChange={(event) =>
+                              setSelectedPatchFields((current) => ({
+                                ...current,
+                                [item.field]: event.target.checked,
+                              }))
+                            }
+                          />
+                          <div className="strategy-ai-assist__proposal-item-body">
+                            <div className="strategy-ai-assist__proposal-item-header">
+                              <strong>{SERVICE_ASSIST_FIELD_LABELS[item.field]}</strong>
+                              {assistResult.fieldMeta[item.field]?.reason && (
+                                <span className="form-help">{assistResult.fieldMeta[item.field]?.reason}</span>
+                              )}
+                            </div>
+                            <div className="strategy-ai-assist__proposal-values">
+                              <div>
+                                <span className="form-help">Current</span>
+                                <pre>{item.currentValue || 'Empty'}</pre>
+                              </div>
+                              <div>
+                                <span className="form-help">Proposed</span>
+                                <pre>{item.proposedValue}</pre>
+                              </div>
+                            </div>
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="form-help">No field changes were proposed from the current notes and form state.</p>
+                  )}
+                  {assistResult.warnings.length > 0 && (
+                    <div className="strategy-ai-assist__messages">
+                      {assistResult.warnings.map((warning, index) => (
+                        <p key={`${warning}-${index}`} className="form-help">{warning}</p>
+                      ))}
+                    </div>
+                  )}
+                  <div className="strategy-ai-assist__proposal-actions">
+                    <button
+                      type="button"
+                      className="btn btn--secondary btn--sm"
+                      onClick={applySelectedPatch}
+                      disabled={!assistDiff.some((item) => selectedPatchFields[item.field])}
+                    >
+                      Apply selected
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn--ghost btn--sm"
+                      onClick={() => {
+                        setAssistResult(null);
+                        setSelectedPatchFields(createEmptyServiceAssistSelection({}));
+                      }}
+                    >
+                      Dismiss
+                    </button>
+                  </div>
+                </div>
+              )}
+              {fieldImproveError && <FormError message={fieldImproveError} />}
+              {fieldImproveSuggestion && (
+                <div className="strategy-ai-assist__field-suggestion">
+                  <div className="strategy-ai-assist__proposal-header">
+                    <div>
+                      <h3 className="strategy-ai-assist__proposal-title">
+                        Suggested {SERVICE_ASSIST_FIELD_LABELS[fieldImproveSuggestion.targetField]} update
+                      </h3>
+                      {fieldImproveSuggestion.reason && (
+                        <p className="form-help">{fieldImproveSuggestion.reason}</p>
+                      )}
+                    </div>
+                    <span className="badge">{fieldImproveSuggestion.model.replace(/^openai\//, '')}</span>
+                  </div>
+                  <pre>{fieldImproveSuggestion.suggestionText}</pre>
+                  <div className="strategy-ai-assist__proposal-actions">
+                    <button type="button" className="btn btn--secondary btn--sm" onClick={applyFieldSuggestion}>
+                      Replace field
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn--ghost btn--sm"
+                      onClick={() => setFieldImproveSuggestion(null)}
+                    >
+                      Dismiss
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </section>
         <div className="form-row">
           <div className="form-group">
-            <label htmlFor="service-name" className="form-label">Name</label>
+            <FieldLabel
+              htmlFor="service-name"
+              label="Name"
+              isWorking={activeFieldImprove === 'name'}
+              isDisabled={isAiBusy}
+              onImprove={() => handleImproveField('name')}
+            />
             <input
               id="service-name"
               type="text"
@@ -501,7 +1024,13 @@ export function ServiceEditModal({ isOpen, service, onClose, onSave }: ServiceEd
           </div>
         </div>
         <div className="form-group">
-          <label htmlFor="service-purpose" className="form-label">Purpose</label>
+          <FieldLabel
+            htmlFor="service-purpose"
+            label="Purpose"
+            isWorking={activeFieldImprove === 'purpose'}
+            isDisabled={isAiBusy}
+            onImprove={() => handleImproveField('purpose')}
+          />
           <textarea
             id="service-purpose"
             className="form-textarea"
@@ -513,7 +1042,13 @@ export function ServiceEditModal({ isOpen, service, onClose, onSave }: ServiceEd
         </div>
         <div className="form-row">
           <div className="form-group">
-            <label htmlFor="service-customer" className="form-label">Customer</label>
+            <FieldLabel
+              htmlFor="service-customer"
+              label="Customer"
+              isWorking={activeFieldImprove === 'customer'}
+              isDisabled={isAiBusy}
+              onImprove={() => handleImproveField('customer')}
+            />
             <input
               id="service-customer"
               type="text"
@@ -524,7 +1059,13 @@ export function ServiceEditModal({ isOpen, service, onClose, onSave }: ServiceEd
             />
           </div>
           <div className="form-group">
-            <label htmlFor="service-trigger" className="form-label">Trigger</label>
+            <FieldLabel
+              htmlFor="service-trigger"
+              label="Trigger"
+              isWorking={activeFieldImprove === 'trigger'}
+              isDisabled={isAiBusy}
+              onImprove={() => handleImproveField('trigger')}
+            />
             <input
               id="service-trigger"
               type="text"
@@ -536,7 +1077,13 @@ export function ServiceEditModal({ isOpen, service, onClose, onSave }: ServiceEd
           </div>
         </div>
         <div className="form-group">
-          <label htmlFor="service-outcome" className="form-label">Outcome</label>
+          <FieldLabel
+            htmlFor="service-outcome"
+            label="Outcome"
+            isWorking={activeFieldImprove === 'outcome'}
+            isDisabled={isAiBusy}
+            onImprove={() => handleImproveField('outcome')}
+          />
           <input
             id="service-outcome"
             type="text"
@@ -547,7 +1094,13 @@ export function ServiceEditModal({ isOpen, service, onClose, onSave }: ServiceEd
           />
         </div>
         <div className="form-group">
-          <label htmlFor="service-constraints" className="form-label">Constraints</label>
+          <FieldLabel
+            htmlFor="service-constraints"
+            label="Constraints"
+            isWorking={activeFieldImprove === 'constraintsText'}
+            isDisabled={isAiBusy}
+            onImprove={() => handleImproveField('constraintsText')}
+          />
           <textarea
             id="service-constraints"
             className="form-textarea"
@@ -560,7 +1113,13 @@ export function ServiceEditModal({ isOpen, service, onClose, onSave }: ServiceEd
         </div>
         <div className="form-row">
           <div className="form-group">
-            <label htmlFor="service-effectiveness" className="form-label">Effectiveness</label>
+            <FieldLabel
+              htmlFor="service-effectiveness"
+              label="Effectiveness"
+              isWorking={activeFieldImprove === 'effectivenessMetric'}
+              isDisabled={isAiBusy}
+              onImprove={() => handleImproveField('effectivenessMetric')}
+            />
             <textarea
               id="service-effectiveness"
               className="form-textarea"
@@ -571,7 +1130,13 @@ export function ServiceEditModal({ isOpen, service, onClose, onSave }: ServiceEd
             />
           </div>
           <div className="form-group">
-            <label htmlFor="service-efficiency" className="form-label">Efficiency</label>
+            <FieldLabel
+              htmlFor="service-efficiency"
+              label="Efficiency"
+              isWorking={activeFieldImprove === 'efficiencyMetric'}
+              isDisabled={isAiBusy}
+              onImprove={() => handleImproveField('efficiencyMetric')}
+            />
             <textarea
               id="service-efficiency"
               className="form-textarea"
@@ -590,6 +1155,44 @@ export function ServiceEditModal({ isOpen, service, onClose, onSave }: ServiceEd
       </form>
     </Modal>
   );
+}
+
+function FieldLabel({
+  htmlFor,
+  label,
+  isWorking,
+  isDisabled,
+  onImprove,
+}: {
+  htmlFor: string;
+  label: string;
+  isWorking: boolean;
+  isDisabled: boolean;
+  onImprove: () => void;
+}) {
+  return (
+    <div className="strategy-editor-field-label">
+      <label htmlFor={htmlFor} className="form-label">{label}</label>
+      <button
+        type="button"
+        className="btn btn--sm btn--ghost strategy-editor-field-label__action"
+        onClick={onImprove}
+        disabled={isDisabled}
+      >
+        <Icon name={isWorking ? 'loader-2' : 'sparkles'} size={14} className={isWorking ? 'loading-icon' : undefined} />
+        {isWorking ? 'Improving...' : 'Improve'}
+      </button>
+    </div>
+  );
+}
+
+function getPreferredRecordingMimeType() {
+  if (typeof MediaRecorder === 'undefined' || typeof MediaRecorder.isTypeSupported !== 'function') {
+    return '';
+  }
+
+  const candidates = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4'];
+  return candidates.find((candidate) => MediaRecorder.isTypeSupported(candidate)) ?? '';
 }
 
 interface FlowStepEditModalProps {

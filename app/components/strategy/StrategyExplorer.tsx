@@ -398,6 +398,11 @@ export function StrategyExplorer() {
       <ServiceEditModal
         isOpen={Boolean(editingService)}
         service={editingService}
+        department={department ?? null}
+        pressures={data.pressures}
+        enterpriseObjectives={data.getEnterpriseObjectives()}
+        departmentObjectives={departmentId ? data.getObjectivesByDepartment(departmentId) : []}
+        mapTitle={data.map?.title}
         onClose={() => setEditingService(null)}
         onSave={async (updates) => {
           if (!editingService) return;

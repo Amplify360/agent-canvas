@@ -4,7 +4,7 @@ export type OpenRouterMessageRole = 'system' | 'user' | 'assistant';
 
 export interface OpenRouterMessage {
   role: OpenRouterMessageRole;
-  content: string;
+  content: string | Array<Record<string, unknown>>;
 }
 
 export interface OpenRouterChatOptions {

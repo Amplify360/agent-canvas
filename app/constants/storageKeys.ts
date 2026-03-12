@@ -10,6 +10,8 @@ export const STORAGE_KEYS = {
   SIDEBAR_COLLAPSED: 'agentcanvas-sidebar-collapsed',
   SIDEBAR_WIDTH: 'agentcanvas-sidebar-width',
   THEME: 'agentcanvas-theme',
+  TRANSFORMATION_MAP_SERVICE_ASSIST_PROMPT: 'agentcanvas-transformation-map-service-assist-prompt',
+  TRANSFORMATION_MAP_SERVICE_FIELD_PROMPT: 'agentcanvas-transformation-map-service-field-prompt',
 } as const;
 
 export type StorageKey = typeof STORAGE_KEYS[keyof typeof STORAGE_KEYS];
