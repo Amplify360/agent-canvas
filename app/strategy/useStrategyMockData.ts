@@ -24,7 +24,7 @@ const EMPTY_DEVIATIONS: Deviation[] = [];
 const EMPTY_INITIATIVES: Initiative[] = [];
 const EMPTY_AGENT_COUNTS: Record<string, number> = {};
 
-export function useStrategyData(departmentId?: string | null, serviceId?: string | null) {
+export function useStrategyData(mapSlug?: string | null, departmentId?: string | null, serviceId?: string | null) {
   const { currentOrgId, isInitialized } = useAuth();
   const { canQuery } = useCanQuery();
   const convex = useConvex();
@@ -43,7 +43,17 @@ export function useStrategyData(departmentId?: string | null, serviceId?: string
     currentOrgId && canQuery ? { workosOrgId: currentOrgId } : 'skip'
   );
 
-  const activeMap = maps?.[0];
+  const activeMap = useMemo(() => {
+    if (!maps || maps.length === 0) {
+      return undefined;
+    }
+
+    if (mapSlug) {
+      return maps.find((map) => map.slug === mapSlug) ?? maps[0];
+    }
+
+    return maps[0];
+  }, [mapSlug, maps]);
 
   const overview = useQuery(
     api.transformationMaps.getOverviewSnapshot,

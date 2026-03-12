@@ -568,6 +568,113 @@ body.is-resizing-sidebar .main-wrapper {
     min-height: 0;
 }
 
+.sidebar__accordion {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+}
+
+.sidebar__accordion-section {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+
+.sidebar__accordion-header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.sidebar__accordion-trigger {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    padding: var(--space-2) var(--space-2);
+    background: transparent;
+    border: none;
+    border-radius: var(--radius-md);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all var(--duration-fast) var(--ease-out);
+    text-align: left;
+}
+
+.sidebar__accordion-trigger:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+}
+
+.sidebar__accordion-trigger.is-active {
+    background: var(--accent-primary-muted);
+    color: var(--accent-primary);
+}
+
+.sidebar__accordion-label {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-width: 0;
+    font-size: var(--text-sm);
+    font-weight: 600;
+}
+
+.sidebar__accordion-label svg {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+}
+
+.sidebar__accordion-meta {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    flex-shrink: 0;
+}
+
+.sidebar__accordion-count {
+    min-width: 24px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: var(--surface-panel);
+    color: var(--text-muted);
+    font-size: 11px;
+    font-weight: 600;
+    text-align: center;
+}
+
+.sidebar__accordion-trigger.is-active .sidebar__accordion-count {
+    background: rgba(var(--accent-primary-rgb), 0.14);
+    color: var(--accent-primary);
+}
+
+.sidebar__accordion-chevron {
+    width: 14px;
+    height: 14px;
+    transition: transform var(--duration-fast) var(--ease-out);
+}
+
+.sidebar__accordion-chevron.is-open {
+    transform: rotate(180deg);
+}
+
+.sidebar__accordion-panel {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    padding-left: var(--space-2);
+}
+
+.sidebar__empty-hint {
+    margin: 0;
+    padding: 0 var(--space-3) var(--space-1);
+    color: var(--text-muted);
+    font-size: var(--text-xs);
+    line-height: 1.5;
+}
+
 .sidebar__section-header {
     display: flex;
     align-items: center;
@@ -632,7 +739,9 @@ body.is-resizing-sidebar .main-wrapper {
     gap: var(--space-1);
 }
 
-.sidebar__canvas-item {
+.sidebar__resource-item,
+.sidebar__canvas-item,
+.sidebar__map-item {
     display: flex;
     align-items: center;
     gap: var(--space-3);
@@ -649,36 +758,48 @@ body.is-resizing-sidebar .main-wrapper {
     width: 100%;
 }
 
-.sidebar__canvas-item:hover {
+.sidebar__resource-item:hover,
+.sidebar__canvas-item:hover,
+.sidebar__map-item:hover {
     background: var(--bg-hover);
     color: var(--text-primary);
     transform: translateX(2px);
 }
 
-.sidebar__canvas-item.is-active {
+.sidebar__resource-item.is-active,
+.sidebar__canvas-item.is-active,
+.sidebar__map-item.is-active {
     background: var(--accent-primary-light);
     color: var(--accent-primary);
 }
 
-.sidebar__canvas-item svg {
+.sidebar__resource-item svg,
+.sidebar__canvas-item svg,
+.sidebar__map-item svg {
     width: 18px;
     height: 18px;
     flex-shrink: 0;
     opacity: 0.7;
 }
 
-.sidebar__canvas-item.is-active svg {
+.sidebar__resource-item.is-active svg,
+.sidebar__canvas-item.is-active svg,
+.sidebar__map-item.is-active svg {
     opacity: 1;
 }
 
 /* Tooltip wrapper in canvas item needs to flex and allow truncation */
-.sidebar__canvas-item > .tooltip-trigger {
+.sidebar__resource-item > .tooltip-trigger,
+.sidebar__canvas-item > .tooltip-trigger,
+.sidebar__map-item > .tooltip-trigger {
     flex: 1;
     min-width: 0;
     overflow: hidden;
 }
 
-.sidebar__canvas-item .sidebar__canvas-title {
+.sidebar__resource-item .sidebar__resource-title,
+.sidebar__canvas-item .sidebar__canvas-title,
+.sidebar__map-item .sidebar__canvas-title {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -686,6 +807,7 @@ body.is-resizing-sidebar .main-wrapper {
 }
 
 /* Canvas Item Menu Button */
+.sidebar__resource-menu-btn,
 .sidebar__canvas-menu-btn {
     width: 24px;
     height: 24px;
@@ -702,15 +824,19 @@ body.is-resizing-sidebar .main-wrapper {
     flex-shrink: 0;
 }
 
-.sidebar__canvas-item:hover .sidebar__canvas-menu-btn {
+.sidebar__resource-item:hover .sidebar__resource-menu-btn,
+.sidebar__canvas-item:hover .sidebar__canvas-menu-btn,
+.sidebar__map-item:hover .sidebar__canvas-menu-btn {
     opacity: 1;
 }
 
+.sidebar__resource-menu-btn:hover,
 .sidebar__canvas-menu-btn:hover {
     background: var(--bg-hover);
     color: var(--text-primary);
 }
 
+.sidebar__resource-menu-btn svg,
 .sidebar__canvas-menu-btn svg {
     width: 14px;
     height: 14px;

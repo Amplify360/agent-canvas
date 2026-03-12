@@ -512,6 +512,144 @@ export const setMapStatus = mutation({
   },
 });
 
+export const removeMap = mutation({
+  args: {
+    mapId: v.id("transformationMaps"),
+    confirmDelete: v.optional(v.boolean()),
+  },
+  handler: async (ctx, { mapId, confirmDelete }) => {
+    const auth = await requireAuth(ctx);
+    const map = await getMapWithAccess(ctx, mapId, auth);
+
+    if (!confirmDelete) {
+      throw new Error("Validation: confirmDelete is required");
+    }
+
+    const now = Date.now();
+    const children = await listMapChildren(ctx, mapId);
+
+    for (const analysis of children.analyses) {
+      await ctx.db.delete(analysis._id);
+      const service = children.services.find((entry) => `${entry._id}` === `${analysis.serviceId}`);
+      await recordTransformationHistory(ctx, {
+        workosOrgId: map.workosOrgId,
+        mapId,
+        entityType: "service_analysis",
+        entityId: service?.key ?? `${analysis.serviceId}`,
+        changedBy: auth.workosUserId,
+        changeType: "delete",
+        previousData: {
+          reviewStatus: analysis.reviewStatus,
+          idealFlowSteps: analysis.idealFlowSteps,
+          currentFlowSteps: analysis.currentFlowSteps,
+          deviations: analysis.deviations,
+          initiatives: analysis.initiatives,
+        },
+      });
+    }
+
+    for (const service of children.services) {
+      await ctx.db.delete(service._id);
+      await recordTransformationHistory(ctx, {
+        workosOrgId: map.workosOrgId,
+        mapId,
+        entityType: "service",
+        entityId: service.key,
+        changedBy: auth.workosUserId,
+        changeType: "delete",
+        previousData: {
+          departmentKey: service.departmentKey,
+          name: service.name,
+          purpose: service.purpose,
+          customer: service.customer,
+          trigger: service.trigger,
+          outcome: service.outcome,
+          constraints: service.constraints,
+          status: service.status,
+          effectivenessMetric: service.effectivenessMetric,
+          efficiencyMetric: service.efficiencyMetric,
+        },
+      });
+    }
+
+    for (const objective of children.objectives) {
+      await ctx.db.delete(objective._id);
+      await recordTransformationHistory(ctx, {
+        workosOrgId: map.workosOrgId,
+        mapId,
+        entityType: "objective",
+        entityId: objective.key,
+        changedBy: auth.workosUserId,
+        changeType: "delete",
+        previousData: {
+          scope: objective.scope,
+          departmentKey: objective.departmentKey,
+          title: objective.title,
+          description: objective.description,
+          linkedPressureKeys: objective.linkedPressureKeys,
+        },
+      });
+    }
+
+    for (const department of children.departments) {
+      await ctx.db.delete(department._id);
+      await recordTransformationHistory(ctx, {
+        workosOrgId: map.workosOrgId,
+        mapId,
+        entityType: "department",
+        entityId: department.key,
+        changedBy: auth.workosUserId,
+        changeType: "delete",
+        previousData: {
+          name: department.name,
+          description: department.description,
+          keyIssues: department.keyIssues,
+          improvementMandates: department.improvementMandates,
+        },
+      });
+    }
+
+    for (const pressure of children.pressures) {
+      await ctx.db.delete(pressure._id);
+      await recordTransformationHistory(ctx, {
+        workosOrgId: map.workosOrgId,
+        mapId,
+        entityType: "pressure",
+        entityId: pressure.key,
+        changedBy: auth.workosUserId,
+        changeType: "delete",
+        previousData: {
+          type: pressure.type,
+          title: pressure.title,
+          description: pressure.description,
+          evidence: pressure.evidence,
+        },
+      });
+    }
+
+    await ctx.db.delete(mapId);
+
+    await recordTransformationHistory(ctx, {
+      workosOrgId: map.workosOrgId,
+      mapId,
+      entityType: "map",
+      entityId: `${mapId}`,
+      changedBy: auth.workosUserId,
+      changeType: "delete",
+      previousData: {
+        title: map.title,
+        slug: map.slug,
+        description: map.description,
+        status: map.status,
+        updatedAt: map.updatedAt,
+        deletedAt: now,
+      },
+    });
+
+    return { ok: true };
+  },
+});
+
 export const updatePressure = mutation({
   args: {
     mapId: v.id("transformationMaps"),

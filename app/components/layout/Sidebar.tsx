@@ -4,14 +4,13 @@
 
 'use client';
 
-import React, { useState, useRef, useCallback } from 'react';
-import { usePathname } from 'next/navigation';
-import Link from 'next/link';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
+import { usePathname, useSearchParams, useRouter } from 'next/navigation';
 import { useAuth, useIsOrgAdmin, useCurrentOrg } from '@/contexts/AuthContext';
 import { useAgents } from '@/contexts/AgentContext';
 import { useCanvas } from '@/contexts/CanvasContext';
 import { useAppState } from '@/contexts/AppStateContext';
-import { useAction, useConvex, useQuery } from '@/hooks/useConvex';
+import { useAction, useCanQuery, useConvex, useMutation, useQuery } from '@/hooks/useConvex';
 import { api } from '../../../convex/_generated/api';
 import { useResizable } from '@/hooks/useResizable';
 import { useClickOutside } from '@/hooks/useClickOutside';
@@ -19,6 +18,7 @@ import { Icon } from '@/components/ui/Icon';
 import { ImportYamlModal } from '../forms/ImportYamlModal';
 import { CanvasRenameModal } from '../forms/CanvasRenameModal';
 import { CopyCanvasModal } from '../forms/CopyCanvasModal';
+import { TransformationMapRenameModal } from '../forms/TransformationMapRenameModal';
 import { FeedbackModal } from '../forms/FeedbackModal';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { MembersWidget } from '../org/MembersWidget';
@@ -32,8 +32,63 @@ import { Id } from '../../../convex/_generated/dataModel';
 const SIDEBAR_MIN_WIDTH = 180;
 const SIDEBAR_MAX_WIDTH = 400;
 
-interface CanvasMenuState {
-  canvasId: string;
+type SidebarEntityType = 'canvas' | 'transformation-map';
+type SidebarMenuAction = 'share' | 'export' | 'copy' | 'rename' | 'delete';
+
+interface SidebarResourceItemProps {
+  iconName: React.ComponentProps<typeof Icon>['name'];
+  title: string;
+  isActive: boolean;
+  menuLabel: string;
+  onSelect: () => void;
+  onOpenMenu: (event: React.MouseEvent) => void;
+  onContextMenu: (event: React.MouseEvent) => void;
+}
+
+function SidebarResourceItem({
+  iconName,
+  title,
+  isActive,
+  menuLabel,
+  onSelect,
+  onOpenMenu,
+  onContextMenu,
+}: SidebarResourceItemProps) {
+  return (
+    <div
+      className={`sidebar__resource-item ${isActive ? 'is-active' : ''}`}
+      onClick={onSelect}
+      onContextMenu={onContextMenu}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          onSelect();
+        }
+      }}
+    >
+      <Icon name={iconName} />
+      <Tooltip content={title} placement="right" showOnlyWhenTruncated>
+        <span className="sidebar__resource-title">{title}</span>
+      </Tooltip>
+      <button
+        className="sidebar__resource-menu-btn"
+        aria-label={menuLabel}
+        onClick={(event) => {
+          event.stopPropagation();
+          onOpenMenu(event);
+        }}
+      >
+        <Icon name="more-vertical" />
+      </button>
+    </div>
+  );
+}
+
+interface SidebarMenuState {
+  entityType: SidebarEntityType;
+  entityId: string;
   x: number;
   y: number;
 }
@@ -45,11 +100,14 @@ const VIEWPORT_PADDING = 8;
 
 export function Sidebar() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const { user, userOrgs, currentOrgId, setCurrentOrgId, signOut } = useAuth();
   const { canvases, currentCanvasId, setCurrentCanvasId, createCanvas, deleteCanvas } = useCanvas();
   const { agents, isLoading: isAgentsLoading } = useAgents();
   const convex = useConvex();
   const { isSidebarCollapsed, toggleSidebar, showToast, sidebarWidth, setSidebarWidth, themePreference, setThemePreference } = useAppState();
+  const { canQuery } = useCanQuery();
 
   const { isDragging, resizeHandleProps } = useResizable({
     minWidth: SIDEBAR_MIN_WIDTH,
@@ -59,9 +117,20 @@ export function Sidebar() {
   });
   const isOrgAdmin = useIsOrgAdmin();
   const currentOrg = useCurrentOrg();
+  const transformationMaps = useQuery(
+    api.transformationMaps.list,
+    currentOrgId && canQuery ? { workosOrgId: currentOrgId } : 'skip'
+  ) ?? [];
+  const isTransformationRoute = pathname.startsWith('/transformation-map') || pathname.startsWith('/strategy');
+  const currentMapSlugParam = searchParams.get('map');
+  const activeTransformationMap =
+    transformationMaps.find((map) => map.slug === currentMapSlugParam) ??
+    transformationMaps[0] ??
+    null;
 
   // Convex action for syncing memberships from WorkOS
   const syncMyMemberships = useAction(api.orgMemberships.syncMyMemberships);
+  const deleteTransformationMap = useMutation(api.transformationMaps.removeMap);
   const [isSyncing, setIsSyncing] = useState(false);
   const [isSwitchingOrg, setIsSwitchingOrg] = useState(false);
 
@@ -72,13 +141,16 @@ export function Sidebar() {
   const [isMembersModalOpen, setIsMembersModalOpen] = useState(false);
   const [isMcpModalOpen, setIsMcpModalOpen] = useState(false);
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
-  const [canvasMenu, setCanvasMenu] = useState<CanvasMenuState | null>(null);
+  const [itemMenu, setItemMenu] = useState<SidebarMenuState | null>(null);
   const [renameCanvas, setRenameCanvas] = useState<{ id: string; title: string } | null>(null);
+  const [renameTransformationMap, setRenameTransformationMap] = useState<{ id: string; title: string } | null>(null);
   const [copyCanvas, setCopyCanvas] = useState<{ id: string; title: string } | null>(null);
-  const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; title: string } | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ entityType: SidebarEntityType; id: string; title: string } | null>(null);
   const [orgDropdownOpen, setOrgDropdownOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [canvasActionsOpen, setCanvasActionsOpen] = useState(false);
+  const [isCanvasPanelOpen, setIsCanvasPanelOpen] = useState(!isTransformationRoute);
+  const [isTransformationPanelOpen, setIsTransformationPanelOpen] = useState(isTransformationRoute);
   const menuRef = useRef<HTMLDivElement>(null);
   const orgDropdownRef = useRef<HTMLDivElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
@@ -113,70 +185,142 @@ export function Sidebar() {
   }, [user]);
 
   // Close menus on outside click or Escape key
-  const closeCanvasMenu = useCallback(() => setCanvasMenu(null), []);
+  const closeItemMenu = useCallback(() => setItemMenu(null), []);
   const closeOrgDropdown = useCallback(() => setOrgDropdownOpen(false), []);
   const closeUserMenu = useCallback(() => setUserMenuOpen(false), []);
   const closeCanvasActions = useCallback(() => setCanvasActionsOpen(false), []);
 
-  useClickOutside(menuRef, closeCanvasMenu, canvasMenu !== null);
+  useClickOutside(menuRef, closeItemMenu, itemMenu !== null);
   useClickOutside(orgDropdownRef, closeOrgDropdown, orgDropdownOpen);
   useClickOutside(userMenuRef, closeUserMenu, userMenuOpen);
   useClickOutside(canvasActionsRef, closeCanvasActions, canvasActionsOpen);
 
-  const handleCanvasContextMenu = (e: React.MouseEvent, canvasId: string) => {
-    e.preventDefault();
-    e.stopPropagation();
+  useEffect(() => {
+    if (isTransformationRoute) {
+      setIsTransformationPanelOpen(true);
+    } else {
+      setIsCanvasPanelOpen(true);
+    }
+  }, [isTransformationRoute]);
 
-    // Calculate position with viewport boundary checks
+  const openItemMenu = (event: React.MouseEvent, entityType: SidebarEntityType, entityId: string) => {
+    event.preventDefault();
+    event.stopPropagation();
+
     const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
 
-    let x = e.clientX;
-    let y = e.clientY;
+    let x = event.clientX;
+    let y = event.clientY;
 
-    // Adjust if menu would overflow right edge
     if (x + MENU_WIDTH + VIEWPORT_PADDING > viewportWidth) {
       x = viewportWidth - MENU_WIDTH - VIEWPORT_PADDING;
     }
 
-    // Adjust if menu would overflow bottom edge
     if (y + MENU_HEIGHT + VIEWPORT_PADDING > viewportHeight) {
       y = viewportHeight - MENU_HEIGHT - VIEWPORT_PADDING;
     }
 
-    setCanvasMenu({ canvasId, x, y });
+    setItemMenu({ entityType, entityId, x, y });
   };
 
-  const handleMenuAction = async (action: 'rename' | 'delete' | 'share' | 'copy' | 'export') => {
-    if (!canvasMenu) return;
-    const canvas = canvases.find((c) => c._id === canvasMenu.canvasId);
-    if (!canvas) return;
+  const handleCanvasContextMenu = (event: React.MouseEvent, canvasId: string) => {
+    openItemMenu(event, 'canvas', canvasId);
+  };
+
+  const handleTransformationMapContextMenu = (event: React.MouseEvent, mapId: string) => {
+    openItemMenu(event, 'transformation-map', mapId);
+  };
+
+  const handleCanvasMenuAction = async (action: 'rename' | 'delete' | 'share' | 'copy' | 'export', canvasId: string) => {
+    const canvas = canvases.find((entry) => entry._id === canvasId);
+    if (!canvas) {
+      return;
+    }
 
     if (action === 'rename') {
       setRenameCanvas({ id: canvas._id, title: canvas.title });
-    } else if (action === 'copy') {
+      return;
+    }
+
+    if (action === 'copy') {
       setCopyCanvas({ id: canvas._id, title: canvas.title });
-    } else if (action === 'delete') {
-      setDeleteConfirm({ id: canvas._id, title: canvas.title });
-    } else if (action === 'share') {
+      return;
+    }
+
+    if (action === 'delete') {
+      setDeleteConfirm({ entityType: 'canvas', id: canvas._id, title: canvas.title });
+      return;
+    }
+
+    if (action === 'share') {
       const url = `${window.location.origin}/c/${canvas._id}`;
       const ok = await copyTextToClipboard(url);
       showToast(ok ? 'Link copied to clipboard' : 'Failed to copy link', ok ? 'success' : 'error');
-    } else if (action === 'export') {
-      await handleExportYaml(canvas._id);
+      return;
     }
-    setCanvasMenu(null);
+
+    await handleExportYaml(canvas._id);
+  };
+
+  const handleTransformationMapMenuAction = async (action: 'rename' | 'delete' | 'share', mapId: string) => {
+    const map = transformationMaps.find((entry) => entry._id === mapId);
+    if (!map) {
+      return;
+    }
+
+    if (action === 'rename') {
+      setRenameTransformationMap({ id: map._id, title: map.title });
+      return;
+    }
+
+    if (action === 'delete') {
+      setDeleteConfirm({ entityType: 'transformation-map', id: map._id, title: map.title });
+      return;
+    }
+
+    const url = `${window.location.origin}/transformation-map?map=${encodeURIComponent(map.slug)}`;
+    const ok = await copyTextToClipboard(url);
+    showToast(ok ? 'Link copied to clipboard' : 'Failed to copy link', ok ? 'success' : 'error');
+  };
+
+  const handleMenuAction = async (action: 'rename' | 'delete' | 'share' | 'copy' | 'export') => {
+    if (!itemMenu) {
+      return;
+    }
+
+    if (itemMenu.entityType === 'canvas') {
+      await handleCanvasMenuAction(action, itemMenu.entityId);
+    } else if (action === 'rename' || action === 'delete' || action === 'share') {
+      await handleTransformationMapMenuAction(action, itemMenu.entityId);
+    }
+
+    setItemMenu(null);
   };
 
   const handleDeleteConfirm = async () => {
     if (!deleteConfirm) return;
     try {
-      await deleteCanvas(deleteConfirm.id);
-      showToast('Canvas deleted successfully', 'success');
+      if (deleteConfirm.entityType === 'canvas') {
+        await deleteCanvas(deleteConfirm.id);
+        showToast('Canvas deleted successfully', 'success');
+      } else {
+        await deleteTransformationMap({
+          mapId: deleteConfirm.id as Id<"transformationMaps">,
+          confirmDelete: true,
+        });
+        if (activeTransformationMap?._id === deleteConfirm.id) {
+          router.push('/transformation-map');
+        }
+        showToast('Transformation map deleted successfully', 'success');
+      }
       setDeleteConfirm(null);
     } catch (error) {
-      console.error('Failed to delete canvas:', error);
-      showToast('Failed to delete canvas', 'error');
+      console.error('Failed to delete item:', error);
+      showToast(
+        deleteConfirm.entityType === 'canvas' ? 'Failed to delete canvas' : 'Failed to delete transformation map',
+        'error'
+      );
       setDeleteConfirm(null);
     }
   };
@@ -186,6 +330,10 @@ export function Sidebar() {
     setCurrentCanvasId(canvasId);
     // Update URL for shareable links
     window.history.replaceState(null, '', `/c/${canvasId}`);
+  };
+
+  const handleSelectTransformationMap = (slug: string) => {
+    router.push(`/transformation-map?map=${encodeURIComponent(slug)}`);
   };
 
   const handleCreateCanvas = async () => {
@@ -244,6 +392,33 @@ export function Sidebar() {
       showToast('Failed to export YAML', 'error');
     }
   };
+
+  const itemMenuActions: Array<{
+    action: SidebarMenuAction;
+    label: string;
+    icon: React.ComponentProps<typeof Icon>['name'];
+    isDanger?: boolean;
+    disabled?: boolean;
+    tooltip?: string;
+  }> = itemMenu?.entityType === 'canvas'
+    ? [
+        { action: 'share', label: 'Copy link', icon: 'share-2' },
+        { action: 'export', label: 'Export as YAML', icon: 'download' },
+        {
+          action: 'copy',
+          label: 'Copy to...',
+          icon: 'copy',
+          disabled: userOrgs.length <= 1,
+          tooltip: userOrgs.length <= 1 ? 'You need access to other organizations to copy' : undefined,
+        },
+        { action: 'rename', label: 'Rename', icon: 'pencil' },
+        { action: 'delete', label: 'Delete', icon: 'trash-2', isDanger: true },
+      ]
+    : [
+        { action: 'share', label: 'Copy link', icon: 'share-2' },
+        { action: 'rename', label: 'Rename', icon: 'pencil' },
+        { action: 'delete', label: 'Delete', icon: 'trash-2', isDanger: true },
+      ];
 
   return (
     <>
@@ -318,93 +493,136 @@ export function Sidebar() {
           </Tooltip>
         </div>
 
-        <nav className="sidebar__nav">
-          <Link
-            href="/"
-            className={`sidebar__nav-item ${!pathname.startsWith('/transformation-map') && !pathname.startsWith('/strategy') ? 'is-active' : ''}`}
-          >
-            <Icon name="layout-grid" />
-            <span>Canvases</span>
-          </Link>
-          <Link
-            href="/transformation-map"
-            className={`sidebar__nav-item ${pathname.startsWith('/transformation-map') || pathname.startsWith('/strategy') ? 'is-active' : ''}`}
-          >
-            <Icon name="compass" />
-            <span>Transformation Map</span>
-          </Link>
-        </nav>
-
         <div className="sidebar__section sidebar__section--grow">
-          <div className="sidebar__section-header">
-            <h3 className="sidebar__section-title">Canvases</h3>
-            <div className="sidebar__section-actions" ref={canvasActionsRef}>
-              <Tooltip content="Canvas actions" placement="bottom">
+          <div className="sidebar__accordion">
+            <div className={`sidebar__accordion-section ${!isTransformationRoute ? 'is-current-view' : ''}`}>
+              <div className="sidebar__accordion-header">
                 <button
                   type="button"
-                  className="sidebar__action-btn"
-                  onClick={() => setCanvasActionsOpen(!canvasActionsOpen)}
-                  aria-expanded={canvasActionsOpen}
+                  className={`sidebar__accordion-trigger ${!isTransformationRoute ? 'is-active' : ''}`}
+                  onClick={() => setIsCanvasPanelOpen((open) => !open)}
+                  aria-expanded={isCanvasPanelOpen}
                 >
-                  <Icon name="more-vertical" />
+                  <span className="sidebar__accordion-label">
+                    <Icon name="layout-grid" />
+                    <span>Canvases</span>
+                  </span>
+                  <span className="sidebar__accordion-meta">
+                    <span className="sidebar__accordion-count">{canvases.length}</span>
+                    <Icon
+                      name="chevron-down"
+                      className={`sidebar__accordion-chevron ${isCanvasPanelOpen ? 'is-open' : ''}`}
+                    />
+                  </span>
                 </button>
-              </Tooltip>
-              <div className={`sidebar__dropdown ${canvasActionsOpen ? 'open' : ''}`}>
-                <button
-                  className="sidebar__dropdown-item"
-                  onClick={() => {
-                    handleCreateCanvas();
-                    setCanvasActionsOpen(false);
-                  }}
-                >
-                  <Icon name="plus" />
-                  <span>New canvas</span>
-                </button>
-                <button
-                  className="sidebar__dropdown-item"
-                  onClick={() => {
-                    setIsImportModalOpen(true);
-                    setCanvasActionsOpen(false);
-                  }}
-                >
-                  <Icon name="upload" />
-                  <span>Import from YAML</span>
-                </button>
+                <div className="sidebar__section-actions" ref={canvasActionsRef}>
+                  <Tooltip content="Canvas actions" placement="bottom">
+                    <button
+                      type="button"
+                      className="sidebar__action-btn"
+                      onClick={() => setCanvasActionsOpen(!canvasActionsOpen)}
+                      aria-expanded={canvasActionsOpen}
+                    >
+                      <Icon name="more-vertical" />
+                    </button>
+                  </Tooltip>
+                  <div className={`sidebar__dropdown ${canvasActionsOpen ? 'open' : ''}`}>
+                    <button
+                      className="sidebar__dropdown-item"
+                      onClick={() => {
+                        handleCreateCanvas();
+                        setCanvasActionsOpen(false);
+                      }}
+                    >
+                      <Icon name="plus" />
+                      <span>New canvas</span>
+                    </button>
+                    <button
+                      className="sidebar__dropdown-item"
+                      onClick={() => {
+                        setIsImportModalOpen(true);
+                        setCanvasActionsOpen(false);
+                      }}
+                    >
+                      <Icon name="upload" />
+                      <span>Import from YAML</span>
+                    </button>
+                  </div>
+                </div>
               </div>
+
+              {isCanvasPanelOpen && (
+                <div className="sidebar__accordion-panel">
+                  <div className="sidebar__canvas-list">
+                    {canvases.map((canvas) => (
+                      <SidebarResourceItem
+                        key={canvas._id}
+                        iconName="file-text"
+                        title={canvas.title}
+                        isActive={currentCanvasId === canvas._id}
+                        menuLabel="Canvas menu"
+                        onSelect={() => handleSelectCanvas(canvas._id)}
+                        onOpenMenu={(event) => handleCanvasContextMenu(event, canvas._id)}
+                        onContextMenu={(event) => handleCanvasContextMenu(event, canvas._id)}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
-          </div>
-          <div className="sidebar__canvas-list">
-            {canvases.map((canvas) => (
-              <div
-                key={canvas._id}
-                className={`sidebar__canvas-item ${currentCanvasId === canvas._id ? 'is-active' : ''}`}
-                onClick={() => handleSelectCanvas(canvas._id)}
-                onContextMenu={(e) => handleCanvasContextMenu(e, canvas._id)}
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    handleSelectCanvas(canvas._id);
-                  }
-                }}
-              >
-                <Icon name="file-text" />
-                <Tooltip content={canvas.title} placement="right" showOnlyWhenTruncated>
-                  <span className="sidebar__canvas-title">{canvas.title}</span>
-                </Tooltip>
+
+            <div className={`sidebar__accordion-section ${isTransformationRoute ? 'is-current-view' : ''}`}>
+              <div className="sidebar__accordion-header">
                 <button
-                  className="sidebar__canvas-menu-btn"
-                  aria-label="Canvas menu"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleCanvasContextMenu(e, canvas._id);
-                  }}
+                  type="button"
+                  className={`sidebar__accordion-trigger ${isTransformationRoute ? 'is-active' : ''}`}
+                  onClick={() => setIsTransformationPanelOpen((open) => !open)}
+                  aria-expanded={isTransformationPanelOpen}
                 >
-                  <Icon name="more-vertical" />
+                  <span className="sidebar__accordion-label">
+                    <Icon name="compass" />
+                    <span>Transformation Maps</span>
+                  </span>
+                  <span className="sidebar__accordion-meta">
+                    <span className="sidebar__accordion-count">{transformationMaps.length}</span>
+                    <Icon
+                      name="chevron-down"
+                      className={`sidebar__accordion-chevron ${isTransformationPanelOpen ? 'is-open' : ''}`}
+                    />
+                  </span>
                 </button>
               </div>
-            ))}
+
+              {isTransformationPanelOpen && (
+                <div className="sidebar__accordion-panel">
+                  {transformationMaps.length === 0 ? (
+                    <p className="sidebar__empty-hint">No transformation maps yet.</p>
+                  ) : (
+                    <div className="sidebar__canvas-list">
+                      {transformationMaps.map((map) => {
+                        const isActiveMap =
+                          isTransformationRoute &&
+                          activeTransformationMap !== null &&
+                          activeTransformationMap.slug === map.slug;
+
+                        return (
+                          <SidebarResourceItem
+                            key={map._id}
+                            iconName="map"
+                            title={map.title}
+                            isActive={isActiveMap}
+                            menuLabel="Transformation map menu"
+                            onSelect={() => handleSelectTransformationMap(map.slug)}
+                            onOpenMenu={(event) => handleTransformationMapContextMenu(event, map._id)}
+                            onContextMenu={(event) => handleTransformationMapContextMenu(event, map._id)}
+                          />
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -544,60 +762,46 @@ export function Sidebar() {
         />
       </aside>
 
-      {/* Canvas Context Menu */}
-      {canvasMenu && (
+      {/* Item Context Menu */}
+      {itemMenu && (
         <div
           ref={menuRef}
           className="context-menu open"
           style={{
             position: 'fixed',
-            left: canvasMenu.x,
-            top: canvasMenu.y,
+            left: itemMenu.x,
+            top: itemMenu.y,
             zIndex: 1000,
           }}
         >
-          <button
-            className="context-menu__item"
-            onClick={() => handleMenuAction('share')}
-          >
-            <Icon name="share-2" />
-            <span>Copy link</span>
-          </button>
-          <button
-            className="context-menu__item"
-            onClick={() => handleMenuAction('export')}
-          >
-            <Icon name="download" />
-            <span>Export as YAML</span>
-          </button>
-          <Tooltip
-            content="You need access to other organizations to copy"
-            placement="left"
-            disabled={userOrgs.length > 1}
-          >
-            <button
-              className="context-menu__item"
-              onClick={() => handleMenuAction('copy')}
-              disabled={userOrgs.length <= 1}
-            >
-              <Icon name="copy" />
-              <span>Copy to...</span>
-            </button>
-          </Tooltip>
-          <button
-            className="context-menu__item"
-            onClick={() => handleMenuAction('rename')}
-          >
-            <Icon name="pencil" />
-            <span>Rename</span>
-          </button>
-          <button
-            className="context-menu__item context-menu__item--danger"
-            onClick={() => handleMenuAction('delete')}
-          >
-            <Icon name="trash-2" />
-            <span>Delete</span>
-          </button>
+          {itemMenuActions.map((menuAction) => {
+            const button = (
+              <button
+                key={menuAction.action}
+                className={`context-menu__item ${menuAction.isDanger ? 'context-menu__item--danger' : ''}`}
+                onClick={() => handleMenuAction(menuAction.action)}
+                disabled={menuAction.disabled}
+              >
+                <Icon name={menuAction.icon} />
+                <span>{menuAction.label}</span>
+              </button>
+            );
+
+            if (!menuAction.tooltip) {
+              return button;
+            }
+
+            return (
+              <Tooltip
+                key={menuAction.action}
+                content={menuAction.tooltip}
+                placement="left"
+                disabled={!menuAction.disabled}
+              >
+                {button}
+              </Tooltip>
+            );
+          })}
         </div>
       )}
 
@@ -608,6 +812,15 @@ export function Sidebar() {
           canvasId={renameCanvas.id}
           currentTitle={renameCanvas.title}
           onClose={() => setRenameCanvas(null)}
+        />
+      )}
+
+      {renameTransformationMap && (
+        <TransformationMapRenameModal
+          isOpen={true}
+          mapId={renameTransformationMap.id}
+          currentTitle={renameTransformationMap.title}
+          onClose={() => setRenameTransformationMap(null)}
         />
       )}
 
@@ -625,8 +838,12 @@ export function Sidebar() {
       {deleteConfirm && (
         <ConfirmDialog
           isOpen={true}
-          title="Delete Canvas"
-          message={`Are you sure you want to delete "${deleteConfirm.title}"? This will also delete all agents in this canvas. This action cannot be undone.`}
+          title={deleteConfirm.entityType === 'canvas' ? 'Delete Canvas' : 'Delete Transformation Map'}
+          message={
+            deleteConfirm.entityType === 'canvas'
+              ? `Are you sure you want to delete "${deleteConfirm.title}"? This will also delete all agents in this canvas. This action cannot be undone.`
+              : `Are you sure you want to delete "${deleteConfirm.title}"? This will also delete all departments, services, analyses, pressures, and objectives in this transformation map. This action cannot be undone.`
+          }
           confirmLabel="Delete"
           confirmVariant="danger"
           onConfirm={handleDeleteConfirm}

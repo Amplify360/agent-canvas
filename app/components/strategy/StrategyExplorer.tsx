@@ -53,9 +53,10 @@ export function StrategyExplorer() {
   const router = useRouter();
   const { isSidebarCollapsed, toggleSidebar, sidebarWidth, showToast } = useAppState();
 
+  const mapSlug = searchParams.get('map');
   const departmentId = searchParams.get('department');
   const serviceId = searchParams.get('service');
-  const data = useStrategyData(departmentId, serviceId);
+  const data = useStrategyData(mapSlug, departmentId, serviceId);
   const department = departmentId ? data.getDepartment(departmentId) : undefined;
   const service = serviceId ? data.getService(serviceId) : undefined;
   const [editingPressure, setEditingPressure] = useState<StrategicPressure | null>(null);
@@ -76,18 +77,42 @@ export function StrategyExplorer() {
       return;
     }
 
-    router.replace(`/transformation-map?department=${service.departmentId}&service=${serviceId}`);
-  }, [router, service, serviceId, shouldCanonicalizeServiceUrl]);
+    const nextParams = new URLSearchParams();
+    if (mapSlug) {
+      nextParams.set('map', mapSlug);
+    }
+    nextParams.set('department', service.departmentId);
+    nextParams.set('service', serviceId);
+    router.replace(`/transformation-map?${nextParams.toString()}`);
+  }, [router, mapSlug, service, serviceId, shouldCanonicalizeServiceUrl]);
 
   // Navigation helpers
   const navigate = (path: string) => router.push(path);
 
+  const buildMapPath = (nextDepartmentId?: string, nextServiceId?: string) => {
+    const params = new URLSearchParams();
+    const resolvedMapSlug = mapSlug ?? data.map?.slug;
+
+    if (resolvedMapSlug) {
+      params.set('map', resolvedMapSlug);
+    }
+    if (nextDepartmentId) {
+      params.set('department', nextDepartmentId);
+    }
+    if (nextServiceId) {
+      params.set('service', nextServiceId);
+    }
+
+    const query = params.toString();
+    return query ? `/transformation-map?${query}` : '/transformation-map';
+  };
+
   const navigateToDepartment = (id: string) => {
-    router.push(`/transformation-map?department=${id}`);
+    router.push(buildMapPath(id));
   };
 
   const navigateToService = (deptId: string, svcId: string) => {
-    router.push(`/transformation-map?department=${deptId}&service=${svcId}`);
+    router.push(buildMapPath(deptId, svcId));
   };
 
   const saveWithToast = async (operation: () => Promise<void>, successMessage: string) => {
@@ -114,13 +139,13 @@ export function StrategyExplorer() {
   };
 
   // Build breadcrumb
-  const breadcrumbItems: BreadcrumbItem[] = [{ label: 'Transformation Map', href: '/transformation-map' }];
+  const breadcrumbItems: BreadcrumbItem[] = [{ label: 'Transformation Map', href: buildMapPath() }];
 
   if (department) {
     if (!hasMismatchedDepartmentService) {
       breadcrumbItems.push({
         label: department.name,
-        href: serviceId ? `/transformation-map?department=${departmentId}` : undefined,
+        href: serviceId ? buildMapPath(departmentId ?? undefined) : undefined,
       });
     }
   }
@@ -181,9 +206,9 @@ export function StrategyExplorer() {
               onConfirm: async () => {
                 await data.removeService(currentService.id);
                 if (departmentId) {
-                  router.push(`/transformation-map?department=${departmentId}`);
+                  router.push(buildMapPath(departmentId));
                 } else {
-                  router.push('/transformation-map');
+                  router.push(buildMapPath());
                 }
               },
             });
@@ -253,7 +278,7 @@ export function StrategyExplorer() {
               errorMessage: 'Failed to delete department',
               onConfirm: async () => {
                 await data.removeDepartment(currentDepartment.id);
-                router.push('/transformation-map');
+                router.push(buildMapPath());
               },
             });
           }}
