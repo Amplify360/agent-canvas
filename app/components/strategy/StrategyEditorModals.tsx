@@ -1,9 +1,11 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
+import { FormAssistPanel } from '@/components/ai/FormAssistPanel';
 import { Modal } from '@/components/ui/Modal';
 import { Icon } from '@/components/ui/Icon';
 import { useAppState } from '@/contexts/AppStateContext';
+import { useStructuredFormAssist } from '@/hooks/useStructuredFormAssist';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { STORAGE_KEYS } from '@/constants/storageKeys';
 import {
@@ -24,6 +26,28 @@ import {
   type ServiceTranscribeResult,
 } from '@/strategy/aiAssist';
 import { encodeWavAudio } from '@/strategy/audioRecording';
+import {
+  DEFAULT_DEPARTMENT_ASSIST_PROMPT,
+  DEFAULT_DEVIATION_ASSIST_PROMPT,
+  DEFAULT_FLOW_STEP_ASSIST_PROMPT,
+  DEFAULT_INITIATIVE_ASSIST_PROMPT,
+  DEFAULT_OBJECTIVE_ASSIST_PROMPT,
+  DEFAULT_PRESSURE_ASSIST_PROMPT,
+  DEPARTMENT_FIELDS,
+  DEVIATION_FIELDS,
+  FLOW_STEP_FIELDS,
+  INITIATIVE_FIELDS,
+  OBJECTIVE_FIELDS,
+  PRESSURE_FIELDS,
+  STRATEGY_FORM_ASSIST_MODEL_FALLBACK,
+  type DepartmentEditorFormData,
+  type DeviationEditorFormData,
+  type FlowStepEditorFormData,
+  type InitiativeEditorFormData,
+  type ObjectiveEditorFormData,
+  type PressureEditorFormData,
+  type StrategyFormAssistRequest,
+} from '@/strategy/formAssist';
 import {
   type Department,
   type Deviation,
@@ -113,12 +137,40 @@ interface PressureEditModalProps {
 }
 
 export function PressureEditModal({ isOpen, pressure, onClose, onSave }: PressureEditModalProps) {
+  const { showToast } = useAppState();
   const [type, setType] = useState<StrategicPressure['type']>('external');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [evidenceText, setEvidenceText] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const pressureFormData: PressureEditorFormData = { type, title, description, evidenceText };
+  const pressureAssist = useStructuredFormAssist<
+    PressureEditorFormData,
+    keyof PressureEditorFormData & string,
+    StrategyFormAssistRequest
+  >({
+    storageKey: STORAGE_KEYS.STRATEGY_PRESSURE_ASSIST_PROMPT,
+    defaultPrompt: DEFAULT_PRESSURE_ASSIST_PROMPT,
+    modelFallback: STRATEGY_FORM_ASSIST_MODEL_FALLBACK,
+    current: pressureFormData,
+    fields: PRESSURE_FIELDS,
+    buildRequest: (notes, promptOverride) => ({
+      formType: 'pressure',
+      promptOverride,
+      notes,
+      context: { current: pressureFormData },
+    }),
+    onApplyPatch: (patch) => {
+      if (patch.type !== undefined) setType(patch.type);
+      if (patch.title !== undefined) setTitle(patch.title);
+      if (patch.description !== undefined) setDescription(patch.description);
+      if (patch.evidenceText !== undefined) setEvidenceText(patch.evidenceText);
+    },
+    requestEndpoint: '/api/strategy/form-assist',
+    onToast: showToast,
+    enabled: isOpen,
+  });
 
   useEffect(() => {
     if (!isOpen || !pressure) return;
@@ -158,6 +210,35 @@ export function PressureEditModal({ isOpen, pressure, onClose, onSave }: Pressur
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Edit Pressure" size="medium" closeOnOverlayClick={false}>
       <form onSubmit={handleSubmit} className="strategy-editor-form">
+        <FormAssistPanel
+          modelFallback={pressureAssist.modelFallback}
+          prompt={pressureAssist.prompt}
+          onPromptChange={pressureAssist.setPrompt}
+          onResetPrompt={pressureAssist.resetPrompt}
+          isAssistOpen={pressureAssist.isAssistOpen}
+          onToggleOpen={() => pressureAssist.setIsAssistOpen(!pressureAssist.isAssistOpen)}
+          isAdvancedPromptOpen={pressureAssist.isAdvancedPromptOpen}
+          onToggleAdvanced={() => pressureAssist.setIsAdvancedPromptOpen(!pressureAssist.isAdvancedPromptOpen)}
+          assistNotes={pressureAssist.assistNotes}
+          onNotesChange={pressureAssist.setAssistNotes}
+          fillEmptyOnly={pressureAssist.fillEmptyOnly}
+          onFillEmptyOnlyChange={pressureAssist.setFillEmptyOnly}
+          assistError={pressureAssist.assistError}
+          isGeneratingAssist={pressureAssist.isGeneratingAssist}
+          isRecording={pressureAssist.isRecording}
+          isTranscribing={pressureAssist.isTranscribing}
+          isAiBusy={pressureAssist.isAiBusy || isSubmitting}
+          onToggleRecording={pressureAssist.toggleRecording}
+          onGenerateAssist={pressureAssist.generateAssist}
+          assistResult={pressureAssist.assistResult}
+          assistDiff={pressureAssist.assistDiff}
+          selectedPatchFields={pressureAssist.selectedPatchFields}
+          onSelectionChange={(field, checked) =>
+            pressureAssist.setSelectedPatchFields((current) => ({ ...current, [field]: checked }))
+          }
+          onApplySelected={pressureAssist.applySelectedPatch}
+          onDismiss={pressureAssist.dismissAssist}
+        />
         <div className="form-row">
           <div className="form-group">
             <label htmlFor="pressure-type" className="form-label">Type</label>
@@ -227,11 +308,48 @@ interface ObjectiveEditModalProps {
 }
 
 export function ObjectiveEditModal({ isOpen, objective, pressures, onClose, onSave }: ObjectiveEditModalProps) {
+  const { showToast } = useAppState();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [linkedPressureIds, setLinkedPressureIds] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const pressureTitleById = new Map(pressures.map((pressure) => [pressure.id, pressure.title]));
+  const objectiveFields = OBJECTIVE_FIELDS(pressureTitleById);
+  const objectiveFormData: ObjectiveEditorFormData = { title, description, linkedPressureIds };
+  const objectiveAssist = useStructuredFormAssist<
+    ObjectiveEditorFormData,
+    keyof ObjectiveEditorFormData & string,
+    StrategyFormAssistRequest
+  >({
+    storageKey: STORAGE_KEYS.STRATEGY_OBJECTIVE_ASSIST_PROMPT,
+    defaultPrompt: DEFAULT_OBJECTIVE_ASSIST_PROMPT,
+    modelFallback: STRATEGY_FORM_ASSIST_MODEL_FALLBACK,
+    current: objectiveFormData,
+    fields: objectiveFields,
+    buildRequest: (notes, promptOverride) => ({
+      formType: 'objective',
+      promptOverride,
+      notes,
+      context: {
+        current: objectiveFormData,
+        availablePressures: pressures.map((pressure) => ({
+          id: pressure.id,
+          type: pressure.type,
+          title: pressure.title,
+          description: pressure.description,
+        })),
+      },
+    }),
+    onApplyPatch: (patch) => {
+      if (patch.title !== undefined) setTitle(patch.title);
+      if (patch.description !== undefined) setDescription(patch.description);
+      if (patch.linkedPressureIds !== undefined) setLinkedPressureIds(patch.linkedPressureIds);
+    },
+    requestEndpoint: '/api/strategy/form-assist',
+    onToast: showToast,
+    enabled: isOpen,
+  });
 
   useEffect(() => {
     if (!isOpen || !objective) return;
@@ -277,6 +395,35 @@ export function ObjectiveEditModal({ isOpen, objective, pressures, onClose, onSa
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Edit Objective" size="medium" closeOnOverlayClick={false}>
       <form onSubmit={handleSubmit} className="strategy-editor-form">
+        <FormAssistPanel
+          modelFallback={objectiveAssist.modelFallback}
+          prompt={objectiveAssist.prompt}
+          onPromptChange={objectiveAssist.setPrompt}
+          onResetPrompt={objectiveAssist.resetPrompt}
+          isAssistOpen={objectiveAssist.isAssistOpen}
+          onToggleOpen={() => objectiveAssist.setIsAssistOpen(!objectiveAssist.isAssistOpen)}
+          isAdvancedPromptOpen={objectiveAssist.isAdvancedPromptOpen}
+          onToggleAdvanced={() => objectiveAssist.setIsAdvancedPromptOpen(!objectiveAssist.isAdvancedPromptOpen)}
+          assistNotes={objectiveAssist.assistNotes}
+          onNotesChange={objectiveAssist.setAssistNotes}
+          fillEmptyOnly={objectiveAssist.fillEmptyOnly}
+          onFillEmptyOnlyChange={objectiveAssist.setFillEmptyOnly}
+          assistError={objectiveAssist.assistError}
+          isGeneratingAssist={objectiveAssist.isGeneratingAssist}
+          isRecording={objectiveAssist.isRecording}
+          isTranscribing={objectiveAssist.isTranscribing}
+          isAiBusy={objectiveAssist.isAiBusy || isSubmitting}
+          onToggleRecording={objectiveAssist.toggleRecording}
+          onGenerateAssist={objectiveAssist.generateAssist}
+          assistResult={objectiveAssist.assistResult}
+          assistDiff={objectiveAssist.assistDiff}
+          selectedPatchFields={objectiveAssist.selectedPatchFields}
+          onSelectionChange={(field, checked) =>
+            objectiveAssist.setSelectedPatchFields((current) => ({ ...current, [field]: checked }))
+          }
+          onApplySelected={objectiveAssist.applySelectedPatch}
+          onDismiss={objectiveAssist.dismissAssist}
+        />
         <div className="form-group">
           <label htmlFor="objective-title" className="form-label">Title</label>
           <input
@@ -334,11 +481,38 @@ interface DepartmentEditModalProps {
 }
 
 export function DepartmentEditModal({ isOpen, department, onClose, onSave }: DepartmentEditModalProps) {
+  const { showToast } = useAppState();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [keyIssuesText, setKeyIssuesText] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const departmentFormData: DepartmentEditorFormData = { name, description, keyIssuesText };
+  const departmentAssist = useStructuredFormAssist<
+    DepartmentEditorFormData,
+    keyof DepartmentEditorFormData & string,
+    StrategyFormAssistRequest
+  >({
+    storageKey: STORAGE_KEYS.STRATEGY_DEPARTMENT_ASSIST_PROMPT,
+    defaultPrompt: DEFAULT_DEPARTMENT_ASSIST_PROMPT,
+    modelFallback: STRATEGY_FORM_ASSIST_MODEL_FALLBACK,
+    current: departmentFormData,
+    fields: DEPARTMENT_FIELDS,
+    buildRequest: (notes, promptOverride) => ({
+      formType: 'department',
+      promptOverride,
+      notes,
+      context: { current: departmentFormData },
+    }),
+    onApplyPatch: (patch) => {
+      if (patch.name !== undefined) setName(patch.name);
+      if (patch.description !== undefined) setDescription(patch.description);
+      if (patch.keyIssuesText !== undefined) setKeyIssuesText(patch.keyIssuesText);
+    },
+    requestEndpoint: '/api/strategy/form-assist',
+    onToast: showToast,
+    enabled: isOpen,
+  });
 
   useEffect(() => {
     if (!isOpen || !department) return;
@@ -376,6 +550,35 @@ export function DepartmentEditModal({ isOpen, department, onClose, onSave }: Dep
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Edit Department" size="medium" closeOnOverlayClick={false}>
       <form onSubmit={handleSubmit} className="strategy-editor-form">
+        <FormAssistPanel
+          modelFallback={departmentAssist.modelFallback}
+          prompt={departmentAssist.prompt}
+          onPromptChange={departmentAssist.setPrompt}
+          onResetPrompt={departmentAssist.resetPrompt}
+          isAssistOpen={departmentAssist.isAssistOpen}
+          onToggleOpen={() => departmentAssist.setIsAssistOpen(!departmentAssist.isAssistOpen)}
+          isAdvancedPromptOpen={departmentAssist.isAdvancedPromptOpen}
+          onToggleAdvanced={() => departmentAssist.setIsAdvancedPromptOpen(!departmentAssist.isAdvancedPromptOpen)}
+          assistNotes={departmentAssist.assistNotes}
+          onNotesChange={departmentAssist.setAssistNotes}
+          fillEmptyOnly={departmentAssist.fillEmptyOnly}
+          onFillEmptyOnlyChange={departmentAssist.setFillEmptyOnly}
+          assistError={departmentAssist.assistError}
+          isGeneratingAssist={departmentAssist.isGeneratingAssist}
+          isRecording={departmentAssist.isRecording}
+          isTranscribing={departmentAssist.isTranscribing}
+          isAiBusy={departmentAssist.isAiBusy || isSubmitting}
+          onToggleRecording={departmentAssist.toggleRecording}
+          onGenerateAssist={departmentAssist.generateAssist}
+          assistResult={departmentAssist.assistResult}
+          assistDiff={departmentAssist.assistDiff}
+          selectedPatchFields={departmentAssist.selectedPatchFields}
+          onSelectionChange={(field, checked) =>
+            departmentAssist.setSelectedPatchFields((current) => ({ ...current, [field]: checked }))
+          }
+          onApplySelected={departmentAssist.applySelectedPatch}
+          onDismiss={departmentAssist.dismissAssist}
+        />
         <div className="form-group">
           <label htmlFor="department-name" className="form-label">Name</label>
           <input
@@ -1225,6 +1428,7 @@ interface FlowStepEditModalProps {
 }
 
 export function FlowStepEditModal({ isOpen, step, flowLabel, onClose, onSave }: FlowStepEditModalProps) {
+  const { showToast } = useAppState();
   const [description, setDescription] = useState('');
   const [stepType, setStepType] = useState<FlowStepType>('process');
   const [hasDeviation, setHasDeviation] = useState(false);
@@ -1232,6 +1436,43 @@ export function FlowStepEditModal({ isOpen, step, flowLabel, onClose, onSave }: 
   const [groupLabel, setGroupLabel] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const flowStepFormData: FlowStepEditorFormData = {
+    description,
+    stepType,
+    hasDeviation,
+    parallelGroup,
+    groupLabel,
+  };
+  const flowStepAssist = useStructuredFormAssist<
+    FlowStepEditorFormData,
+    keyof FlowStepEditorFormData & string,
+    StrategyFormAssistRequest
+  >({
+    storageKey: STORAGE_KEYS.STRATEGY_FLOW_STEP_ASSIST_PROMPT,
+    defaultPrompt: DEFAULT_FLOW_STEP_ASSIST_PROMPT,
+    modelFallback: STRATEGY_FORM_ASSIST_MODEL_FALLBACK,
+    current: flowStepFormData,
+    fields: FLOW_STEP_FIELDS,
+    buildRequest: (notes, promptOverride) => ({
+      formType: 'flow-step',
+      promptOverride,
+      notes,
+      context: {
+        current: flowStepFormData,
+        flowLabel,
+      },
+    }),
+    onApplyPatch: (patch) => {
+      if (patch.description !== undefined) setDescription(patch.description);
+      if (patch.stepType !== undefined) setStepType(patch.stepType);
+      if (patch.hasDeviation !== undefined) setHasDeviation(patch.hasDeviation);
+      if (patch.parallelGroup !== undefined) setParallelGroup(patch.parallelGroup);
+      if (patch.groupLabel !== undefined) setGroupLabel(patch.groupLabel);
+    },
+    requestEndpoint: '/api/strategy/form-assist',
+    onToast: showToast,
+    enabled: isOpen,
+  });
 
   useEffect(() => {
     if (!isOpen || !step) return;
@@ -1273,6 +1514,35 @@ export function FlowStepEditModal({ isOpen, step, flowLabel, onClose, onSave }: 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={`Edit ${flowLabel} Step`} size="medium" closeOnOverlayClick={false}>
       <form onSubmit={handleSubmit} className="strategy-editor-form">
+        <FormAssistPanel
+          modelFallback={flowStepAssist.modelFallback}
+          prompt={flowStepAssist.prompt}
+          onPromptChange={flowStepAssist.setPrompt}
+          onResetPrompt={flowStepAssist.resetPrompt}
+          isAssistOpen={flowStepAssist.isAssistOpen}
+          onToggleOpen={() => flowStepAssist.setIsAssistOpen(!flowStepAssist.isAssistOpen)}
+          isAdvancedPromptOpen={flowStepAssist.isAdvancedPromptOpen}
+          onToggleAdvanced={() => flowStepAssist.setIsAdvancedPromptOpen(!flowStepAssist.isAdvancedPromptOpen)}
+          assistNotes={flowStepAssist.assistNotes}
+          onNotesChange={flowStepAssist.setAssistNotes}
+          fillEmptyOnly={flowStepAssist.fillEmptyOnly}
+          onFillEmptyOnlyChange={flowStepAssist.setFillEmptyOnly}
+          assistError={flowStepAssist.assistError}
+          isGeneratingAssist={flowStepAssist.isGeneratingAssist}
+          isRecording={flowStepAssist.isRecording}
+          isTranscribing={flowStepAssist.isTranscribing}
+          isAiBusy={flowStepAssist.isAiBusy || isSubmitting}
+          onToggleRecording={flowStepAssist.toggleRecording}
+          onGenerateAssist={flowStepAssist.generateAssist}
+          assistResult={flowStepAssist.assistResult}
+          assistDiff={flowStepAssist.assistDiff}
+          selectedPatchFields={flowStepAssist.selectedPatchFields}
+          onSelectionChange={(field, checked) =>
+            flowStepAssist.setSelectedPatchFields((current) => ({ ...current, [field]: checked }))
+          }
+          onApplySelected={flowStepAssist.applySelectedPatch}
+          onDismiss={flowStepAssist.dismissAssist}
+        />
         <div className="form-row">
           <div className="form-group">
             <label htmlFor="flow-step-type" className="form-label">Step Type</label>
@@ -1357,6 +1627,7 @@ interface DeviationEditModalProps {
 }
 
 export function DeviationEditModal({ isOpen, deviation, onClose, onSave }: DeviationEditModalProps) {
+  const { showToast } = useAppState();
   const [what, setWhat] = useState('');
   const [why, setWhy] = useState('');
   const [necessary, setNecessary] = useState(false);
@@ -1365,6 +1636,42 @@ export function DeviationEditModal({ isOpen, deviation, onClose, onSave }: Devia
   const [classification, setClassification] = useState<DeviationClassification>('handoff');
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const deviationFormData: DeviationEditorFormData = {
+    what,
+    why,
+    necessary,
+    impact,
+    treatment,
+    classification,
+  };
+  const deviationAssist = useStructuredFormAssist<
+    DeviationEditorFormData,
+    keyof DeviationEditorFormData & string,
+    StrategyFormAssistRequest
+  >({
+    storageKey: STORAGE_KEYS.STRATEGY_DEVIATION_ASSIST_PROMPT,
+    defaultPrompt: DEFAULT_DEVIATION_ASSIST_PROMPT,
+    modelFallback: STRATEGY_FORM_ASSIST_MODEL_FALLBACK,
+    current: deviationFormData,
+    fields: DEVIATION_FIELDS,
+    buildRequest: (notes, promptOverride) => ({
+      formType: 'deviation',
+      promptOverride,
+      notes,
+      context: { current: deviationFormData },
+    }),
+    onApplyPatch: (patch) => {
+      if (patch.what !== undefined) setWhat(patch.what);
+      if (patch.why !== undefined) setWhy(patch.why);
+      if (patch.necessary !== undefined) setNecessary(patch.necessary);
+      if (patch.impact !== undefined) setImpact(patch.impact);
+      if (patch.treatment !== undefined) setTreatment(patch.treatment);
+      if (patch.classification !== undefined) setClassification(patch.classification);
+    },
+    requestEndpoint: '/api/strategy/form-assist',
+    onToast: showToast,
+    enabled: isOpen,
+  });
 
   useEffect(() => {
     if (!isOpen || !deviation) return;
@@ -1408,6 +1715,35 @@ export function DeviationEditModal({ isOpen, deviation, onClose, onSave }: Devia
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Edit Deviation" size="medium" closeOnOverlayClick={false}>
       <form onSubmit={handleSubmit} className="strategy-editor-form">
+        <FormAssistPanel
+          modelFallback={deviationAssist.modelFallback}
+          prompt={deviationAssist.prompt}
+          onPromptChange={deviationAssist.setPrompt}
+          onResetPrompt={deviationAssist.resetPrompt}
+          isAssistOpen={deviationAssist.isAssistOpen}
+          onToggleOpen={() => deviationAssist.setIsAssistOpen(!deviationAssist.isAssistOpen)}
+          isAdvancedPromptOpen={deviationAssist.isAdvancedPromptOpen}
+          onToggleAdvanced={() => deviationAssist.setIsAdvancedPromptOpen(!deviationAssist.isAdvancedPromptOpen)}
+          assistNotes={deviationAssist.assistNotes}
+          onNotesChange={deviationAssist.setAssistNotes}
+          fillEmptyOnly={deviationAssist.fillEmptyOnly}
+          onFillEmptyOnlyChange={deviationAssist.setFillEmptyOnly}
+          assistError={deviationAssist.assistError}
+          isGeneratingAssist={deviationAssist.isGeneratingAssist}
+          isRecording={deviationAssist.isRecording}
+          isTranscribing={deviationAssist.isTranscribing}
+          isAiBusy={deviationAssist.isAiBusy || isSubmitting}
+          onToggleRecording={deviationAssist.toggleRecording}
+          onGenerateAssist={deviationAssist.generateAssist}
+          assistResult={deviationAssist.assistResult}
+          assistDiff={deviationAssist.assistDiff}
+          selectedPatchFields={deviationAssist.selectedPatchFields}
+          onSelectionChange={(field, checked) =>
+            deviationAssist.setSelectedPatchFields((current) => ({ ...current, [field]: checked }))
+          }
+          onApplySelected={deviationAssist.applySelectedPatch}
+          onDismiss={deviationAssist.dismissAssist}
+        />
         <div className="form-group">
           <label htmlFor="deviation-what" className="form-label">What</label>
           <textarea
@@ -1582,12 +1918,54 @@ interface InitiativeEditModalProps {
 }
 
 export function InitiativeEditModal({ isOpen, initiative, onClose, onSave }: InitiativeEditModalProps) {
+  const { showToast } = useAppState();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [status, setStatus] = useState<Initiative['status']>('proposed');
   const [linkedAgents, setLinkedAgents] = useState<LinkedAgent[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const initiativeFormData: InitiativeEditorFormData = {
+    title,
+    description,
+    status,
+    linkedAgents: linkedAgents.map((agent) => ({
+      name: agent.name,
+      role: agent.role,
+    })),
+  };
+  const initiativeAssist = useStructuredFormAssist<
+    InitiativeEditorFormData,
+    keyof InitiativeEditorFormData & string,
+    StrategyFormAssistRequest
+  >({
+    storageKey: STORAGE_KEYS.STRATEGY_INITIATIVE_ASSIST_PROMPT,
+    defaultPrompt: DEFAULT_INITIATIVE_ASSIST_PROMPT,
+    modelFallback: STRATEGY_FORM_ASSIST_MODEL_FALLBACK,
+    current: initiativeFormData,
+    fields: INITIATIVE_FIELDS,
+    buildRequest: (notes, promptOverride) => ({
+      formType: 'initiative',
+      promptOverride,
+      notes,
+      context: { current: initiativeFormData },
+    }),
+    onApplyPatch: (patch) => {
+      if (patch.title !== undefined) setTitle(patch.title);
+      if (patch.description !== undefined) setDescription(patch.description);
+      if (patch.status !== undefined) setStatus(patch.status);
+      if (patch.linkedAgents !== undefined) {
+        setLinkedAgents(patch.linkedAgents.map((agent) => ({
+          id: createDraftId('linked-agent'),
+          name: agent.name,
+          role: agent.role,
+        })));
+      }
+    },
+    requestEndpoint: '/api/strategy/form-assist',
+    onToast: showToast,
+    enabled: isOpen,
+  });
 
   useEffect(() => {
     if (!isOpen || !initiative) return;
@@ -1635,6 +2013,35 @@ export function InitiativeEditModal({ isOpen, initiative, onClose, onSave }: Ini
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Edit Initiative" size="large" closeOnOverlayClick={false}>
       <form onSubmit={handleSubmit} className="strategy-editor-form">
+        <FormAssistPanel
+          modelFallback={initiativeAssist.modelFallback}
+          prompt={initiativeAssist.prompt}
+          onPromptChange={initiativeAssist.setPrompt}
+          onResetPrompt={initiativeAssist.resetPrompt}
+          isAssistOpen={initiativeAssist.isAssistOpen}
+          onToggleOpen={() => initiativeAssist.setIsAssistOpen(!initiativeAssist.isAssistOpen)}
+          isAdvancedPromptOpen={initiativeAssist.isAdvancedPromptOpen}
+          onToggleAdvanced={() => initiativeAssist.setIsAdvancedPromptOpen(!initiativeAssist.isAdvancedPromptOpen)}
+          assistNotes={initiativeAssist.assistNotes}
+          onNotesChange={initiativeAssist.setAssistNotes}
+          fillEmptyOnly={initiativeAssist.fillEmptyOnly}
+          onFillEmptyOnlyChange={initiativeAssist.setFillEmptyOnly}
+          assistError={initiativeAssist.assistError}
+          isGeneratingAssist={initiativeAssist.isGeneratingAssist}
+          isRecording={initiativeAssist.isRecording}
+          isTranscribing={initiativeAssist.isTranscribing}
+          isAiBusy={initiativeAssist.isAiBusy || isSubmitting}
+          onToggleRecording={initiativeAssist.toggleRecording}
+          onGenerateAssist={initiativeAssist.generateAssist}
+          assistResult={initiativeAssist.assistResult}
+          assistDiff={initiativeAssist.assistDiff}
+          selectedPatchFields={initiativeAssist.selectedPatchFields}
+          onSelectionChange={(field, checked) =>
+            initiativeAssist.setSelectedPatchFields((current) => ({ ...current, [field]: checked }))
+          }
+          onApplySelected={initiativeAssist.applySelectedPatch}
+          onDismiss={initiativeAssist.dismissAssist}
+        />
         <div className="form-row">
           <div className="form-group">
             <label htmlFor="initiative-title" className="form-label">Title</label>
