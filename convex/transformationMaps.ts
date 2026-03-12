@@ -463,6 +463,20 @@ export const applyDepartmentAnalysis = mutation({
     const map = await getMapWithAccess(ctx, mapId, auth);
     const department = await getDepartmentByKey(ctx, mapId, departmentKey);
     const now = Date.now();
+    const seenObjectiveKeys = new Set<string>();
+    for (const objective of payload.improvementMandates) {
+      if (seenObjectiveKeys.has(objective.key)) {
+        throw new Error(`Validation: Duplicate improvement mandate key in payload: ${objective.key}`);
+      }
+      seenObjectiveKeys.add(objective.key);
+    }
+    const seenServiceKeys = new Set<string>();
+    for (const service of payload.services) {
+      if (seenServiceKeys.has(service.key)) {
+        throw new Error(`Validation: Duplicate service key in payload: ${service.key}`);
+      }
+      seenServiceKeys.add(service.key);
+    }
 
     await ctx.db.patch(department._id, {
       description: payload.description,
@@ -514,13 +528,8 @@ export const applyDepartmentAnalysis = mutation({
       .withIndex("by_department", (q) => q.eq("mapId", mapId).eq("departmentKey", departmentKey))
       .collect();
     const serviceByKey = new Map(existingServices.map((service) => [service.key, service]));
-    const seenServiceKeys = new Set<string>();
 
     for (const [index, service] of payload.services.entries()) {
-      if (seenServiceKeys.has(service.key)) {
-        throw new Error(`Validation: Duplicate service key in payload: ${service.key}`);
-      }
-      seenServiceKeys.add(service.key);
       const current = serviceByKey.get(service.key);
       await ensureUniqueServiceKey(ctx, mapId, service.key, current?._id);
       const nextData = {

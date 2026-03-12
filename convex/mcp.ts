@@ -771,41 +771,48 @@ export const applyTransformationMapChanges = mutation({
     const actor = `mcp_token:${token._id}`;
     const now = Date.now();
     const summary: string[] = [];
+    let mapState = map;
 
     for (const op of args.operations) {
       if (op.type === "update_map") {
         const previousData = {
-          title: map.title,
-          description: map.description,
-          slug: map.slug,
+          title: mapState.title,
+          description: mapState.description,
+          slug: mapState.slug,
         };
-        const nextSlug = op.slug !== undefined ? normalizeSlug(op.slug) : map.slug;
+        const nextSlug = op.slug !== undefined ? normalizeSlug(op.slug) : mapState.slug;
         if (!nextSlug) throw new Error("Validation: slug is required");
-        if (nextSlug !== map.slug) {
-          await ensureUniqueTransformationMapSlug(ctx, token.workosOrgId, nextSlug, map._id);
+        if (nextSlug !== mapState.slug) {
+          await ensureUniqueTransformationMapSlug(ctx, token.workosOrgId, nextSlug, mapState._id);
         }
         const nextData = {
-          title: op.title ?? map.title,
-          description: op.description ?? map.description,
+          title: op.title ?? mapState.title,
+          description: op.description ?? mapState.description,
           slug: nextSlug,
         };
         if (!isDryRun) {
-          await ctx.db.patch(map._id, {
+          await ctx.db.patch(mapState._id, {
             ...nextData,
             updatedBy: actor,
             updatedAt: now,
           });
           await recordTransformationHistory(ctx, {
             workosOrgId: token.workosOrgId,
-            mapId: map._id,
+            mapId: mapState._id,
             entityType: "map",
-            entityId: `${map._id}`,
+            entityId: `${mapState._id}`,
             changedBy: actor,
             changeType: "update",
             previousData,
             nextData,
           });
         }
+        mapState = {
+          ...mapState,
+          ...nextData,
+          updatedBy: actor,
+          updatedAt: now,
+        };
         summary.push("updated map");
       } else if (op.type === "create_department") {
         if (!op.key || !op.name) throw new Error("Validation: create_department requires key and name");
@@ -1070,6 +1077,13 @@ export const applyTransformationDepartmentAnalysis = mutation({
     const department = await getTransformationDepartmentByKey(ctx, map._id, args.departmentKey);
     const actor = `mcp_token:${token._id}`;
     const now = Date.now();
+    const seenObjectiveKeys = new Set<string>();
+    for (const objective of args.payload.improvementMandates) {
+      if (seenObjectiveKeys.has(objective.key)) {
+        throw new Error(`Validation: Duplicate improvement mandate key in payload: ${objective.key}`);
+      }
+      seenObjectiveKeys.add(objective.key);
+    }
     const seenServiceKeys = new Set<string>();
     for (const service of args.payload.services) {
       if (seenServiceKeys.has(service.key)) {
