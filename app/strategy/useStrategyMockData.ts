@@ -6,7 +6,7 @@
  */
 
 import { useMemo } from 'react';
-import type { DepartmentSummary } from './types';
+import type { Department, DepartmentSummary, Deviation, StrategicObjective, Service } from './types';
 import {
   MOCK_PRESSURES,
   MOCK_OBJECTIVES,
@@ -29,6 +29,34 @@ export function countUniqueLinkedAgentsForService(
   return agentIds.size;
 }
 
+function buildDepartmentSummaries(
+  departments: Department[],
+  objectives: StrategicObjective[],
+  services: Service[],
+  deviations: Deviation[]
+): DepartmentSummary[] {
+  return departments.map((dept) => {
+    const deptServices = services.filter((service) => service.departmentId === dept.id);
+    const deptDeviations = deviations.filter((deviation) =>
+      deptServices.some((service) => service.id === deviation.serviceId)
+    );
+    const analyzedCount = deptServices.filter(
+      (service) => service.status === 'analyzed' || service.status === 'has-deviations'
+    ).length;
+    const improvementMandates = objectives.filter(
+      (objective) => objective.scope === 'department' && objective.departmentId === dept.id
+    );
+
+    return {
+      ...dept,
+      improvementMandates,
+      serviceCount: deptServices.length,
+      deviationCount: deptDeviations.length,
+      analyzedCount,
+    };
+  });
+}
+
 export function useStrategyData() {
   const pressures = MOCK_PRESSURES;
   const objectives = MOCK_OBJECTIVES;
@@ -39,23 +67,8 @@ export function useStrategyData() {
   const initiatives = MOCK_INITIATIVES;
 
   const departmentSummaries: DepartmentSummary[] = useMemo(
-    () =>
-      departments.map((dept) => {
-        const deptServices = services.filter((s) => s.departmentId === dept.id);
-        const deptDeviations = deviations.filter((d) =>
-          deptServices.some((s) => s.id === d.serviceId)
-        );
-        const analyzedCount = deptServices.filter(
-          (s) => s.status === 'analyzed' || s.status === 'has-deviations'
-        ).length;
-        return {
-          ...dept,
-          serviceCount: deptServices.length,
-          deviationCount: deptDeviations.length,
-          analyzedCount,
-        };
-      }),
-    [departments, services, deviations]
+    () => buildDepartmentSummaries(departments, objectives, services, deviations),
+    [departments, objectives, services, deviations]
   );
 
   const getDepartment = (id: string) => departments.find((d) => d.id === id);

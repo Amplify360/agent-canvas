@@ -162,12 +162,14 @@ function DepartmentCard({
   return (
     <button className="strategy-card strategy-card--clickable strategy-card--department" onClick={onClick}>
       <h3 className="strategy-card__title">{department.name}</h3>
-      {department.keyIssues.length > 0 && (
-        <div className="strategy-card__issues">
-          {department.keyIssues.map((issue, i) => (
-            <span key={i} className="strategy-card__issue-item">
-              <Icon name="alert-circle" size={12} />
-              {issue}
+      <p className="strategy-card__description">{department.description}</p>
+      {department.improvementMandates.length > 0 && (
+        <div className="strategy-card__mandates">
+          <span className="strategy-card__mandates-label">Improvement mandates</span>
+          {department.improvementMandates.map((objective) => (
+            <span key={objective.id} className="strategy-card__mandate-item">
+              <Icon name="target" size={12} />
+              {objective.title}
             </span>
           ))}
         </div>
