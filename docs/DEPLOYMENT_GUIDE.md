@@ -35,6 +35,16 @@ pnpm deploy:convex:lab
 
 For lab inspection commands such as `logs`, `data`, and `function-spec`, use `--deployment-name fortunate-hummingbird-653`. Do not rely on the repo's ambient/default Convex context when working on lab.
 
+### Re-seed the BSC Demo Transformation Map
+If the BSC demo transformation map is partially created or corrupted in lab, redeploy the current Convex bundle and run:
+
+```bash
+pnpm deploy:convex:lab
+pnpm seed:transformation-map:bsc:lab
+```
+
+This targets the BSC org (`org_01KFN78YZND9ATN508FT2V9P19`) and rewrites the `bsc-demo-transformation-map` hierarchy in place.
+
 ### Deploy Main Convex Backends
 
 `dev` is auto-deployed from the `dev` branch by GitHub Actions when backend files change. `main` remains manual.

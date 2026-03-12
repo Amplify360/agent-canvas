@@ -39,6 +39,7 @@
     "deploy:convex:dev": "CONVEX_DEPLOYMENT=dev:expert-narwhal-281 npx convex deploy --yes",
     "deploy:convex:lab": "CONVEX_DEPLOYMENT=prod:fortunate-hummingbird-653 npx convex deploy --yes",
     "deploy:convex:prod": "CONVEX_DEPLOYMENT=prod:quaint-bee-380 npx convex deploy --yes",
+    "seed:transformation-map:bsc:lab": "npx convex run transformationMapDemoSeed:seedBscDemoTransformationMap '{}' --deployment-name fortunate-hummingbird-653",
     "lint": "eslint --max-warnings 0 app convex server tests middleware.ts playwright.config.ts",
     "test": "vitest",
     "test:ui": "vitest --ui",

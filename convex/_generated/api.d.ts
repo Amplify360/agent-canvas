@@ -30,6 +30,7 @@ import type * as mcp from "../mcp.js";
 import type * as mcpTokens from "../mcpTokens.js";
 import type * as orgMemberships from "../orgMemberships.js";
 import type * as orgSettings from "../orgSettings.js";
+import type * as transformationMapDemoSeed from "../transformationMapDemoSeed.js";
 import type * as transformationMaps from "../transformationMaps.js";
 
 import type {
@@ -61,6 +62,7 @@ declare const fullApi: ApiFromModules<{
   mcpTokens: typeof mcpTokens;
   orgMemberships: typeof orgMemberships;
   orgSettings: typeof orgSettings;
+  transformationMapDemoSeed: typeof transformationMapDemoSeed;
   transformationMaps: typeof transformationMaps;
 }>;
 
