@@ -8,6 +8,7 @@
 
 import React from 'react';
 import { Icon } from '@/components/ui/Icon';
+import { CardHero } from './CardHero';
 import type { StrategicPressure, StrategicObjective, DepartmentSummary } from '@/strategy/types';
 
 interface OverviewViewProps {
@@ -95,25 +96,32 @@ export function OverviewView({
 
 function PressureCard({ pressure }: { pressure: StrategicPressure }) {
   return (
-    <div className="strategy-card">
-      <div className="strategy-card__header">
-        <Icon name={PRESSURE_ICONS[pressure.type]} size={16} />
-        <span className="strategy-card__type">
-          {pressure.type === 'external' ? 'External' : 'Internal'}
-        </span>
-      </div>
-      <h3 className="strategy-card__title">{pressure.title}</h3>
-      <p className="strategy-card__description">{pressure.description}</p>
-      {pressure.evidence.length > 0 && (
-        <div className="strategy-card__evidence">
-          {pressure.evidence.map((e, i) => (
-            <span key={i} className="strategy-card__evidence-item">
-              <Icon name="check-circle" size={12} />
-              {e}
-            </span>
-          ))}
+    <div className="strategy-card strategy-card--has-hero">
+      <CardHero
+        pressureId={pressure.id}
+        pressureType={pressure.type}
+        iconName={PRESSURE_ICONS[pressure.type]}
+      />
+      <div className="strategy-card__body">
+        <div className="strategy-card__header">
+          <Icon name={PRESSURE_ICONS[pressure.type]} size={16} />
+          <span className="strategy-card__type">
+            {pressure.type === 'external' ? 'External' : 'Internal'}
+          </span>
         </div>
-      )}
+        <h3 className="strategy-card__title">{pressure.title}</h3>
+        <p className="strategy-card__description">{pressure.description}</p>
+        {pressure.evidence.length > 0 && (
+          <div className="strategy-card__evidence">
+            {pressure.evidence.map((e, i) => (
+              <span key={i} className="strategy-card__evidence-item">
+                <Icon name="check-circle" size={12} />
+                {e}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -126,7 +134,7 @@ function ObjectiveCard({
   getPressure: (id: string) => StrategicPressure | undefined;
 }) {
   return (
-    <div className="strategy-card">
+    <div className="strategy-card strategy-card--objective">
       <h3 className="strategy-card__title">{objective.title}</h3>
       <p className="strategy-card__description">{objective.description}</p>
       {objective.linkedPressureIds.length > 0 && (
@@ -152,7 +160,7 @@ function DepartmentCard({
   onClick: () => void;
 }) {
   return (
-    <button className="strategy-card strategy-card--clickable" onClick={onClick}>
+    <button className="strategy-card strategy-card--clickable strategy-card--department" onClick={onClick}>
       <h3 className="strategy-card__title">{department.name}</h3>
       {department.keyIssues.length > 0 && (
         <div className="strategy-card__issues">

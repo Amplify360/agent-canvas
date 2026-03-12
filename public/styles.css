@@ -4762,9 +4762,25 @@ body.is-resizing-sidebar .main-wrapper {
     border-left: 3px solid var(--border-default);
 }
 
+/* Preserve section-specific accent colors in light mode */
+[data-theme="light"] .strategy-card--objective,
+:root:not([data-theme]) .strategy-card--objective {
+    border-left: 3px solid rgba(99, 102, 241, 0.35);
+}
+
+[data-theme="light"] .strategy-card--department,
+:root:not([data-theme]) .strategy-card--department {
+    border-left: 3px solid rgba(5, 150, 105, 0.3);
+}
+
 [data-theme="light"] .strategy-card--clickable:hover,
 :root:not([data-theme]) .strategy-card--clickable:hover {
     border-left-color: var(--accent-primary);
+}
+
+[data-theme="light"] .strategy-card--department:hover,
+:root:not([data-theme]) .strategy-card--department:hover {
+    border-left-color: rgba(5, 150, 105, 0.55);
 }
 
 /* ============================================
@@ -6381,6 +6397,123 @@ body.is-resizing-sidebar .main-wrapper {
 
 .strategy-card__stat--warning svg {
     color: var(--warning);
+}
+
+/* ── Card Hero (symbolic editorial header) ──────────── */
+
+.strategy-card--has-hero {
+    padding: 0;
+    overflow: hidden;
+}
+
+.strategy-card--has-hero .strategy-card__body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    padding: var(--space-4) var(--space-5) var(--space-5);
+}
+
+.strategy-card__hero {
+    position: relative;
+    height: 90px;
+    overflow: hidden;
+}
+
+/* External pressures — warm amber palette, angular energy */
+.strategy-card__hero--external {
+    background: linear-gradient(135deg, #FEF3C7 0%, #FDE68A 35%, #FFFBEB 100%);
+    color: #92400E;
+}
+
+/* Internal pain points — cool teal palette, mechanical tension */
+.strategy-card__hero--internal {
+    background: linear-gradient(135deg, #CCFBF1 0%, #99F6E4 35%, #F0FDFA 100%);
+    color: #115E59;
+}
+
+.strategy-card__hero-icon {
+    position: absolute;
+    left: var(--space-5);
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 1;
+    opacity: 0.7;
+}
+
+.strategy-card__hero-icon svg {
+    color: inherit;
+}
+
+.strategy-card__hero-motif {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+
+/* Override light-mode left border for hero cards */
+[data-theme="light"] .strategy-card--has-hero,
+:root:not([data-theme]) .strategy-card--has-hero {
+    border-left: 1px solid var(--border-muted);
+}
+
+/* ── Section accent colors (objectives & departments) ── */
+
+/* Objectives — indigo/blue left accent */
+.strategy-card--objective {
+    border-left: 3px solid rgba(99, 102, 241, 0.35);
+}
+
+.strategy-card--objective:hover {
+    border-left-color: rgba(99, 102, 241, 0.6);
+}
+
+/* Departments — green left accent */
+.strategy-card--department {
+    border-left: 3px solid rgba(5, 150, 105, 0.3);
+}
+
+.strategy-card--department:hover {
+    border-left-color: rgba(5, 150, 105, 0.55);
+}
+
+/* ── Dark mode hero overrides ──────────────────────── */
+
+[data-theme="dark"] .strategy-card__hero--external {
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.14) 0%, rgba(217, 119, 6, 0.08) 40%, rgba(245, 158, 11, 0.02) 100%);
+    color: #FBBF24;
+}
+
+[data-theme="dark"] .strategy-card__hero--internal {
+    background: linear-gradient(135deg, rgba(20, 184, 166, 0.14) 0%, rgba(94, 234, 212, 0.08) 40%, rgba(20, 184, 166, 0.02) 100%);
+    color: #5EEAD4;
+}
+
+[data-theme="dark"] .strategy-card--objective {
+    border-left-color: rgba(129, 140, 248, 0.3);
+}
+
+[data-theme="dark"] .strategy-card--department {
+    border-left-color: rgba(52, 211, 153, 0.25);
+}
+
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme]) .strategy-card__hero--external {
+        background: linear-gradient(135deg, rgba(245, 158, 11, 0.14) 0%, rgba(217, 119, 6, 0.08) 40%, rgba(245, 158, 11, 0.02) 100%);
+        color: #FBBF24;
+    }
+    :root:not([data-theme]) .strategy-card__hero--internal {
+        background: linear-gradient(135deg, rgba(20, 184, 166, 0.14) 0%, rgba(94, 234, 212, 0.08) 40%, rgba(20, 184, 166, 0.02) 100%);
+        color: #5EEAD4;
+    }
+    :root:not([data-theme]) .strategy-card--objective {
+        border-left-color: rgba(129, 140, 248, 0.3);
+    }
+    :root:not([data-theme]) .strategy-card--department {
+        border-left-color: rgba(52, 211, 153, 0.25);
+    }
 }
 
 /* Department View */

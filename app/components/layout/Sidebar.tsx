@@ -320,7 +320,7 @@ export function Sidebar() {
 
         <nav className="sidebar__nav">
           <Link
-            href={currentCanvasId ? `/c/${currentCanvasId}` : '/'}
+            href="/"
             className={`sidebar__nav-item ${!pathname.startsWith('/strategy') ? 'is-active' : ''}`}
           >
             <Icon name="layout-grid" />
