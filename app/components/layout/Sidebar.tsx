@@ -347,7 +347,9 @@ export function Sidebar() {
   };
 
   const handleSelectCanvasWorkspace = () => {
-    const targetCanvasId = currentCanvasId ?? canvases[0]?._id;
+    const targetCanvasId =
+      (currentCanvasId && canvases.some((canvas) => canvas._id === currentCanvasId) ? currentCanvasId : null) ??
+      canvases[0]?._id;
     setIsCanvasPanelOpen(true);
     router.push(targetCanvasId ? `/c/${targetCanvasId}` : '/');
   };

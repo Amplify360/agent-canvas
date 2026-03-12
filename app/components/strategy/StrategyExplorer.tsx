@@ -34,6 +34,10 @@ import {
   ServiceEditModal,
 } from './StrategyEditorModals';
 import { useStrategyData } from '@/strategy/useStrategyMockData';
+import {
+  buildTransformationMapPath,
+  shouldCanonicalizeTransformationMapSlug,
+} from '@/strategy/navigation';
 import type {
   Department,
   Deviation,
@@ -64,6 +68,7 @@ export function StrategyExplorer() {
   const departmentId = searchParams.get('department');
   const serviceId = searchParams.get('service');
   const data = useStrategyData(mapSlug, departmentId, serviceId);
+  const resolvedMapSlug = data.map?.slug ?? null;
   const department = departmentId ? data.getDepartment(departmentId) : undefined;
   const service = serviceId ? data.getService(serviceId) : undefined;
   const [editingPressure, setEditingPressure] = useState<StrategicPressure | null>(null);
@@ -76,6 +81,7 @@ export function StrategyExplorer() {
   const [deleteState, setDeleteState] = useState<DeleteState | null>(null);
   const shouldCanonicalizeServiceUrl =
     Boolean(serviceId && !departmentId && service);
+  const shouldCanonicalizeMapSlug = shouldCanonicalizeTransformationMapSlug(mapSlug, resolvedMapSlug);
   const hasMismatchedDepartmentService =
     Boolean(department && service && service.departmentId !== department.id);
 
@@ -84,38 +90,37 @@ export function StrategyExplorer() {
   }, []);
 
   useEffect(() => {
-    if (!shouldCanonicalizeServiceUrl || !serviceId || !service) {
+    if ((!shouldCanonicalizeServiceUrl || !serviceId || !service) && !shouldCanonicalizeMapSlug) {
       return;
     }
 
-    const nextParams = new URLSearchParams();
-    if (mapSlug) {
-      nextParams.set('map', mapSlug);
-    }
-    nextParams.set('department', service.departmentId);
-    nextParams.set('service', serviceId);
-    router.replace(`/transformation-map?${nextParams.toString()}`);
-  }, [router, mapSlug, service, serviceId, shouldCanonicalizeServiceUrl]);
+    router.replace(buildTransformationMapPath({
+      requestedMapSlug: shouldCanonicalizeMapSlug ? null : mapSlug,
+      resolvedMapSlug: shouldCanonicalizeMapSlug ? resolvedMapSlug : null,
+      departmentId: shouldCanonicalizeServiceUrl && service ? service.departmentId : departmentId,
+      serviceId,
+    }));
+  }, [
+    departmentId,
+    mapSlug,
+    resolvedMapSlug,
+    router,
+    service,
+    serviceId,
+    shouldCanonicalizeMapSlug,
+    shouldCanonicalizeServiceUrl,
+  ]);
 
   // Navigation helpers
   const navigate = (path: string) => router.push(path);
 
   const buildMapPath = (nextDepartmentId?: string, nextServiceId?: string) => {
-    const params = new URLSearchParams();
-    const resolvedMapSlug = mapSlug ?? data.map?.slug;
-
-    if (resolvedMapSlug) {
-      params.set('map', resolvedMapSlug);
-    }
-    if (nextDepartmentId) {
-      params.set('department', nextDepartmentId);
-    }
-    if (nextServiceId) {
-      params.set('service', nextServiceId);
-    }
-
-    const query = params.toString();
-    return query ? `/transformation-map?${query}` : '/transformation-map';
+    return buildTransformationMapPath({
+      requestedMapSlug: mapSlug,
+      resolvedMapSlug,
+      departmentId: nextDepartmentId,
+      serviceId: nextServiceId,
+    });
   };
 
   const navigateToDepartment = (id: string) => {
