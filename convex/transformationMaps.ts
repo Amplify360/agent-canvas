@@ -13,6 +13,7 @@ import {
   normalizeSlug,
   recordTransformationHistory,
   serviceAnalysisPayloadValidator,
+  serviceStatusValidator,
   sortByOrder,
 } from "./lib/transformationMap";
 import {
@@ -66,6 +67,38 @@ async function getDepartmentByKey(ctx: any, mapId: Id<"transformationMaps">, dep
   return department;
 }
 
+async function getPressureByKey(ctx: any, mapId: Id<"transformationMaps">, pressureKey: string) {
+  const pressure = await findPressureByKey(ctx, mapId, pressureKey);
+  if (!pressure) {
+    throw new Error("NotFound: Pressure not found");
+  }
+  return pressure;
+}
+
+async function findPressureByKey(ctx: any, mapId: Id<"transformationMaps">, pressureKey: string) {
+  const pressure = await ctx.db
+    .query("transformationPressures")
+    .withIndex("by_map_key", (q: any) => q.eq("mapId", mapId).eq("key", pressureKey))
+    .first();
+  return pressure;
+}
+
+async function getObjectiveByKey(ctx: any, mapId: Id<"transformationMaps">, objectiveKey: string) {
+  const objective = await findObjectiveByKey(ctx, mapId, objectiveKey);
+  if (!objective) {
+    throw new Error("NotFound: Objective not found");
+  }
+  return objective;
+}
+
+async function findObjectiveByKey(ctx: any, mapId: Id<"transformationMaps">, objectiveKey: string) {
+  const objective = await ctx.db
+    .query("transformationObjectives")
+    .withIndex("by_map_key", (q: any) => q.eq("mapId", mapId).eq("key", objectiveKey))
+    .first();
+  return objective;
+}
+
 async function findDepartmentByKey(ctx: any, mapId: Id<"transformationMaps">, departmentKey: string) {
   const department = await ctx.db
     .query("transformationDepartments")
@@ -115,6 +148,97 @@ async function ensureUniqueServiceKey(
   if (existing && existing._id !== excludeServiceId) {
     throw new Error(`Validation: Service key already exists: ${serviceKey}`);
   }
+}
+
+async function touchMap(ctx: any, mapId: Id<"transformationMaps">, actor: string, now: number) {
+  await ctx.db.patch(mapId, {
+    updatedBy: actor,
+    updatedAt: now,
+  });
+}
+
+async function syncDepartmentMandates(
+  ctx: any,
+  mapId: Id<"transformationMaps">,
+  departmentKey: string,
+  actor: string,
+  now: number
+) {
+  const [department, objectives] = await Promise.all([
+    findDepartmentByKey(ctx, mapId, departmentKey),
+    ctx.db
+      .query("transformationObjectives")
+      .withIndex("by_map_department", (q: any) => q.eq("mapId", mapId).eq("departmentKey", departmentKey))
+      .collect(),
+  ]);
+
+  if (!department) {
+    return;
+  }
+
+  const sortedObjectives = [...objectives].sort((left: any, right: any) => left.order - right.order);
+
+  await ctx.db.patch(department._id, {
+    improvementMandates: sortedObjectives.map((objective: any) => objective.title),
+    updatedBy: actor,
+    updatedAt: now,
+  });
+}
+
+async function removeServiceCascade(
+  ctx: any,
+  args: {
+    map: any;
+    service: any;
+    actor: string;
+    now: number;
+  }
+) {
+  const analysis = await ctx.db
+    .query("transformationServiceAnalyses")
+    .withIndex("by_service", (q: any) => q.eq("serviceId", args.service._id))
+    .first();
+
+  if (analysis) {
+    await ctx.db.delete(analysis._id);
+    await recordTransformationHistory(ctx, {
+      workosOrgId: args.map.workosOrgId,
+      mapId: args.map._id,
+      entityType: "service_analysis",
+      entityId: args.service.key,
+      changedBy: args.actor,
+      changeType: "delete",
+      previousData: {
+        reviewStatus: analysis.reviewStatus,
+        idealFlowSteps: analysis.idealFlowSteps,
+        currentFlowSteps: analysis.currentFlowSteps,
+        deviations: analysis.deviations,
+        initiatives: analysis.initiatives,
+      },
+    });
+  }
+
+  await ctx.db.delete(args.service._id);
+  await recordTransformationHistory(ctx, {
+    workosOrgId: args.map.workosOrgId,
+    mapId: args.map._id,
+    entityType: "service",
+    entityId: args.service.key,
+    changedBy: args.actor,
+    changeType: "delete",
+    previousData: {
+      departmentKey: args.service.departmentKey,
+      name: args.service.name,
+      purpose: args.service.purpose,
+      customer: args.service.customer,
+      trigger: args.service.trigger,
+      outcome: args.service.outcome,
+      constraints: args.service.constraints,
+      status: args.service.status,
+      effectivenessMetric: args.service.effectivenessMetric,
+      efficiencyMetric: args.service.efficiencyMetric,
+    },
+  });
 }
 
 async function seedPrototypeMap(ctx: any, workosOrgId: string, actor: string) {
@@ -385,6 +509,408 @@ export const setMapStatus = mutation({
       previousData: { status: map.status },
       nextData: { status },
     });
+  },
+});
+
+export const updatePressure = mutation({
+  args: {
+    mapId: v.id("transformationMaps"),
+    pressureKey: v.string(),
+    type: v.optional(v.union(v.literal("external"), v.literal("internal"))),
+    title: v.optional(v.string()),
+    description: v.optional(v.string()),
+    evidence: v.optional(v.array(v.string())),
+  },
+  handler: async (ctx, { mapId, pressureKey, type, title, description, evidence }) => {
+    const auth = await requireAuth(ctx);
+    const map = await getMapWithAccess(ctx, mapId, auth);
+    const pressure = await getPressureByKey(ctx, mapId, pressureKey);
+    const now = Date.now();
+    const nextData = {
+      type: type ?? pressure.type,
+      title: title ?? pressure.title,
+      description: description ?? pressure.description,
+      evidence: evidence ?? pressure.evidence,
+      sourceType: "human" as const,
+      updatedBy: auth.workosUserId,
+      updatedAt: now,
+    };
+
+    await ctx.db.patch(pressure._id, nextData);
+    await touchMap(ctx, mapId, auth.workosUserId, now);
+
+    await recordTransformationHistory(ctx, {
+      workosOrgId: map.workosOrgId,
+      mapId,
+      entityType: "pressure",
+      entityId: pressure.key,
+      changedBy: auth.workosUserId,
+      changeType: "update",
+      previousData: {
+        type: pressure.type,
+        title: pressure.title,
+        description: pressure.description,
+        evidence: pressure.evidence,
+      },
+      nextData,
+    });
+
+    return { ok: true };
+  },
+});
+
+export const removePressure = mutation({
+  args: {
+    mapId: v.id("transformationMaps"),
+    pressureKey: v.string(),
+  },
+  handler: async (ctx, { mapId, pressureKey }) => {
+    const auth = await requireAuth(ctx);
+    const map = await getMapWithAccess(ctx, mapId, auth);
+    const pressure = await getPressureByKey(ctx, mapId, pressureKey);
+    const now = Date.now();
+
+    const objectives = await ctx.db
+      .query("transformationObjectives")
+      .withIndex("by_map", (q) => q.eq("mapId", mapId))
+      .collect();
+
+    for (const objective of objectives) {
+      if (!objective.linkedPressureKeys.includes(pressureKey)) {
+        continue;
+      }
+
+      const nextLinkedPressureKeys = objective.linkedPressureKeys.filter((key) => key !== pressureKey);
+      await ctx.db.patch(objective._id, {
+        linkedPressureKeys: nextLinkedPressureKeys,
+        sourceType: "human",
+        updatedBy: auth.workosUserId,
+        updatedAt: now,
+      });
+
+      await recordTransformationHistory(ctx, {
+        workosOrgId: map.workosOrgId,
+        mapId,
+        entityType: "objective",
+        entityId: objective.key,
+        changedBy: auth.workosUserId,
+        changeType: "update",
+        previousData: { linkedPressureKeys: objective.linkedPressureKeys },
+        nextData: { linkedPressureKeys: nextLinkedPressureKeys },
+      });
+    }
+
+    await ctx.db.delete(pressure._id);
+    await touchMap(ctx, mapId, auth.workosUserId, now);
+
+    await recordTransformationHistory(ctx, {
+      workosOrgId: map.workosOrgId,
+      mapId,
+      entityType: "pressure",
+      entityId: pressure.key,
+      changedBy: auth.workosUserId,
+      changeType: "delete",
+      previousData: {
+        type: pressure.type,
+        title: pressure.title,
+        description: pressure.description,
+        evidence: pressure.evidence,
+      },
+    });
+
+    return { ok: true };
+  },
+});
+
+export const updateObjective = mutation({
+  args: {
+    mapId: v.id("transformationMaps"),
+    objectiveKey: v.string(),
+    title: v.optional(v.string()),
+    description: v.optional(v.string()),
+    linkedPressureKeys: v.optional(v.array(v.string())),
+  },
+  handler: async (ctx, { mapId, objectiveKey, title, description, linkedPressureKeys }) => {
+    const auth = await requireAuth(ctx);
+    const map = await getMapWithAccess(ctx, mapId, auth);
+    const objective = await getObjectiveByKey(ctx, mapId, objectiveKey);
+    const now = Date.now();
+    const nextData = {
+      title: title ?? objective.title,
+      description: description ?? objective.description,
+      linkedPressureKeys: linkedPressureKeys ?? objective.linkedPressureKeys,
+      sourceType: "human" as const,
+      updatedBy: auth.workosUserId,
+      updatedAt: now,
+    };
+
+    await ctx.db.patch(objective._id, nextData);
+
+    if (objective.scope === "department" && objective.departmentKey) {
+      await syncDepartmentMandates(ctx, mapId, objective.departmentKey, auth.workosUserId, now);
+    }
+
+    await touchMap(ctx, mapId, auth.workosUserId, now);
+
+    await recordTransformationHistory(ctx, {
+      workosOrgId: map.workosOrgId,
+      mapId,
+      entityType: "objective",
+      entityId: objective.key,
+      changedBy: auth.workosUserId,
+      changeType: "update",
+      previousData: {
+        title: objective.title,
+        description: objective.description,
+        linkedPressureKeys: objective.linkedPressureKeys,
+      },
+      nextData,
+    });
+
+    return { ok: true };
+  },
+});
+
+export const removeObjective = mutation({
+  args: {
+    mapId: v.id("transformationMaps"),
+    objectiveKey: v.string(),
+  },
+  handler: async (ctx, { mapId, objectiveKey }) => {
+    const auth = await requireAuth(ctx);
+    const map = await getMapWithAccess(ctx, mapId, auth);
+    const objective = await getObjectiveByKey(ctx, mapId, objectiveKey);
+    const now = Date.now();
+
+    await ctx.db.delete(objective._id);
+
+    if (objective.scope === "department" && objective.departmentKey) {
+      await syncDepartmentMandates(ctx, mapId, objective.departmentKey, auth.workosUserId, now);
+    }
+
+    await touchMap(ctx, mapId, auth.workosUserId, now);
+
+    await recordTransformationHistory(ctx, {
+      workosOrgId: map.workosOrgId,
+      mapId,
+      entityType: "objective",
+      entityId: objective.key,
+      changedBy: auth.workosUserId,
+      changeType: "delete",
+      previousData: {
+        scope: objective.scope,
+        departmentKey: objective.departmentKey,
+        title: objective.title,
+        description: objective.description,
+        linkedPressureKeys: objective.linkedPressureKeys,
+      },
+    });
+
+    return { ok: true };
+  },
+});
+
+export const updateDepartment = mutation({
+  args: {
+    mapId: v.id("transformationMaps"),
+    departmentKey: v.string(),
+    name: v.optional(v.string()),
+    description: v.optional(v.string()),
+    keyIssues: v.optional(v.array(v.string())),
+  },
+  handler: async (ctx, { mapId, departmentKey, name, description, keyIssues }) => {
+    const auth = await requireAuth(ctx);
+    const map = await getMapWithAccess(ctx, mapId, auth);
+    const department = await getDepartmentByKey(ctx, mapId, departmentKey);
+    const now = Date.now();
+    const nextData = {
+      name: name ?? department.name,
+      description: description ?? department.description,
+      keyIssues: keyIssues ?? department.keyIssues,
+      sourceType: "human" as const,
+      updatedBy: auth.workosUserId,
+      updatedAt: now,
+    };
+
+    await ctx.db.patch(department._id, nextData);
+    await touchMap(ctx, mapId, auth.workosUserId, now);
+
+    await recordTransformationHistory(ctx, {
+      workosOrgId: map.workosOrgId,
+      mapId,
+      entityType: "department",
+      entityId: department.key,
+      changedBy: auth.workosUserId,
+      changeType: "update",
+      previousData: {
+        name: department.name,
+        description: department.description,
+        keyIssues: department.keyIssues,
+      },
+      nextData,
+    });
+
+    return { ok: true };
+  },
+});
+
+export const removeDepartment = mutation({
+  args: {
+    mapId: v.id("transformationMaps"),
+    departmentKey: v.string(),
+  },
+  handler: async (ctx, { mapId, departmentKey }) => {
+    const auth = await requireAuth(ctx);
+    const map = await getMapWithAccess(ctx, mapId, auth);
+    const department = await getDepartmentByKey(ctx, mapId, departmentKey);
+    const now = Date.now();
+
+    const [objectives, services] = await Promise.all([
+      ctx.db
+        .query("transformationObjectives")
+        .withIndex("by_map_department", (q) => q.eq("mapId", mapId).eq("departmentKey", departmentKey))
+        .collect(),
+      ctx.db
+        .query("transformationServices")
+        .withIndex("by_department", (q) => q.eq("mapId", mapId).eq("departmentKey", departmentKey))
+        .collect(),
+    ]);
+
+    for (const objective of objectives) {
+      await ctx.db.delete(objective._id);
+      await recordTransformationHistory(ctx, {
+        workosOrgId: map.workosOrgId,
+        mapId,
+        entityType: "objective",
+        entityId: objective.key,
+        changedBy: auth.workosUserId,
+        changeType: "delete",
+        previousData: {
+          scope: objective.scope,
+          departmentKey: objective.departmentKey,
+          title: objective.title,
+          description: objective.description,
+          linkedPressureKeys: objective.linkedPressureKeys,
+        },
+      });
+    }
+
+    for (const service of services) {
+      await removeServiceCascade(ctx, {
+        map,
+        service,
+        actor: auth.workosUserId,
+        now,
+      });
+    }
+
+    await ctx.db.delete(department._id);
+    await touchMap(ctx, mapId, auth.workosUserId, now);
+
+    await recordTransformationHistory(ctx, {
+      workosOrgId: map.workosOrgId,
+      mapId,
+      entityType: "department",
+      entityId: department.key,
+      changedBy: auth.workosUserId,
+      changeType: "delete",
+      previousData: {
+        name: department.name,
+        description: department.description,
+        keyIssues: department.keyIssues,
+        improvementMandates: department.improvementMandates,
+      },
+    });
+
+    return { ok: true };
+  },
+});
+
+export const updateService = mutation({
+  args: {
+    mapId: v.id("transformationMaps"),
+    serviceKey: v.string(),
+    name: v.optional(v.string()),
+    purpose: v.optional(v.string()),
+    customer: v.optional(v.string()),
+    trigger: v.optional(v.string()),
+    outcome: v.optional(v.string()),
+    constraints: v.optional(v.array(v.string())),
+    status: v.optional(serviceStatusValidator),
+    effectivenessMetric: v.optional(v.string()),
+    efficiencyMetric: v.optional(v.string()),
+  },
+  handler: async (
+    ctx,
+    { mapId, serviceKey, name, purpose, customer, trigger, outcome, constraints, status, effectivenessMetric, efficiencyMetric }
+  ) => {
+    const auth = await requireAuth(ctx);
+    const map = await getMapWithAccess(ctx, mapId, auth);
+    const service = await getServiceByKey(ctx, mapId, serviceKey);
+    const now = Date.now();
+    const nextData = {
+      name: name ?? service.name,
+      purpose: purpose ?? service.purpose,
+      customer: customer ?? service.customer,
+      trigger: trigger ?? service.trigger,
+      outcome: outcome ?? service.outcome,
+      constraints: constraints ?? service.constraints,
+      status: status ?? service.status,
+      effectivenessMetric: effectivenessMetric ?? service.effectivenessMetric,
+      efficiencyMetric: efficiencyMetric ?? service.efficiencyMetric,
+      sourceType: "human" as const,
+      updatedBy: auth.workosUserId,
+      updatedAt: now,
+    };
+
+    await ctx.db.patch(service._id, nextData);
+    await touchMap(ctx, mapId, auth.workosUserId, now);
+
+    await recordTransformationHistory(ctx, {
+      workosOrgId: map.workosOrgId,
+      mapId,
+      entityType: "service",
+      entityId: service.key,
+      changedBy: auth.workosUserId,
+      changeType: "update",
+      previousData: {
+        name: service.name,
+        purpose: service.purpose,
+        customer: service.customer,
+        trigger: service.trigger,
+        outcome: service.outcome,
+        constraints: service.constraints,
+        status: service.status,
+        effectivenessMetric: service.effectivenessMetric,
+        efficiencyMetric: service.efficiencyMetric,
+      },
+      nextData,
+    });
+
+    return { ok: true };
+  },
+});
+
+export const removeService = mutation({
+  args: {
+    mapId: v.id("transformationMaps"),
+    serviceKey: v.string(),
+  },
+  handler: async (ctx, { mapId, serviceKey }) => {
+    const auth = await requireAuth(ctx);
+    const map = await getMapWithAccess(ctx, mapId, auth);
+    const service = await getServiceByKey(ctx, mapId, serviceKey);
+    const now = Date.now();
+
+    await removeServiceCascade(ctx, {
+      map,
+      service,
+      actor: auth.workosUserId,
+      now,
+    });
+    await touchMap(ctx, mapId, auth.workosUserId, now);
+
+    return { ok: true };
   },
 });
 

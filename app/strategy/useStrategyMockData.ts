@@ -9,10 +9,11 @@
 
 import { useMemo } from 'react';
 import { api } from '../../convex/_generated/api';
-import { useQuery, useCanQuery } from '@/hooks/useConvex';
+import { useConvex, useMutation, useQuery, useCanQuery } from '@/hooks/useConvex';
 import { useAuth } from '@/contexts/AuthContext';
 import type { Department, DepartmentSummary, Deviation, FlowStep, Initiative, StrategicObjective, StrategicPressure, Service } from './types';
 import { countUniqueLinkedAgentsForService } from './utils';
+import { normalizeOrderedFlowSteps } from './editorUtils';
 
 const EMPTY_DEPARTMENT_SUMMARIES: DepartmentSummary[] = [];
 const EMPTY_PRESSURES: StrategicPressure[] = [];
@@ -26,6 +27,16 @@ const EMPTY_AGENT_COUNTS: Record<string, number> = {};
 export function useStrategyData(departmentId?: string | null, serviceId?: string | null) {
   const { currentOrgId, isInitialized } = useAuth();
   const { canQuery } = useCanQuery();
+  const convex = useConvex();
+  const updatePressureMutation = useMutation(api.transformationMaps.updatePressure);
+  const removePressureMutation = useMutation(api.transformationMaps.removePressure);
+  const updateObjectiveMutation = useMutation(api.transformationMaps.updateObjective);
+  const removeObjectiveMutation = useMutation(api.transformationMaps.removeObjective);
+  const updateDepartmentMutation = useMutation(api.transformationMaps.updateDepartment);
+  const removeDepartmentMutation = useMutation(api.transformationMaps.removeDepartment);
+  const updateServiceMutation = useMutation(api.transformationMaps.updateService);
+  const removeServiceMutation = useMutation(api.transformationMaps.removeService);
+  const applyServiceAnalysisMutation = useMutation(api.transformationMaps.applyServiceAnalysis);
 
   const maps = useQuery(
     api.transformationMaps.list,
@@ -36,7 +47,7 @@ export function useStrategyData(departmentId?: string | null, serviceId?: string
 
   const overview = useQuery(
     api.transformationMaps.getOverviewSnapshot,
-    canQuery && activeMap && !departmentId && !serviceId ? { mapId: activeMap._id } : 'skip'
+    canQuery && activeMap ? { mapId: activeMap._id } : 'skip'
   );
 
   const departmentSnapshot = useQuery(
@@ -58,6 +69,10 @@ export function useStrategyData(departmentId?: string | null, serviceId?: string
       return departmentSnapshot.department;
     }
 
+    if (serviceSnapshot?.department && serviceSnapshot.department.id === departmentId) {
+      return serviceSnapshot.department;
+    }
+
     const summary = departmentSummaries.find((entry) => entry.id === departmentId);
     if (!summary) return undefined;
     return {
@@ -66,7 +81,7 @@ export function useStrategyData(departmentId?: string | null, serviceId?: string
       description: summary.description,
       keyIssues: summary.keyIssues,
     };
-  }, [departmentId, departmentSnapshot, departmentSummaries]);
+  }, [departmentId, departmentSnapshot, departmentSummaries, serviceSnapshot]);
 
   const currentServices = departmentSnapshot?.services ?? EMPTY_SERVICES;
   const currentService = useMemo<Service | undefined>(() => {
@@ -89,6 +104,58 @@ export function useStrategyData(departmentId?: string | null, serviceId?: string
     (canQuery && !!activeMap && !departmentId && !serviceId && overview === undefined) ||
     (canQuery && !!activeMap && !!departmentId && !serviceId && departmentSnapshot === undefined) ||
     (canQuery && !!activeMap && !!serviceId && serviceSnapshot === undefined);
+
+  const requireActiveMapId = () => {
+    if (!activeMap) {
+      throw new Error('Transformation Map not found');
+    }
+    return activeMap._id;
+  };
+
+  const applyCurrentServiceAnalysis = async (
+    requestedServiceId: string,
+    nextAnalysis: {
+      idealFlowSteps?: FlowStep[];
+      currentFlowSteps?: FlowStep[];
+      deviations?: Deviation[];
+      initiatives?: Initiative[];
+    }
+  ) => {
+    const mapId = requireActiveMapId();
+    const latestSnapshot = await convex.query(api.transformationMaps.getServiceSnapshot, {
+      mapId,
+      serviceKey: requestedServiceId,
+    });
+
+    if (!latestSnapshot?.service) {
+      throw new Error('Service snapshot is not available');
+    }
+
+    const service = latestSnapshot.service;
+
+    await applyServiceAnalysisMutation({
+      mapId,
+      serviceKey: requestedServiceId,
+      payload: {
+        service: {
+          name: service.name,
+          purpose: service.purpose,
+          customer: service.customer,
+          trigger: service.trigger,
+          outcome: service.outcome,
+          constraints: service.constraints,
+          status: service.status,
+          effectivenessMetric: service.effectivenessMetric,
+          efficiencyMetric: service.efficiencyMetric,
+        },
+        idealFlowSteps: nextAnalysis.idealFlowSteps ?? latestSnapshot.idealSteps,
+        currentFlowSteps: nextAnalysis.currentFlowSteps ?? latestSnapshot.currentSteps,
+        deviations: nextAnalysis.deviations ?? latestSnapshot.deviations,
+        initiatives: nextAnalysis.initiatives ?? latestSnapshot.initiatives,
+        reviewStatus: latestSnapshot.reviewStatus,
+      },
+    });
+  };
 
   return {
     isLoading,
@@ -130,5 +197,116 @@ export function useStrategyData(departmentId?: string | null, serviceId?: string
       requestedDepartmentId === departmentId ? (currentObjectives as StrategicObjective[]) : [],
     getEnterpriseObjectives: () => enterpriseObjectives as StrategicObjective[],
     getPressure: (id: string) => pressures.find((pressure) => pressure.id === id),
+    updatePressure: async (
+      pressureId: string,
+      updates: Partial<Pick<StrategicPressure, 'type' | 'title' | 'description' | 'evidence'>>
+    ) => {
+      await updatePressureMutation({
+        mapId: requireActiveMapId(),
+        pressureKey: pressureId,
+        ...updates,
+      });
+    },
+    removePressure: async (pressureId: string) => {
+      await removePressureMutation({
+        mapId: requireActiveMapId(),
+        pressureKey: pressureId,
+      });
+    },
+    updateObjective: async (
+      objectiveId: string,
+      updates: Partial<Pick<StrategicObjective, 'title' | 'description' | 'linkedPressureIds'>>
+    ) => {
+      await updateObjectiveMutation({
+        mapId: requireActiveMapId(),
+        objectiveKey: objectiveId,
+        title: updates.title,
+        description: updates.description,
+        linkedPressureKeys: updates.linkedPressureIds,
+      });
+    },
+    removeObjective: async (objectiveId: string) => {
+      await removeObjectiveMutation({
+        mapId: requireActiveMapId(),
+        objectiveKey: objectiveId,
+      });
+    },
+    updateDepartment: async (
+      requestedDepartmentId: string,
+      updates: Partial<Pick<Department, 'name' | 'description' | 'keyIssues'>>
+    ) => {
+      await updateDepartmentMutation({
+        mapId: requireActiveMapId(),
+        departmentKey: requestedDepartmentId,
+        ...updates,
+      });
+    },
+    removeDepartment: async (requestedDepartmentId: string) => {
+      await removeDepartmentMutation({
+        mapId: requireActiveMapId(),
+        departmentKey: requestedDepartmentId,
+      });
+    },
+    updateService: async (
+      requestedServiceId: string,
+      updates: Partial<Pick<Service, 'name' | 'purpose' | 'customer' | 'trigger' | 'outcome' | 'constraints' | 'status' | 'effectivenessMetric' | 'efficiencyMetric'>>
+    ) => {
+      await updateServiceMutation({
+        mapId: requireActiveMapId(),
+        serviceKey: requestedServiceId,
+        ...updates,
+      });
+    },
+    removeService: async (requestedServiceId: string) => {
+      await removeServiceMutation({
+        mapId: requireActiveMapId(),
+        serviceKey: requestedServiceId,
+      });
+    },
+    updateFlowStep: async (
+      requestedServiceId: string,
+      flowType: 'ideal' | 'current',
+      stepId: string,
+      updates: Partial<FlowStep>
+    ) => {
+      const baseSteps = flowType === 'ideal' ? currentIdealSteps : currentCurrentSteps;
+      const nextSteps = normalizeOrderedFlowSteps(
+        baseSteps.map((step) => (step.id === stepId ? { ...step, ...updates } : step))
+      );
+      await applyCurrentServiceAnalysis(requestedServiceId, flowType === 'ideal'
+        ? { idealFlowSteps: nextSteps }
+        : { currentFlowSteps: nextSteps });
+    },
+    removeFlowStep: async (requestedServiceId: string, flowType: 'ideal' | 'current', stepId: string) => {
+      const baseSteps = flowType === 'ideal' ? currentIdealSteps : currentCurrentSteps;
+      const nextSteps = normalizeOrderedFlowSteps(baseSteps.filter((step) => step.id !== stepId));
+      await applyCurrentServiceAnalysis(requestedServiceId, flowType === 'ideal'
+        ? { idealFlowSteps: nextSteps }
+        : { currentFlowSteps: nextSteps });
+    },
+    updateDeviation: async (requestedServiceId: string, deviationId: string, updates: Partial<Deviation>) => {
+      await applyCurrentServiceAnalysis(requestedServiceId, {
+        deviations: currentDeviations.map((deviation) =>
+          deviation.id === deviationId ? { ...deviation, ...updates } : deviation
+        ),
+      });
+    },
+    removeDeviation: async (requestedServiceId: string, deviationId: string) => {
+      await applyCurrentServiceAnalysis(requestedServiceId, {
+        deviations: currentDeviations.filter((deviation) => deviation.id !== deviationId),
+      });
+    },
+    updateInitiative: async (requestedServiceId: string, initiativeId: string, updates: Partial<Initiative>) => {
+      await applyCurrentServiceAnalysis(requestedServiceId, {
+        initiatives: currentInitiatives.map((initiative) =>
+          initiative.id === initiativeId ? { ...initiative, ...updates } : initiative
+        ),
+      });
+    },
+    removeInitiative: async (requestedServiceId: string, initiativeId: string) => {
+      await applyCurrentServiceAnalysis(requestedServiceId, {
+        initiatives: currentInitiatives.filter((initiative) => initiative.id !== initiativeId),
+      });
+    },
   };
 }

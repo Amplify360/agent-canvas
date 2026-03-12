@@ -8,6 +8,7 @@
 
 import React, { useState } from 'react';
 import { Icon } from '@/components/ui/Icon';
+import { StrategyActionMenu } from './StrategyActionMenu';
 import type { Service, FlowStep, FlowStepType, Deviation, Initiative } from '@/strategy/types';
 
 interface ServiceDetailViewProps {
@@ -16,6 +17,14 @@ interface ServiceDetailViewProps {
   currentSteps: FlowStep[];
   deviations: Deviation[];
   initiatives: Initiative[];
+  onEditService: (service: Service) => void;
+  onDeleteService: (service: Service) => void;
+  onEditFlowStep: (flowType: 'ideal' | 'current', step: FlowStep) => void;
+  onDeleteFlowStep: (flowType: 'ideal' | 'current', step: FlowStep) => void;
+  onEditDeviation: (deviation: Deviation) => void;
+  onDeleteDeviation: (deviation: Deviation) => void;
+  onEditInitiative: (initiative: Initiative) => void;
+  onDeleteInitiative: (initiative: Initiative) => void;
 }
 
 const STEP_TYPE_CONFIG: Record<FlowStepType, { icon: string; color: string }> = {
@@ -62,6 +71,14 @@ export function ServiceDetailView({
   currentSteps,
   deviations,
   initiatives,
+  onEditService,
+  onDeleteService,
+  onEditFlowStep,
+  onDeleteFlowStep,
+  onEditDeviation,
+  onDeleteDeviation,
+  onEditInitiative,
+  onDeleteInitiative,
 }: ServiceDetailViewProps) {
   const [activeTab, setActiveTab] = useState<ActiveTab>('flows');
 
@@ -69,7 +86,15 @@ export function ServiceDetailView({
     <div className="strategy-service-detail">
       {/* Service header */}
       <div className="strategy-service-detail__header">
-        <h2 className="strategy-service-detail__name">{service.name}</h2>
+        <div className="strategy-service-detail__title-row">
+          <h2 className="strategy-service-detail__name">{service.name}</h2>
+          <StrategyActionMenu
+            actions={[
+              { label: 'Edit', icon: 'edit-3', onSelect: () => onEditService(service) },
+              { label: 'Delete', icon: 'trash-2', tone: 'danger', onSelect: () => onDeleteService(service) },
+            ]}
+          />
+        </div>
         <p className="strategy-service-detail__purpose">{service.purpose}</p>
         <div className="strategy-service-detail__meta">
           <span className="strategy-service-detail__meta-item">
@@ -132,13 +157,26 @@ export function ServiceDetailView({
 
       {/* Tab content */}
       {activeTab === 'flows' && (
-        <FlowComparison idealSteps={idealSteps} currentSteps={currentSteps} />
+        <FlowComparison
+          idealSteps={idealSteps}
+          currentSteps={currentSteps}
+          onEditFlowStep={onEditFlowStep}
+          onDeleteFlowStep={onDeleteFlowStep}
+        />
       )}
       {activeTab === 'deviations' && (
-        <DeviationTable deviations={deviations} />
+        <DeviationTable
+          deviations={deviations}
+          onEditDeviation={onEditDeviation}
+          onDeleteDeviation={onDeleteDeviation}
+        />
       )}
       {activeTab === 'initiatives' && (
-        <InitiativeList initiatives={initiatives} />
+        <InitiativeList
+          initiatives={initiatives}
+          onEditInitiative={onEditInitiative}
+          onDeleteInitiative={onDeleteInitiative}
+        />
       )}
     </div>
   );
@@ -165,9 +203,13 @@ function groupSteps(steps: FlowStep[]): Array<{ parallel: boolean; group?: strin
 function FlowComparison({
   idealSteps,
   currentSteps,
+  onEditFlowStep,
+  onDeleteFlowStep,
 }: {
   idealSteps: FlowStep[];
   currentSteps: FlowStep[];
+  onEditFlowStep: (flowType: 'ideal' | 'current', step: FlowStep) => void;
+  onDeleteFlowStep: (flowType: 'ideal' | 'current', step: FlowStep) => void;
 }) {
   const idealBlocks = groupSteps(idealSteps);
   const currentBlocks = groupSteps(currentSteps);
@@ -183,9 +225,21 @@ function FlowComparison({
         <div className="strategy-flow-steps">
           {idealBlocks.map((block, i) =>
             block.parallel ? (
-              <GroupBlock key={`p-${i}`} steps={block.steps} />
+              <GroupBlock
+                key={`p-${i}`}
+                flowType="ideal"
+                steps={block.steps}
+                onEditFlowStep={onEditFlowStep}
+                onDeleteFlowStep={onDeleteFlowStep}
+              />
             ) : (
-              <FlowStepCard key={block.steps[0].id} step={block.steps[0]} />
+              <FlowStepCard
+                key={block.steps[0].id}
+                flowType="ideal"
+                step={block.steps[0]}
+                onEdit={() => onEditFlowStep('ideal', block.steps[0])}
+                onDelete={() => onDeleteFlowStep('ideal', block.steps[0])}
+              />
             )
           )}
         </div>
@@ -199,9 +253,21 @@ function FlowComparison({
         <div className="strategy-flow-steps">
           {currentBlocks.map((block, i) =>
             block.parallel ? (
-              <GroupBlock key={`p-${i}`} steps={block.steps} />
+              <GroupBlock
+                key={`p-${i}`}
+                flowType="current"
+                steps={block.steps}
+                onEditFlowStep={onEditFlowStep}
+                onDeleteFlowStep={onDeleteFlowStep}
+              />
             ) : (
-              <FlowStepCard key={block.steps[0].id} step={block.steps[0]} />
+              <FlowStepCard
+                key={block.steps[0].id}
+                flowType="current"
+                step={block.steps[0]}
+                onEdit={() => onEditFlowStep('current', block.steps[0])}
+                onDelete={() => onDeleteFlowStep('current', block.steps[0])}
+              />
             )
           )}
         </div>
@@ -210,7 +276,17 @@ function FlowComparison({
   );
 }
 
-function GroupBlock({ steps }: { steps: FlowStep[] }) {
+function GroupBlock({
+  flowType,
+  steps,
+  onEditFlowStep,
+  onDeleteFlowStep,
+}: {
+  flowType: 'ideal' | 'current';
+  steps: FlowStep[];
+  onEditFlowStep: (flowType: 'ideal' | 'current', step: FlowStep) => void;
+  onDeleteFlowStep: (flowType: 'ideal' | 'current', step: FlowStep) => void;
+}) {
   const label = steps.find((s) => s.groupLabel)?.groupLabel;
   return (
     <div className="strategy-flow-group">
@@ -219,14 +295,29 @@ function GroupBlock({ steps }: { steps: FlowStep[] }) {
       )}
       <div className="strategy-flow-group__steps">
         {steps.map((step) => (
-          <FlowStepCard key={step.id} step={step} />
+          <FlowStepCard
+            key={step.id}
+            flowType={flowType}
+            step={step}
+            onEdit={() => onEditFlowStep(flowType, step)}
+            onDelete={() => onDeleteFlowStep(flowType, step)}
+          />
         ))}
       </div>
     </div>
   );
 }
 
-function FlowStepCard({ step }: { step: FlowStep }) {
+function FlowStepCard({
+  step,
+  onEdit,
+  onDelete,
+}: {
+  flowType: 'ideal' | 'current';
+  step: FlowStep;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
   const config = STEP_TYPE_CONFIG[step.stepType];
 
   return (
@@ -244,11 +335,26 @@ function FlowStepCard({ step }: { step: FlowStep }) {
           <Icon name="alert-triangle" size={14} />
         </div>
       )}
+      <StrategyActionMenu
+        className="strategy-action-menu--row"
+        actions={[
+          { label: 'Edit', icon: 'edit-3', onSelect: onEdit },
+          { label: 'Delete', icon: 'trash-2', tone: 'danger', onSelect: onDelete },
+        ]}
+      />
     </div>
   );
 }
 
-function DeviationTable({ deviations }: { deviations: Deviation[] }) {
+function DeviationTable({
+  deviations,
+  onEditDeviation,
+  onDeleteDeviation,
+}: {
+  deviations: Deviation[];
+  onEditDeviation: (deviation: Deviation) => void;
+  onDeleteDeviation: (deviation: Deviation) => void;
+}) {
   if (deviations.length === 0) {
     return (
       <div className="strategy-empty">
@@ -267,6 +373,7 @@ function DeviationTable({ deviations }: { deviations: Deviation[] }) {
         <span>Impact</span>
         <span>Treatment</span>
         <span>Type</span>
+        <span></span>
       </div>
       {deviations.map((d) => {
         const necessary = NECESSARY_CONFIG[String(d.necessary)];
@@ -290,6 +397,15 @@ function DeviationTable({ deviations }: { deviations: Deviation[] }) {
             <div>
               <span className="chip">{d.classification}</span>
             </div>
+            <div className="strategy-deviation-row__actions">
+              <StrategyActionMenu
+                className="strategy-action-menu--row"
+                actions={[
+                  { label: 'Edit', icon: 'edit-3', onSelect: () => onEditDeviation(d) },
+                  { label: 'Delete', icon: 'trash-2', tone: 'danger', onSelect: () => onDeleteDeviation(d) },
+                ]}
+              />
+            </div>
           </div>
         );
       })}
@@ -297,7 +413,15 @@ function DeviationTable({ deviations }: { deviations: Deviation[] }) {
   );
 }
 
-function InitiativeList({ initiatives }: { initiatives: Initiative[] }) {
+function InitiativeList({
+  initiatives,
+  onEditInitiative,
+  onDeleteInitiative,
+}: {
+  initiatives: Initiative[];
+  onEditInitiative: (initiative: Initiative) => void;
+  onDeleteInitiative: (initiative: Initiative) => void;
+}) {
   if (initiatives.length === 0) {
     return (
       <div className="strategy-empty">
@@ -315,8 +439,16 @@ function InitiativeList({ initiatives }: { initiatives: Initiative[] }) {
         return (
           <div key={init.id} className="strategy-initiative-card">
             <div className="strategy-initiative-card__header">
-              <h4 className="strategy-initiative-card__title">{init.title}</h4>
-              <span className={status.badgeClass}>{status.label}</span>
+              <div className="strategy-initiative-card__header-main">
+                <h4 className="strategy-initiative-card__title">{init.title}</h4>
+                <span className={status.badgeClass}>{status.label}</span>
+              </div>
+              <StrategyActionMenu
+                actions={[
+                  { label: 'Edit', icon: 'edit-3', onSelect: () => onEditInitiative(init) },
+                  { label: 'Delete', icon: 'trash-2', tone: 'danger', onSelect: () => onDeleteInitiative(init) },
+                ]}
+              />
             </div>
             <p className="strategy-initiative-card__description">{init.description}</p>
 

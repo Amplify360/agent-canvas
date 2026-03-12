@@ -1,0 +1,1065 @@
+'use client';
+
+import React, { useEffect, useState } from 'react';
+import { Modal } from '@/components/ui/Modal';
+import { Icon } from '@/components/ui/Icon';
+import {
+  type Department,
+  type Deviation,
+  type DeviationClassification,
+  type DeviationImpact,
+  type DeviationTreatment,
+  type FlowStep,
+  type FlowStepType,
+  type Initiative,
+  type LinkedAgent,
+  type Service,
+  type StrategicObjective,
+  type StrategicPressure,
+} from '@/strategy/types';
+import { linesToText, normalizeOptionalString, textToLines } from '@/strategy/editorUtils';
+
+const SERVICE_STATUS_OPTIONS: Array<{ value: Service['status']; label: string }> = [
+  { value: 'not-analyzed', label: 'Not started' },
+  { value: 'analyzed', label: 'Analyzed' },
+  { value: 'has-deviations', label: 'Has deviations' },
+];
+
+const FLOW_STEP_TYPE_OPTIONS: Array<{ value: FlowStepType; label: string }> = [
+  { value: 'input', label: 'Input' },
+  { value: 'process', label: 'Process' },
+  { value: 'output', label: 'Output' },
+  { value: 'control', label: 'Control' },
+  { value: 'approval', label: 'Approval' },
+  { value: 'handoff', label: 'Handoff' },
+  { value: 'rework', label: 'Rework' },
+  { value: 'exception', label: 'Exception' },
+];
+
+const DEVIATION_IMPACT_OPTIONS: Array<{ value: DeviationImpact; label: string }> = [
+  { value: 'high', label: 'High' },
+  { value: 'medium', label: 'Medium' },
+  { value: 'low', label: 'Low' },
+];
+
+const DEVIATION_TREATMENT_OPTIONS: Array<{ value: DeviationTreatment; label: string }> = [
+  { value: 'automate', label: 'Automate' },
+  { value: 'eliminate', label: 'Eliminate' },
+  { value: 'simplify', label: 'Simplify' },
+  { value: 'accept', label: 'Accept' },
+];
+
+const DEVIATION_CLASSIFICATION_OPTIONS: Array<{ value: DeviationClassification; label: string }> = [
+  { value: 'approval', label: 'Approval' },
+  { value: 'handoff', label: 'Handoff' },
+  { value: 'rework', label: 'Rework' },
+  { value: 'system-constraint', label: 'System constraint' },
+  { value: 'exception', label: 'Exception' },
+  { value: 'control', label: 'Control' },
+];
+
+const INITIATIVE_STATUS_OPTIONS: Array<{ value: Initiative['status']; label: string }> = [
+  { value: 'proposed', label: 'Proposed' },
+  { value: 'approved', label: 'Approved' },
+  { value: 'in-progress', label: 'In progress' },
+  { value: 'done', label: 'Done' },
+  { value: 'parked', label: 'Parked' },
+];
+
+function createDraftId(prefix: string) {
+  const random = globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  return `${prefix}-${random}`;
+}
+
+function FormError({ message }: { message: string | null }) {
+  if (!message) {
+    return null;
+  }
+
+  return (
+    <p className="form-error">
+      <Icon name="alert-circle" size={14} />
+      <span>{message}</span>
+    </p>
+  );
+}
+
+interface PressureEditModalProps {
+  isOpen: boolean;
+  pressure: StrategicPressure | null;
+  onClose: () => void;
+  onSave: (updates: Pick<StrategicPressure, 'type' | 'title' | 'description' | 'evidence'>) => Promise<void>;
+}
+
+export function PressureEditModal({ isOpen, pressure, onClose, onSave }: PressureEditModalProps) {
+  const [type, setType] = useState<StrategicPressure['type']>('external');
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [evidenceText, setEvidenceText] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen || !pressure) return;
+    setType(pressure.type);
+    setTitle(pressure.title);
+    setDescription(pressure.description);
+    setEvidenceText(linesToText(pressure.evidence));
+    setError(null);
+  }, [isOpen, pressure]);
+
+  if (!pressure) return null;
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!title.trim() || !description.trim()) {
+      setError('Title and description are required.');
+      return;
+    }
+
+    setIsSubmitting(true);
+    setError(null);
+    try {
+      await onSave({
+        type,
+        title: title.trim(),
+        description: description.trim(),
+        evidence: textToLines(evidenceText),
+      });
+      onClose();
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : 'Failed to save pressure.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title="Edit Pressure" size="medium" closeOnOverlayClick={false}>
+      <form onSubmit={handleSubmit} className="strategy-editor-form">
+        <div className="form-row">
+          <div className="form-group">
+            <label htmlFor="pressure-type" className="form-label">Type</label>
+            <select
+              id="pressure-type"
+              className="form-select"
+              value={type}
+              onChange={(event) => setType(event.target.value as StrategicPressure['type'])}
+              disabled={isSubmitting}
+            >
+              <option value="external">External</option>
+              <option value="internal">Internal</option>
+            </select>
+          </div>
+          <div className="form-group">
+            <label htmlFor="pressure-title" className="form-label">Title</label>
+            <input
+              id="pressure-title"
+              type="text"
+              className="form-input"
+              value={title}
+              onChange={(event) => setTitle(event.target.value)}
+              disabled={isSubmitting}
+              autoFocus
+            />
+          </div>
+        </div>
+        <div className="form-group">
+          <label htmlFor="pressure-description" className="form-label">Description</label>
+          <textarea
+            id="pressure-description"
+            className="form-textarea"
+            value={description}
+            onChange={(event) => setDescription(event.target.value)}
+            disabled={isSubmitting}
+            rows={4}
+          />
+        </div>
+        <div className="form-group">
+          <label htmlFor="pressure-evidence" className="form-label">Evidence</label>
+          <textarea
+            id="pressure-evidence"
+            className="form-textarea"
+            value={evidenceText}
+            onChange={(event) => setEvidenceText(event.target.value)}
+            disabled={isSubmitting}
+            rows={5}
+            placeholder="One line per evidence signal"
+          />
+        </div>
+        <FormError message={error} />
+        <div className="modal__actions">
+          <button type="button" className="btn btn--secondary" onClick={onClose} disabled={isSubmitting}>Cancel</button>
+          <button type="submit" className="btn btn--primary" disabled={isSubmitting}>{isSubmitting ? 'Saving...' : 'Save'}</button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+interface ObjectiveEditModalProps {
+  isOpen: boolean;
+  objective: StrategicObjective | null;
+  pressures: StrategicPressure[];
+  onClose: () => void;
+  onSave: (updates: Pick<StrategicObjective, 'title' | 'description' | 'linkedPressureIds'>) => Promise<void>;
+}
+
+export function ObjectiveEditModal({ isOpen, objective, pressures, onClose, onSave }: ObjectiveEditModalProps) {
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [linkedPressureIds, setLinkedPressureIds] = useState<string[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen || !objective) return;
+    setTitle(objective.title);
+    setDescription(objective.description);
+    setLinkedPressureIds(objective.linkedPressureIds);
+    setError(null);
+  }, [isOpen, objective]);
+
+  if (!objective) return null;
+
+  const togglePressure = (pressureId: string) => {
+    setLinkedPressureIds((current) =>
+      current.includes(pressureId)
+        ? current.filter((id) => id !== pressureId)
+        : [...current, pressureId]
+    );
+  };
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!title.trim() || !description.trim()) {
+      setError('Title and description are required.');
+      return;
+    }
+
+    setIsSubmitting(true);
+    setError(null);
+    try {
+      await onSave({
+        title: title.trim(),
+        description: description.trim(),
+        linkedPressureIds,
+      });
+      onClose();
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : 'Failed to save objective.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title="Edit Objective" size="medium" closeOnOverlayClick={false}>
+      <form onSubmit={handleSubmit} className="strategy-editor-form">
+        <div className="form-group">
+          <label htmlFor="objective-title" className="form-label">Title</label>
+          <input
+            id="objective-title"
+            type="text"
+            className="form-input"
+            value={title}
+            onChange={(event) => setTitle(event.target.value)}
+            disabled={isSubmitting}
+            autoFocus
+          />
+        </div>
+        <div className="form-group">
+          <label htmlFor="objective-description" className="form-label">Description</label>
+          <textarea
+            id="objective-description"
+            className="form-textarea"
+            value={description}
+            onChange={(event) => setDescription(event.target.value)}
+            disabled={isSubmitting}
+            rows={4}
+          />
+        </div>
+        <div className="form-group">
+          <span className="form-label">Linked Pressures</span>
+          <div className="strategy-editor-checklist">
+            {pressures.map((pressure) => (
+              <label key={pressure.id} className="checkbox-label strategy-editor-checklist__item">
+                <input
+                  type="checkbox"
+                  checked={linkedPressureIds.includes(pressure.id)}
+                  onChange={() => togglePressure(pressure.id)}
+                  disabled={isSubmitting}
+                />
+                <span>{pressure.title}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+        <FormError message={error} />
+        <div className="modal__actions">
+          <button type="button" className="btn btn--secondary" onClick={onClose} disabled={isSubmitting}>Cancel</button>
+          <button type="submit" className="btn btn--primary" disabled={isSubmitting}>{isSubmitting ? 'Saving...' : 'Save'}</button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+interface DepartmentEditModalProps {
+  isOpen: boolean;
+  department: Department | null;
+  onClose: () => void;
+  onSave: (updates: Pick<Department, 'name' | 'description' | 'keyIssues'>) => Promise<void>;
+}
+
+export function DepartmentEditModal({ isOpen, department, onClose, onSave }: DepartmentEditModalProps) {
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [keyIssuesText, setKeyIssuesText] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen || !department) return;
+    setName(department.name);
+    setDescription(department.description);
+    setKeyIssuesText(linesToText(department.keyIssues));
+    setError(null);
+  }, [isOpen, department]);
+
+  if (!department) return null;
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!name.trim() || !description.trim()) {
+      setError('Name and description are required.');
+      return;
+    }
+
+    setIsSubmitting(true);
+    setError(null);
+    try {
+      await onSave({
+        name: name.trim(),
+        description: description.trim(),
+        keyIssues: textToLines(keyIssuesText),
+      });
+      onClose();
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : 'Failed to save department.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title="Edit Department" size="medium" closeOnOverlayClick={false}>
+      <form onSubmit={handleSubmit} className="strategy-editor-form">
+        <div className="form-group">
+          <label htmlFor="department-name" className="form-label">Name</label>
+          <input
+            id="department-name"
+            type="text"
+            className="form-input"
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            disabled={isSubmitting}
+            autoFocus
+          />
+        </div>
+        <div className="form-group">
+          <label htmlFor="department-description" className="form-label">Description</label>
+          <textarea
+            id="department-description"
+            className="form-textarea"
+            value={description}
+            onChange={(event) => setDescription(event.target.value)}
+            disabled={isSubmitting}
+            rows={4}
+          />
+        </div>
+        <div className="form-group">
+          <label htmlFor="department-key-issues" className="form-label">Key Issues</label>
+          <textarea
+            id="department-key-issues"
+            className="form-textarea"
+            value={keyIssuesText}
+            onChange={(event) => setKeyIssuesText(event.target.value)}
+            disabled={isSubmitting}
+            rows={5}
+            placeholder="One line per issue"
+          />
+        </div>
+        <FormError message={error} />
+        <div className="modal__actions">
+          <button type="button" className="btn btn--secondary" onClick={onClose} disabled={isSubmitting}>Cancel</button>
+          <button type="submit" className="btn btn--primary" disabled={isSubmitting}>{isSubmitting ? 'Saving...' : 'Save'}</button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+interface ServiceEditModalProps {
+  isOpen: boolean;
+  service: Service | null;
+  onClose: () => void;
+  onSave: (updates: Pick<Service, 'name' | 'purpose' | 'customer' | 'trigger' | 'outcome' | 'constraints' | 'status' | 'effectivenessMetric' | 'efficiencyMetric'>) => Promise<void>;
+}
+
+export function ServiceEditModal({ isOpen, service, onClose, onSave }: ServiceEditModalProps) {
+  const [formData, setFormData] = useState({
+    name: '',
+    purpose: '',
+    customer: '',
+    trigger: '',
+    outcome: '',
+    constraintsText: '',
+    status: 'not-analyzed' as Service['status'],
+    effectivenessMetric: '',
+    efficiencyMetric: '',
+  });
+  const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen || !service) return;
+    setFormData({
+      name: service.name,
+      purpose: service.purpose,
+      customer: service.customer,
+      trigger: service.trigger,
+      outcome: service.outcome,
+      constraintsText: linesToText(service.constraints),
+      status: service.status,
+      effectivenessMetric: service.effectivenessMetric,
+      efficiencyMetric: service.efficiencyMetric,
+    });
+    setError(null);
+  }, [isOpen, service]);
+
+  if (!service) return null;
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!formData.name.trim() || !formData.purpose.trim()) {
+      setError('Name and purpose are required.');
+      return;
+    }
+
+    setIsSubmitting(true);
+    setError(null);
+    try {
+      await onSave({
+        name: formData.name.trim(),
+        purpose: formData.purpose.trim(),
+        customer: formData.customer.trim(),
+        trigger: formData.trigger.trim(),
+        outcome: formData.outcome.trim(),
+        constraints: textToLines(formData.constraintsText),
+        status: formData.status,
+        effectivenessMetric: formData.effectivenessMetric.trim(),
+        efficiencyMetric: formData.efficiencyMetric.trim(),
+      });
+      onClose();
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : 'Failed to save service.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title="Edit Service" size="large" closeOnOverlayClick={false}>
+      <form onSubmit={handleSubmit} className="strategy-editor-form">
+        <div className="form-row">
+          <div className="form-group">
+            <label htmlFor="service-name" className="form-label">Name</label>
+            <input
+              id="service-name"
+              type="text"
+              className="form-input"
+              value={formData.name}
+              onChange={(event) => setFormData((current) => ({ ...current, name: event.target.value }))}
+              disabled={isSubmitting}
+              autoFocus
+            />
+          </div>
+          <div className="form-group">
+            <label htmlFor="service-status" className="form-label">Status</label>
+            <select
+              id="service-status"
+              className="form-select"
+              value={formData.status}
+              onChange={(event) => setFormData((current) => ({ ...current, status: event.target.value as Service['status'] }))}
+              disabled={isSubmitting}
+            >
+              {SERVICE_STATUS_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+        <div className="form-group">
+          <label htmlFor="service-purpose" className="form-label">Purpose</label>
+          <textarea
+            id="service-purpose"
+            className="form-textarea"
+            value={formData.purpose}
+            onChange={(event) => setFormData((current) => ({ ...current, purpose: event.target.value }))}
+            disabled={isSubmitting}
+            rows={3}
+          />
+        </div>
+        <div className="form-row">
+          <div className="form-group">
+            <label htmlFor="service-customer" className="form-label">Customer</label>
+            <input
+              id="service-customer"
+              type="text"
+              className="form-input"
+              value={formData.customer}
+              onChange={(event) => setFormData((current) => ({ ...current, customer: event.target.value }))}
+              disabled={isSubmitting}
+            />
+          </div>
+          <div className="form-group">
+            <label htmlFor="service-trigger" className="form-label">Trigger</label>
+            <input
+              id="service-trigger"
+              type="text"
+              className="form-input"
+              value={formData.trigger}
+              onChange={(event) => setFormData((current) => ({ ...current, trigger: event.target.value }))}
+              disabled={isSubmitting}
+            />
+          </div>
+        </div>
+        <div className="form-group">
+          <label htmlFor="service-outcome" className="form-label">Outcome</label>
+          <input
+            id="service-outcome"
+            type="text"
+            className="form-input"
+            value={formData.outcome}
+            onChange={(event) => setFormData((current) => ({ ...current, outcome: event.target.value }))}
+            disabled={isSubmitting}
+          />
+        </div>
+        <div className="form-group">
+          <label htmlFor="service-constraints" className="form-label">Constraints</label>
+          <textarea
+            id="service-constraints"
+            className="form-textarea"
+            value={formData.constraintsText}
+            onChange={(event) => setFormData((current) => ({ ...current, constraintsText: event.target.value }))}
+            disabled={isSubmitting}
+            rows={4}
+            placeholder="One line per constraint"
+          />
+        </div>
+        <div className="form-row">
+          <div className="form-group">
+            <label htmlFor="service-effectiveness" className="form-label">Effectiveness</label>
+            <textarea
+              id="service-effectiveness"
+              className="form-textarea"
+              value={formData.effectivenessMetric}
+              onChange={(event) => setFormData((current) => ({ ...current, effectivenessMetric: event.target.value }))}
+              disabled={isSubmitting}
+              rows={4}
+            />
+          </div>
+          <div className="form-group">
+            <label htmlFor="service-efficiency" className="form-label">Efficiency</label>
+            <textarea
+              id="service-efficiency"
+              className="form-textarea"
+              value={formData.efficiencyMetric}
+              onChange={(event) => setFormData((current) => ({ ...current, efficiencyMetric: event.target.value }))}
+              disabled={isSubmitting}
+              rows={4}
+            />
+          </div>
+        </div>
+        <FormError message={error} />
+        <div className="modal__actions">
+          <button type="button" className="btn btn--secondary" onClick={onClose} disabled={isSubmitting}>Cancel</button>
+          <button type="submit" className="btn btn--primary" disabled={isSubmitting}>{isSubmitting ? 'Saving...' : 'Save'}</button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+interface FlowStepEditModalProps {
+  isOpen: boolean;
+  step: FlowStep | null;
+  flowLabel: string;
+  onClose: () => void;
+  onSave: (updates: Partial<FlowStep>) => Promise<void>;
+}
+
+export function FlowStepEditModal({ isOpen, step, flowLabel, onClose, onSave }: FlowStepEditModalProps) {
+  const [description, setDescription] = useState('');
+  const [stepType, setStepType] = useState<FlowStepType>('process');
+  const [hasDeviation, setHasDeviation] = useState(false);
+  const [parallelGroup, setParallelGroup] = useState('');
+  const [groupLabel, setGroupLabel] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen || !step) return;
+    setDescription(step.description);
+    setStepType(step.stepType);
+    setHasDeviation(Boolean(step.hasDeviation));
+    setParallelGroup(step.parallelGroup ?? '');
+    setGroupLabel(step.groupLabel ?? '');
+    setError(null);
+  }, [isOpen, step]);
+
+  if (!step) return null;
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!description.trim()) {
+      setError('Description is required.');
+      return;
+    }
+
+    setIsSubmitting(true);
+    setError(null);
+    try {
+      await onSave({
+        description: description.trim(),
+        stepType,
+        hasDeviation,
+        parallelGroup: normalizeOptionalString(parallelGroup),
+        groupLabel: normalizeOptionalString(groupLabel),
+      });
+      onClose();
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : 'Failed to save flow step.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title={`Edit ${flowLabel} Step`} size="medium" closeOnOverlayClick={false}>
+      <form onSubmit={handleSubmit} className="strategy-editor-form">
+        <div className="form-row">
+          <div className="form-group">
+            <label htmlFor="flow-step-type" className="form-label">Step Type</label>
+            <select
+              id="flow-step-type"
+              className="form-select"
+              value={stepType}
+              onChange={(event) => setStepType(event.target.value as FlowStepType)}
+              disabled={isSubmitting}
+            >
+              {FLOW_STEP_TYPE_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
+            </select>
+          </div>
+          <div className="form-group">
+            <label className="form-label">Flags</label>
+            <label className="checkbox-label">
+              <input
+                type="checkbox"
+                checked={hasDeviation}
+                onChange={(event) => setHasDeviation(event.target.checked)}
+                disabled={isSubmitting}
+              />
+              <span>Highlights a deviation</span>
+            </label>
+          </div>
+        </div>
+        <div className="form-group">
+          <label htmlFor="flow-step-description" className="form-label">Description</label>
+          <textarea
+            id="flow-step-description"
+            className="form-textarea"
+            value={description}
+            onChange={(event) => setDescription(event.target.value)}
+            disabled={isSubmitting}
+            autoFocus
+            rows={4}
+          />
+        </div>
+        <div className="form-row">
+          <div className="form-group">
+            <label htmlFor="flow-step-parallel-group" className="form-label">Parallel Group</label>
+            <input
+              id="flow-step-parallel-group"
+              type="text"
+              className="form-input"
+              value={parallelGroup}
+              onChange={(event) => setParallelGroup(event.target.value)}
+              disabled={isSubmitting}
+              placeholder="Optional group key"
+            />
+          </div>
+          <div className="form-group">
+            <label htmlFor="flow-step-group-label" className="form-label">Group Label</label>
+            <input
+              id="flow-step-group-label"
+              type="text"
+              className="form-input"
+              value={groupLabel}
+              onChange={(event) => setGroupLabel(event.target.value)}
+              disabled={isSubmitting}
+              placeholder="Optional display label"
+            />
+          </div>
+        </div>
+        <FormError message={error} />
+        <div className="modal__actions">
+          <button type="button" className="btn btn--secondary" onClick={onClose} disabled={isSubmitting}>Cancel</button>
+          <button type="submit" className="btn btn--primary" disabled={isSubmitting}>{isSubmitting ? 'Saving...' : 'Save'}</button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+interface DeviationEditModalProps {
+  isOpen: boolean;
+  deviation: Deviation | null;
+  onClose: () => void;
+  onSave: (updates: Partial<Deviation>) => Promise<void>;
+}
+
+export function DeviationEditModal({ isOpen, deviation, onClose, onSave }: DeviationEditModalProps) {
+  const [what, setWhat] = useState('');
+  const [why, setWhy] = useState('');
+  const [necessary, setNecessary] = useState(false);
+  const [impact, setImpact] = useState<DeviationImpact>('medium');
+  const [treatment, setTreatment] = useState<DeviationTreatment>('simplify');
+  const [classification, setClassification] = useState<DeviationClassification>('handoff');
+  const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen || !deviation) return;
+    setWhat(deviation.what);
+    setWhy(deviation.why);
+    setNecessary(deviation.necessary);
+    setImpact(deviation.impact);
+    setTreatment(deviation.treatment);
+    setClassification(deviation.classification);
+    setError(null);
+  }, [isOpen, deviation]);
+
+  if (!deviation) return null;
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!what.trim() || !why.trim()) {
+      setError('What and why are required.');
+      return;
+    }
+
+    setIsSubmitting(true);
+    setError(null);
+    try {
+      await onSave({
+        what: what.trim(),
+        why: why.trim(),
+        necessary,
+        impact,
+        treatment,
+        classification,
+      });
+      onClose();
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : 'Failed to save deviation.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title="Edit Deviation" size="medium" closeOnOverlayClick={false}>
+      <form onSubmit={handleSubmit} className="strategy-editor-form">
+        <div className="form-group">
+          <label htmlFor="deviation-what" className="form-label">What</label>
+          <textarea
+            id="deviation-what"
+            className="form-textarea"
+            value={what}
+            onChange={(event) => setWhat(event.target.value)}
+            disabled={isSubmitting}
+            autoFocus
+            rows={3}
+          />
+        </div>
+        <div className="form-group">
+          <label htmlFor="deviation-why" className="form-label">Why</label>
+          <textarea
+            id="deviation-why"
+            className="form-textarea"
+            value={why}
+            onChange={(event) => setWhy(event.target.value)}
+            disabled={isSubmitting}
+            rows={4}
+          />
+        </div>
+        <div className="form-row">
+          <div className="form-group">
+            <label htmlFor="deviation-impact" className="form-label">Impact</label>
+            <select
+              id="deviation-impact"
+              className="form-select"
+              value={impact}
+              onChange={(event) => setImpact(event.target.value as DeviationImpact)}
+              disabled={isSubmitting}
+            >
+              {DEVIATION_IMPACT_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
+            </select>
+          </div>
+          <div className="form-group">
+            <label htmlFor="deviation-treatment" className="form-label">Treatment</label>
+            <select
+              id="deviation-treatment"
+              className="form-select"
+              value={treatment}
+              onChange={(event) => setTreatment(event.target.value as DeviationTreatment)}
+              disabled={isSubmitting}
+            >
+              {DEVIATION_TREATMENT_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+        <div className="form-row">
+          <div className="form-group">
+            <label htmlFor="deviation-classification" className="form-label">Classification</label>
+            <select
+              id="deviation-classification"
+              className="form-select"
+              value={classification}
+              onChange={(event) => setClassification(event.target.value as DeviationClassification)}
+              disabled={isSubmitting}
+            >
+              {DEVIATION_CLASSIFICATION_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
+            </select>
+          </div>
+          <div className="form-group">
+            <label className="form-label">Required?</label>
+            <label className="checkbox-label">
+              <input
+                type="checkbox"
+                checked={necessary}
+                onChange={(event) => setNecessary(event.target.checked)}
+                disabled={isSubmitting}
+              />
+              <span>This step is necessary</span>
+            </label>
+          </div>
+        </div>
+        <FormError message={error} />
+        <div className="modal__actions">
+          <button type="button" className="btn btn--secondary" onClick={onClose} disabled={isSubmitting}>Cancel</button>
+          <button type="submit" className="btn btn--primary" disabled={isSubmitting}>{isSubmitting ? 'Saving...' : 'Save'}</button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+function LinkedAgentsEditor({
+  linkedAgents,
+  onChange,
+  disabled,
+}: {
+  linkedAgents: LinkedAgent[];
+  onChange: (nextLinkedAgents: LinkedAgent[]) => void;
+  disabled: boolean;
+}) {
+  const updateAgent = (agentId: string, updates: Partial<LinkedAgent>) => {
+    onChange(linkedAgents.map((agent) => (agent.id === agentId ? { ...agent, ...updates } : agent)));
+  };
+
+  const removeAgent = (agentId: string) => {
+    onChange(linkedAgents.filter((agent) => agent.id !== agentId));
+  };
+
+  const addAgent = () => {
+    onChange([
+      ...linkedAgents,
+      {
+        id: createDraftId('linked-agent'),
+        name: '',
+        role: '',
+      },
+    ]);
+  };
+
+  return (
+    <div className="strategy-linked-agents-editor">
+      <div className="strategy-linked-agents-editor__list">
+        {linkedAgents.map((agent) => (
+          <div key={agent.id} className="strategy-linked-agents-editor__row">
+            <div className="form-row">
+              <div className="form-group">
+                <label className="form-label">Agent Name</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  value={agent.name}
+                  onChange={(event) => updateAgent(agent.id, { name: event.target.value })}
+                  disabled={disabled}
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Role</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  value={agent.role}
+                  onChange={(event) => updateAgent(agent.id, { role: event.target.value })}
+                  disabled={disabled}
+                />
+              </div>
+            </div>
+            <button
+              type="button"
+              className="btn btn--sm btn--ghost strategy-linked-agents-editor__remove"
+              onClick={() => removeAgent(agent.id)}
+              disabled={disabled}
+            >
+              <Icon name="trash-2" size={14} />
+              Remove
+            </button>
+          </div>
+        ))}
+      </div>
+      <button type="button" className="btn btn--secondary btn--sm" onClick={addAgent} disabled={disabled}>
+        <Icon name="plus" size={14} />
+        Add linked agent
+      </button>
+    </div>
+  );
+}
+
+interface InitiativeEditModalProps {
+  isOpen: boolean;
+  initiative: Initiative | null;
+  onClose: () => void;
+  onSave: (updates: Partial<Initiative>) => Promise<void>;
+}
+
+export function InitiativeEditModal({ isOpen, initiative, onClose, onSave }: InitiativeEditModalProps) {
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [status, setStatus] = useState<Initiative['status']>('proposed');
+  const [linkedAgents, setLinkedAgents] = useState<LinkedAgent[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen || !initiative) return;
+    setTitle(initiative.title);
+    setDescription(initiative.description);
+    setStatus(initiative.status);
+    setLinkedAgents(initiative.linkedAgents);
+    setError(null);
+  }, [isOpen, initiative]);
+
+  if (!initiative) return null;
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!title.trim() || !description.trim()) {
+      setError('Title and description are required.');
+      return;
+    }
+
+    const cleanedAgents = linkedAgents
+      .map((agent) => ({
+        ...agent,
+        name: agent.name.trim(),
+        role: agent.role.trim(),
+      }))
+      .filter((agent) => agent.name && agent.role);
+
+    setIsSubmitting(true);
+    setError(null);
+    try {
+      await onSave({
+        title: title.trim(),
+        description: description.trim(),
+        status,
+        linkedAgents: cleanedAgents,
+      });
+      onClose();
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : 'Failed to save initiative.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title="Edit Initiative" size="large" closeOnOverlayClick={false}>
+      <form onSubmit={handleSubmit} className="strategy-editor-form">
+        <div className="form-row">
+          <div className="form-group">
+            <label htmlFor="initiative-title" className="form-label">Title</label>
+            <input
+              id="initiative-title"
+              type="text"
+              className="form-input"
+              value={title}
+              onChange={(event) => setTitle(event.target.value)}
+              disabled={isSubmitting}
+              autoFocus
+            />
+          </div>
+          <div className="form-group">
+            <label htmlFor="initiative-status" className="form-label">Status</label>
+            <select
+              id="initiative-status"
+              className="form-select"
+              value={status}
+              onChange={(event) => setStatus(event.target.value as Initiative['status'])}
+              disabled={isSubmitting}
+            >
+              {INITIATIVE_STATUS_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+        <div className="form-group">
+          <label htmlFor="initiative-description" className="form-label">Description</label>
+          <textarea
+            id="initiative-description"
+            className="form-textarea"
+            value={description}
+            onChange={(event) => setDescription(event.target.value)}
+            disabled={isSubmitting}
+            rows={4}
+          />
+        </div>
+        <div className="form-group">
+          <span className="form-label">Linked Agents</span>
+          <LinkedAgentsEditor linkedAgents={linkedAgents} onChange={setLinkedAgents} disabled={isSubmitting} />
+        </div>
+        <FormError message={error} />
+        <div className="modal__actions">
+          <button type="button" className="btn btn--secondary" onClick={onClose} disabled={isSubmitting}>Cancel</button>
+          <button type="submit" className="btn btn--primary" disabled={isSubmitting}>{isSubmitting ? 'Saving...' : 'Save'}</button>
+        </div>
+      </form>
+    </Modal>
+  );
+}

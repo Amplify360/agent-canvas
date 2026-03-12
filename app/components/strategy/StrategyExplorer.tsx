@@ -7,30 +7,65 @@
 
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { useAppState } from '@/contexts/AppStateContext';
 import { Icon } from '@/components/ui/Icon';
 import { Tooltip } from '@/components/ui/Tooltip';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { ToastContainer } from '@/components/ui/Toast';
 import { ConnectionRecoveryBanner } from '@/components/ui/ConnectionRecoveryBanner';
 import { StrategyBreadcrumb, type BreadcrumbItem } from './StrategyBreadcrumb';
 import { OverviewView } from './OverviewView';
 import { DepartmentView } from './DepartmentView';
 import { ServiceDetailView } from './ServiceDetailView';
+import {
+  DepartmentEditModal,
+  DeviationEditModal,
+  FlowStepEditModal,
+  InitiativeEditModal,
+  ObjectiveEditModal,
+  PressureEditModal,
+  ServiceEditModal,
+} from './StrategyEditorModals';
 import { useStrategyData } from '@/strategy/useStrategyMockData';
+import type {
+  Department,
+  Deviation,
+  FlowStep,
+  Initiative,
+  Service,
+  StrategicObjective,
+  StrategicPressure,
+} from '@/strategy/types';
+
+interface DeleteState {
+  title: string;
+  message: string;
+  successMessage: string;
+  errorMessage: string;
+  onConfirm: () => Promise<void>;
+}
 
 export function StrategyExplorer() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { isSidebarCollapsed, toggleSidebar, sidebarWidth } = useAppState();
+  const { isSidebarCollapsed, toggleSidebar, sidebarWidth, showToast } = useAppState();
 
   const departmentId = searchParams.get('department');
   const serviceId = searchParams.get('service');
   const data = useStrategyData(departmentId, serviceId);
   const department = departmentId ? data.getDepartment(departmentId) : undefined;
   const service = serviceId ? data.getService(serviceId) : undefined;
+  const [editingPressure, setEditingPressure] = useState<StrategicPressure | null>(null);
+  const [editingObjective, setEditingObjective] = useState<StrategicObjective | null>(null);
+  const [editingDepartment, setEditingDepartment] = useState<Department | null>(null);
+  const [editingService, setEditingService] = useState<Service | null>(null);
+  const [editingFlowStep, setEditingFlowStep] = useState<{ flowType: 'ideal' | 'current'; step: FlowStep } | null>(null);
+  const [editingDeviation, setEditingDeviation] = useState<Deviation | null>(null);
+  const [editingInitiative, setEditingInitiative] = useState<Initiative | null>(null);
+  const [deleteState, setDeleteState] = useState<DeleteState | null>(null);
   const shouldCanonicalizeServiceUrl =
     Boolean(serviceId && !departmentId && service);
   const hasMismatchedDepartmentService =
@@ -53,6 +88,29 @@ export function StrategyExplorer() {
 
   const navigateToService = (deptId: string, svcId: string) => {
     router.push(`/transformation-map?department=${deptId}&service=${svcId}`);
+  };
+
+  const saveWithToast = async (operation: () => Promise<void>, successMessage: string) => {
+    await operation();
+    showToast(successMessage, 'success');
+  };
+
+  const requestDelete = (nextDeleteState: DeleteState) => {
+    setDeleteState(nextDeleteState);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteState) {
+      return;
+    }
+
+    try {
+      await deleteState.onConfirm();
+      showToast(deleteState.successMessage, 'success');
+      setDeleteState(null);
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : deleteState.errorMessage, 'error');
+    }
   };
 
   // Build breadcrumb
@@ -113,6 +171,59 @@ export function StrategyExplorer() {
           currentSteps={data.getFlowSteps(serviceId, 'current')}
           deviations={data.getDeviationsByService(serviceId)}
           initiatives={data.getInitiativesByService(serviceId)}
+          onEditService={setEditingService}
+          onDeleteService={(currentService) => {
+            requestDelete({
+              title: 'Delete Service',
+              message: `Delete "${currentService.name}" and its analysis bundle? This cannot be undone.`,
+              successMessage: 'Service deleted',
+              errorMessage: 'Failed to delete service',
+              onConfirm: async () => {
+                await data.removeService(currentService.id);
+                if (departmentId) {
+                  router.push(`/transformation-map?department=${departmentId}`);
+                } else {
+                  router.push('/transformation-map');
+                }
+              },
+            });
+          }}
+          onEditFlowStep={(flowType, step) => setEditingFlowStep({ flowType, step })}
+          onDeleteFlowStep={(flowType, step) => {
+            requestDelete({
+              title: 'Delete Flow Step',
+              message: `Delete step ${step.order} from the ${flowType === 'ideal' ? 'first-principles' : 'current-state'} flow?`,
+              successMessage: 'Flow step deleted',
+              errorMessage: 'Failed to delete flow step',
+              onConfirm: async () => {
+                await data.removeFlowStep(service.id, flowType, step.id);
+              },
+            });
+          }}
+          onEditDeviation={setEditingDeviation}
+          onDeleteDeviation={(deviation) => {
+            requestDelete({
+              title: 'Delete Deviation',
+              message: `Delete "${deviation.what}" from this service analysis?`,
+              successMessage: 'Deviation deleted',
+              errorMessage: 'Failed to delete deviation',
+              onConfirm: async () => {
+                await data.removeDeviation(service.id, deviation.id);
+              },
+            });
+          }}
+          onEditInitiative={setEditingInitiative}
+          onDeleteInitiative={(initiative) => {
+            requestDelete({
+              title: 'Delete Initiative',
+              message: `Delete "${initiative.title}" from this service?`,
+              successMessage: 'Initiative deleted',
+              errorMessage: 'Failed to delete initiative',
+              onConfirm: async () => {
+                await data.removeInitiative(service.id, initiative.id);
+              },
+            });
+          }}
         />
       );
     } else if (hasMismatchedDepartmentService) {
@@ -133,6 +244,43 @@ export function StrategyExplorer() {
           objectives={data.getObjectivesByDepartment(departmentId)}
           onSelectService={(svcId) => navigateToService(departmentId, svcId)}
           getAgentCount={data.getAgentCountByService}
+          onEditDepartment={setEditingDepartment}
+          onDeleteDepartment={(currentDepartment) => {
+            requestDelete({
+              title: 'Delete Department',
+              message: `Delete "${currentDepartment.name}" and all services and analyses underneath it? This cannot be undone.`,
+              successMessage: 'Department deleted',
+              errorMessage: 'Failed to delete department',
+              onConfirm: async () => {
+                await data.removeDepartment(currentDepartment.id);
+                router.push('/transformation-map');
+              },
+            });
+          }}
+          onEditObjective={setEditingObjective}
+          onDeleteObjective={(objective) => {
+            requestDelete({
+              title: 'Delete Objective',
+              message: `Delete "${objective.title}" from this department?`,
+              successMessage: 'Objective deleted',
+              errorMessage: 'Failed to delete objective',
+              onConfirm: async () => {
+                await data.removeObjective(objective.id);
+              },
+            });
+          }}
+          onEditService={setEditingService}
+          onDeleteService={(currentService) => {
+            requestDelete({
+              title: 'Delete Service',
+              message: `Delete "${currentService.name}" and its analysis bundle? This cannot be undone.`,
+              successMessage: 'Service deleted',
+              errorMessage: 'Failed to delete service',
+              onConfirm: async () => {
+                await data.removeService(currentService.id);
+              },
+            });
+          }}
         />
       );
     } else {
@@ -145,6 +293,42 @@ export function StrategyExplorer() {
         enterpriseObjectives={data.getEnterpriseObjectives()}
         departmentSummaries={data.departmentSummaries}
         onSelectDepartment={navigateToDepartment}
+        onEditPressure={setEditingPressure}
+        onDeletePressure={(pressure) => {
+          requestDelete({
+            title: 'Delete Pressure',
+            message: `Delete "${pressure.title}" from this Transformation Map?`,
+            successMessage: 'Pressure deleted',
+            errorMessage: 'Failed to delete pressure',
+            onConfirm: async () => {
+              await data.removePressure(pressure.id);
+            },
+          });
+        }}
+        onEditObjective={setEditingObjective}
+        onDeleteObjective={(objective) => {
+          requestDelete({
+            title: 'Delete Objective',
+            message: `Delete "${objective.title}" from the Transformation Map?`,
+            successMessage: 'Objective deleted',
+            errorMessage: 'Failed to delete objective',
+            onConfirm: async () => {
+              await data.removeObjective(objective.id);
+            },
+          });
+        }}
+        onEditDepartment={setEditingDepartment}
+        onDeleteDepartment={(currentDepartment) => {
+          requestDelete({
+            title: 'Delete Department',
+            message: `Delete "${currentDepartment.name}" and all services and analyses underneath it? This cannot be undone.`,
+            successMessage: 'Department deleted',
+            errorMessage: 'Failed to delete department',
+            onConfirm: async () => {
+              await data.removeDepartment(currentDepartment.id);
+            },
+          });
+        }}
         getPressure={data.getPressure}
       />
     );
@@ -183,6 +367,83 @@ export function StrategyExplorer() {
           {content}
         </main>
       </div>
+      <PressureEditModal
+        isOpen={Boolean(editingPressure)}
+        pressure={editingPressure}
+        onClose={() => setEditingPressure(null)}
+        onSave={async (updates) => {
+          if (!editingPressure) return;
+          await saveWithToast(() => data.updatePressure(editingPressure.id, updates), 'Pressure updated');
+        }}
+      />
+      <ObjectiveEditModal
+        isOpen={Boolean(editingObjective)}
+        objective={editingObjective}
+        pressures={data.pressures}
+        onClose={() => setEditingObjective(null)}
+        onSave={async (updates) => {
+          if (!editingObjective) return;
+          await saveWithToast(() => data.updateObjective(editingObjective.id, updates), 'Objective updated');
+        }}
+      />
+      <DepartmentEditModal
+        isOpen={Boolean(editingDepartment)}
+        department={editingDepartment}
+        onClose={() => setEditingDepartment(null)}
+        onSave={async (updates) => {
+          if (!editingDepartment) return;
+          await saveWithToast(() => data.updateDepartment(editingDepartment.id, updates), 'Department updated');
+        }}
+      />
+      <ServiceEditModal
+        isOpen={Boolean(editingService)}
+        service={editingService}
+        onClose={() => setEditingService(null)}
+        onSave={async (updates) => {
+          if (!editingService) return;
+          await saveWithToast(() => data.updateService(editingService.id, updates), 'Service updated');
+        }}
+      />
+      <FlowStepEditModal
+        isOpen={Boolean(editingFlowStep)}
+        step={editingFlowStep?.step ?? null}
+        flowLabel={editingFlowStep?.flowType === 'ideal' ? 'First-Principles' : 'Current-State'}
+        onClose={() => setEditingFlowStep(null)}
+        onSave={async (updates) => {
+          if (!editingFlowStep || !service) return;
+          await saveWithToast(
+            () => data.updateFlowStep(service.id, editingFlowStep.flowType, editingFlowStep.step.id, updates),
+            'Flow step updated'
+          );
+        }}
+      />
+      <DeviationEditModal
+        isOpen={Boolean(editingDeviation)}
+        deviation={editingDeviation}
+        onClose={() => setEditingDeviation(null)}
+        onSave={async (updates) => {
+          if (!editingDeviation || !service) return;
+          await saveWithToast(() => data.updateDeviation(service.id, editingDeviation.id, updates), 'Deviation updated');
+        }}
+      />
+      <InitiativeEditModal
+        isOpen={Boolean(editingInitiative)}
+        initiative={editingInitiative}
+        onClose={() => setEditingInitiative(null)}
+        onSave={async (updates) => {
+          if (!editingInitiative || !service) return;
+          await saveWithToast(() => data.updateInitiative(service.id, editingInitiative.id, updates), 'Initiative updated');
+        }}
+      />
+      <ConfirmDialog
+        isOpen={Boolean(deleteState)}
+        title={deleteState?.title ?? 'Delete Item'}
+        message={deleteState?.message ?? ''}
+        confirmLabel="Delete"
+        confirmVariant="danger"
+        onConfirm={handleDeleteConfirm}
+        onCancel={() => setDeleteState(null)}
+      />
       <ToastContainer />
     </>
   );

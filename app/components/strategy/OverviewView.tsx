@@ -9,6 +9,7 @@
 import React from 'react';
 import { Icon } from '@/components/ui/Icon';
 import { CardHero } from './CardHero';
+import { StrategyActionMenu } from './StrategyActionMenu';
 import type { StrategicPressure, StrategicObjective, DepartmentSummary } from '@/strategy/types';
 
 interface OverviewViewProps {
@@ -16,6 +17,12 @@ interface OverviewViewProps {
   enterpriseObjectives: StrategicObjective[];
   departmentSummaries: DepartmentSummary[];
   onSelectDepartment: (departmentId: string) => void;
+  onEditPressure: (pressure: StrategicPressure) => void;
+  onDeletePressure: (pressure: StrategicPressure) => void;
+  onEditObjective: (objective: StrategicObjective) => void;
+  onDeleteObjective: (objective: StrategicObjective) => void;
+  onEditDepartment: (department: DepartmentSummary) => void;
+  onDeleteDepartment: (department: DepartmentSummary) => void;
   getPressure: (id: string) => StrategicPressure | undefined;
 }
 
@@ -29,6 +36,12 @@ export function OverviewView({
   enterpriseObjectives,
   departmentSummaries,
   onSelectDepartment,
+  onEditPressure,
+  onDeletePressure,
+  onEditObjective,
+  onDeleteObjective,
+  onEditDepartment,
+  onDeleteDepartment,
   getPressure,
 }: OverviewViewProps) {
   const externalPressures = pressures.filter((p) => p.type === 'external');
@@ -45,7 +58,12 @@ export function OverviewView({
         </div>
         <div className="strategy-card-grid">
           {externalPressures.map((p) => (
-            <PressureCard key={p.id} pressure={p} />
+            <PressureCard
+              key={p.id}
+              pressure={p}
+              onEdit={() => onEditPressure(p)}
+              onDelete={() => onDeletePressure(p)}
+            />
           ))}
         </div>
       </section>
@@ -58,7 +76,12 @@ export function OverviewView({
         </div>
         <div className="strategy-card-grid">
           {internalPressures.map((p) => (
-            <PressureCard key={p.id} pressure={p} />
+            <PressureCard
+              key={p.id}
+              pressure={p}
+              onEdit={() => onEditPressure(p)}
+              onDelete={() => onDeletePressure(p)}
+            />
           ))}
         </div>
       </section>
@@ -72,7 +95,13 @@ export function OverviewView({
         </div>
         <div className="strategy-card-grid">
           {enterpriseObjectives.map((obj) => (
-            <ObjectiveCard key={obj.id} objective={obj} getPressure={getPressure} />
+            <ObjectiveCard
+              key={obj.id}
+              objective={obj}
+              getPressure={getPressure}
+              onEdit={() => onEditObjective(obj)}
+              onDelete={() => onDeleteObjective(obj)}
+            />
           ))}
         </div>
       </section>
@@ -86,7 +115,13 @@ export function OverviewView({
         </div>
         <div className="strategy-card-grid">
           {departmentSummaries.map((dept) => (
-            <DepartmentCard key={dept.id} department={dept} onClick={() => onSelectDepartment(dept.id)} />
+            <DepartmentCard
+              key={dept.id}
+              department={dept}
+              onClick={() => onSelectDepartment(dept.id)}
+              onEdit={() => onEditDepartment(dept)}
+              onDelete={() => onDeleteDepartment(dept)}
+            />
           ))}
         </div>
       </section>
@@ -94,7 +129,15 @@ export function OverviewView({
   );
 }
 
-function PressureCard({ pressure }: { pressure: StrategicPressure }) {
+function PressureCard({
+  pressure,
+  onEdit,
+  onDelete,
+}: {
+  pressure: StrategicPressure;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
   return (
     <div className="strategy-card strategy-card--has-hero">
       <CardHero
@@ -108,6 +151,13 @@ function PressureCard({ pressure }: { pressure: StrategicPressure }) {
           <span className="strategy-card__type">
             {pressure.type === 'external' ? 'External' : 'Internal'}
           </span>
+          <StrategyActionMenu
+            className="strategy-action-menu--inline"
+            actions={[
+              { label: 'Edit', icon: 'edit-3', onSelect: onEdit },
+              { label: 'Delete', icon: 'trash-2', tone: 'danger', onSelect: onDelete },
+            ]}
+          />
         </div>
         <h3 className="strategy-card__title">{pressure.title}</h3>
         <p className="strategy-card__description">{pressure.description}</p>
@@ -129,13 +179,25 @@ function PressureCard({ pressure }: { pressure: StrategicPressure }) {
 function ObjectiveCard({
   objective,
   getPressure,
+  onEdit,
+  onDelete,
 }: {
   objective: StrategicObjective;
   getPressure: (id: string) => StrategicPressure | undefined;
+  onEdit: () => void;
+  onDelete: () => void;
 }) {
   return (
     <div className="strategy-card strategy-card--objective">
-      <h3 className="strategy-card__title">{objective.title}</h3>
+      <div className="strategy-card__title-row">
+        <h3 className="strategy-card__title">{objective.title}</h3>
+        <StrategyActionMenu
+          actions={[
+            { label: 'Edit', icon: 'edit-3', onSelect: onEdit },
+            { label: 'Delete', icon: 'trash-2', tone: 'danger', onSelect: onDelete },
+          ]}
+        />
+      </div>
       <p className="strategy-card__description">{objective.description}</p>
       {objective.linkedPressureIds.length > 0 && (
         <div className="strategy-card__links">
@@ -155,41 +217,68 @@ function ObjectiveCard({
 function DepartmentCard({
   department,
   onClick,
+  onEdit,
+  onDelete,
 }: {
   department: DepartmentSummary;
   onClick: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
 }) {
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      onClick();
+    }
+  };
+
   return (
-    <button className="strategy-card strategy-card--clickable strategy-card--department" onClick={onClick}>
-      <h3 className="strategy-card__title">{department.name}</h3>
-      <p className="strategy-card__description">{department.description}</p>
-      {department.improvementMandates.length > 0 && (
-        <div className="strategy-card__mandates">
-          <span className="strategy-card__mandates-label">Improvement mandates</span>
-          {department.improvementMandates.map((objective) => (
-            <span key={objective.id} className="strategy-card__mandate-item">
-              <Icon name="target" size={12} />
-              {objective.title}
-            </span>
-          ))}
-        </div>
-      )}
-      <div className="strategy-card__stats">
-        <span className="strategy-card__stat">
-          <Icon name="layers" size={14} />
-          {department.serviceCount} services
-        </span>
-        <span className="strategy-card__stat">
-          <Icon name="search" size={14} />
-          {department.analyzedCount} analyzed
-        </span>
-        {department.deviationCount > 0 && (
-          <span className="strategy-card__stat strategy-card__stat--warning">
-            <Icon name="alert-triangle" size={14} />
-            {department.deviationCount} deviations
-          </span>
-        )}
+    <div className="strategy-card strategy-card--clickable strategy-card--department">
+      <div className="strategy-card__title-row">
+        <h3 className="strategy-card__title">{department.name}</h3>
+        <StrategyActionMenu
+          actions={[
+            { label: 'Edit', icon: 'edit-3', onSelect: onEdit },
+            { label: 'Delete', icon: 'trash-2', tone: 'danger', onSelect: onDelete },
+          ]}
+        />
       </div>
-    </button>
+      <div
+        className="strategy-card__content-button"
+        role="button"
+        tabIndex={0}
+        onClick={onClick}
+        onKeyDown={handleKeyDown}
+      >
+        <p className="strategy-card__description">{department.description}</p>
+        {department.improvementMandates.length > 0 && (
+          <div className="strategy-card__mandates">
+            <span className="strategy-card__mandates-label">Improvement mandates</span>
+            {department.improvementMandates.map((objective) => (
+              <span key={objective.id} className="strategy-card__mandate-item">
+                <Icon name="target" size={12} />
+                {objective.title}
+              </span>
+            ))}
+          </div>
+        )}
+        <div className="strategy-card__stats">
+          <span className="strategy-card__stat">
+            <Icon name="layers" size={14} />
+            {department.serviceCount} services
+          </span>
+          <span className="strategy-card__stat">
+            <Icon name="search" size={14} />
+            {department.analyzedCount} analyzed
+          </span>
+          {department.deviationCount > 0 && (
+            <span className="strategy-card__stat strategy-card__stat--warning">
+              <Icon name="alert-triangle" size={14} />
+              {department.deviationCount} deviations
+            </span>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }

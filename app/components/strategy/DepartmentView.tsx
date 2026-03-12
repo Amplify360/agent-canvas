@@ -6,6 +6,7 @@
 
 import React from 'react';
 import { Icon } from '@/components/ui/Icon';
+import { StrategyActionMenu } from './StrategyActionMenu';
 import type { Department, Service, StrategicObjective } from '@/strategy/types';
 
 interface DepartmentViewProps {
@@ -14,6 +15,12 @@ interface DepartmentViewProps {
   objectives: StrategicObjective[];
   onSelectService: (serviceId: string) => void;
   getAgentCount: (serviceId: string) => number;
+  onEditDepartment: (department: Department) => void;
+  onDeleteDepartment: (department: Department) => void;
+  onEditObjective: (objective: StrategicObjective) => void;
+  onDeleteObjective: (objective: StrategicObjective) => void;
+  onEditService: (service: Service) => void;
+  onDeleteService: (service: Service) => void;
 }
 
 const STATUS_CONFIG: Record<Service['status'], { label: string; badgeClass: string; icon: string }> = {
@@ -22,12 +29,32 @@ const STATUS_CONFIG: Record<Service['status'], { label: string; badgeClass: stri
   'has-deviations': { label: 'Has deviations', badgeClass: 'badge badge--warning', icon: 'alert-triangle' },
 };
 
-export function DepartmentView({ department, services, objectives, onSelectService, getAgentCount }: DepartmentViewProps) {
+export function DepartmentView({
+  department,
+  services,
+  objectives,
+  onSelectService,
+  getAgentCount,
+  onEditDepartment,
+  onDeleteDepartment,
+  onEditObjective,
+  onDeleteObjective,
+  onEditService,
+  onDeleteService,
+}: DepartmentViewProps) {
   return (
     <div className="strategy-department">
       {/* Department header */}
       <div className="strategy-department__header">
-        <h2 className="strategy-department__name">{department.name}</h2>
+        <div className="strategy-department__title-row">
+          <h2 className="strategy-department__name">{department.name}</h2>
+          <StrategyActionMenu
+            actions={[
+              { label: 'Edit', icon: 'edit-3', onSelect: () => onEditDepartment(department) },
+              { label: 'Delete', icon: 'trash-2', tone: 'danger', onSelect: () => onDeleteDepartment(department) },
+            ]}
+          />
+        </div>
         <p className="strategy-department__description">{department.description}</p>
       </div>
 
@@ -42,10 +69,16 @@ export function DepartmentView({ department, services, objectives, onSelectServi
             {objectives.map((obj) => (
               <div key={obj.id} className="strategy-objective-item">
                 <Icon name="arrow-right" size={14} className="strategy-objective-item__icon" />
-                <div>
+                <div className="strategy-objective-item__content">
                   <span className="strategy-objective-item__title">{obj.title}</span>
                   <span className="strategy-objective-item__description">{obj.description}</span>
                 </div>
+                <StrategyActionMenu
+                  actions={[
+                    { label: 'Edit', icon: 'edit-3', onSelect: () => onEditObjective(obj) },
+                    { label: 'Delete', icon: 'trash-2', tone: 'danger', onSelect: () => onDeleteObjective(obj) },
+                  ]}
+                />
               </div>
             ))}
           </div>
@@ -61,7 +94,14 @@ export function DepartmentView({ department, services, objectives, onSelectServi
         </div>
         <div className="strategy-service-grid">
           {services.map((service) => (
-            <ServiceCard key={service.id} service={service} agentCount={getAgentCount(service.id)} onClick={() => onSelectService(service.id)} />
+            <ServiceCard
+              key={service.id}
+              service={service}
+              agentCount={getAgentCount(service.id)}
+              onClick={() => onSelectService(service.id)}
+              onEdit={() => onEditService(service)}
+              onDelete={() => onDeleteService(service)}
+            />
           ))}
         </div>
       </section>
@@ -69,48 +109,82 @@ export function DepartmentView({ department, services, objectives, onSelectServi
   );
 }
 
-function ServiceCard({ service, agentCount, onClick }: { service: Service; agentCount: number; onClick: () => void }) {
+function ServiceCard({
+  service,
+  agentCount,
+  onClick,
+  onEdit,
+  onDelete,
+}: {
+  service: Service;
+  agentCount: number;
+  onClick: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
   const status = STATUS_CONFIG[service.status];
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      onClick();
+    }
+  };
 
   return (
-    <button className="strategy-service-card" onClick={onClick}>
+    <div className="strategy-service-card">
       <div className="strategy-service-card__header">
         <h4 className="strategy-service-card__name">{service.name}</h4>
-        <span className={status.badgeClass}>
-          <Icon name={status.icon} size={12} />
-          {status.label}
-        </span>
-      </div>
-      <p className="strategy-service-card__purpose">{service.purpose}</p>
-      <div className="strategy-service-card__metrics">
-        <div className="strategy-service-card__metric">
-          <div className="strategy-service-card__metric-header">
-            <Icon name="target" size={14} />
-            <span className="strategy-service-card__metric-label">Effectiveness</span>
-          </div>
-          <span className="strategy-service-card__metric-value">{service.effectivenessMetric}</span>
-        </div>
-        <div className="strategy-service-card__metric">
-          <div className="strategy-service-card__metric-header">
-            <Icon name="gauge" size={14} />
-            <span className="strategy-service-card__metric-label">Efficiency</span>
-          </div>
-          <span className="strategy-service-card__metric-value">{service.efficiencyMetric}</span>
+        <div className="strategy-service-card__header-actions">
+          <span className={status.badgeClass}>
+            <Icon name={status.icon} size={12} />
+            {status.label}
+          </span>
+          <StrategyActionMenu
+            actions={[
+              { label: 'Edit', icon: 'edit-3', onSelect: onEdit },
+              { label: 'Delete', icon: 'trash-2', tone: 'danger', onSelect: onDelete },
+            ]}
+          />
         </div>
       </div>
-      {agentCount > 0 && (
-        <div className="strategy-service-card__agents">
-          <Icon name="bot" size={14} />
-          <span>{agentCount} unique agent{agentCount !== 1 ? 's' : ''} linked</span>
+      <div
+        className="strategy-service-card__content-button"
+        role="button"
+        tabIndex={0}
+        onClick={onClick}
+        onKeyDown={handleKeyDown}
+      >
+        <p className="strategy-service-card__purpose">{service.purpose}</p>
+        <div className="strategy-service-card__metrics">
+          <div className="strategy-service-card__metric">
+            <div className="strategy-service-card__metric-header">
+              <Icon name="target" size={14} />
+              <span className="strategy-service-card__metric-label">Effectiveness</span>
+            </div>
+            <span className="strategy-service-card__metric-value">{service.effectivenessMetric}</span>
+          </div>
+          <div className="strategy-service-card__metric">
+            <div className="strategy-service-card__metric-header">
+              <Icon name="gauge" size={14} />
+              <span className="strategy-service-card__metric-label">Efficiency</span>
+            </div>
+            <span className="strategy-service-card__metric-value">{service.efficiencyMetric}</span>
+          </div>
         </div>
-      )}
-      {service.constraints.length > 0 && (
-        <div className="strategy-service-card__constraints">
-          {service.constraints.map((c, i) => (
-            <span key={i} className="chip">{c}</span>
-          ))}
-        </div>
-      )}
-    </button>
+        {agentCount > 0 && (
+          <div className="strategy-service-card__agents">
+            <Icon name="bot" size={14} />
+            <span>{agentCount} unique agent{agentCount !== 1 ? 's' : ''} linked</span>
+          </div>
+        )}
+        {service.constraints.length > 0 && (
+          <div className="strategy-service-card__constraints">
+            {service.constraints.map((c, i) => (
+              <span key={i} className="chip">{c}</span>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
