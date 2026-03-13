@@ -35,18 +35,26 @@ pnpm test:e2e
 # Everything
 pnpm test:all
 
-# MCP server smoke test (requires running app + service token)
+# MCP server end-to-end test (requires running app + service token)
 MCP_TOKEN=mcp_xxx pnpm test:mcp
 ```
 
-### MCP Smoke Test
+### MCP End-to-End Test
 
-The MCP smoke client validates the server handshake and a real tool invocation.
+The MCP client validates the MCP handshake, then runs a real Transformation Map lifecycle:
+
+- verify required tools and token scopes
+- create a test Transformation Map
+- verify reads from `list_transformation_maps` and `get_transformation_map_snapshot`
+- run dry-run and persisted updates
+- verify department and service reads after writes
+- delete the test Transformation Map and confirm cleanup
 
 Prerequisites:
 
 - Next.js app is running (`pnpm dev`)
 - Valid MCP service token from **MCP Access** in the app
+- Token includes `transformation:read` and `transformation:write`
 
 Optional environment variables:
 

@@ -1,4 +1,4 @@
-import { v } from "convex/values";
+import { ConvexError, v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { Doc, Id } from "./_generated/dataModel";
 import { AGENT_MODEL_VERSION } from "../shared/agentModel";
@@ -10,6 +10,7 @@ import {
   buildDepartmentSnapshot,
   buildOverviewSnapshot,
   buildServiceSnapshot,
+  deleteTransformationMapCascade,
   departmentAnalysisPayloadValidator,
   listServiceAnalysesForServices,
   listMapChildren,
@@ -34,10 +35,14 @@ function constantTimeEquals(a: string, b: string): boolean {
   return mismatch === 0;
 }
 
+function mcpError(message: string): never {
+  throw new ConvexError(message);
+}
+
 async function resolveCanvas(ctx: any, workosOrgId: string, canvasId?: Id<"canvases">, canvasSlug?: string, defaultCanvasId?: Id<"canvases">) {
   if (canvasId) {
     const byId = await ctx.db.get(canvasId);
-    if (!byId || byId.deletedAt || byId.workosOrgId !== workosOrgId) throw new Error("NotFound: Canvas not found");
+    if (!byId || byId.deletedAt || byId.workosOrgId !== workosOrgId) mcpError("NotFound: Canvas not found");
     return byId;
   }
   if (canvasSlug) {
@@ -46,14 +51,14 @@ async function resolveCanvas(ctx: any, workosOrgId: string, canvasId?: Id<"canva
       .withIndex("by_org_slug", (q: any) => q.eq("workosOrgId", workosOrgId).eq("slug", canvasSlug))
       .filter((q: any) => q.eq(q.field("deletedAt"), undefined))
       .first();
-    if (!bySlug) throw new Error("NotFound: Canvas not found");
+    if (!bySlug) mcpError("NotFound: Canvas not found");
     return bySlug;
   }
   if (defaultCanvasId) {
     const byDefault = await ctx.db.get(defaultCanvasId);
     if (byDefault && !byDefault.deletedAt && byDefault.workosOrgId === workosOrgId) return byDefault;
   }
-  throw new Error("Validation: canvasId or canvasSlug is required");
+  mcpError("Validation: canvasId or canvasSlug is required");
 }
 
 async function ensureUniqueCanvasSlug(
@@ -69,7 +74,7 @@ async function ensureUniqueCanvasSlug(
     .first();
 
   if (existing && existing._id !== excludeCanvasId) {
-    throw new Error("Validation: A canvas with this slug already exists");
+    mcpError("Validation: A canvas with this slug already exists");
   }
 }
 
@@ -82,7 +87,7 @@ async function resolveTransformationMap(
   if (mapId) {
     const byId = await ctx.db.get(mapId);
     if (!byId || byId.workosOrgId !== workosOrgId) {
-      throw new Error("NotFound: Transformation Map not found");
+      mcpError("NotFound: Transformation Map not found");
     }
     return byId;
   }
@@ -93,7 +98,7 @@ async function resolveTransformationMap(
       .withIndex("by_org_slug", (q: any) => q.eq("workosOrgId", workosOrgId).eq("slug", mapSlug))
       .first();
     if (!bySlug) {
-      throw new Error("NotFound: Transformation Map not found");
+      mcpError("NotFound: Transformation Map not found");
     }
     return bySlug;
   }
@@ -104,7 +109,7 @@ async function resolveTransformationMap(
     .collect();
   const [latest] = maps.sort((a: any, b: any) => b.updatedAt - a.updatedAt);
   if (!latest) {
-    throw new Error("NotFound: No Transformation Maps found for this organization");
+    mcpError("NotFound: No Transformation Maps found for this organization");
   }
   return latest;
 }
@@ -121,7 +126,7 @@ async function ensureUniqueTransformationMapSlug(
     .first();
 
   if (existing && existing._id !== excludeMapId) {
-    throw new Error("Validation: A Transformation Map with this slug already exists");
+    mcpError("Validation: A Transformation Map with this slug already exists");
   }
 }
 
@@ -137,7 +142,39 @@ async function ensureUniqueTransformationServiceKey(
     .first();
 
   if (existing && existing._id !== excludeServiceId) {
-    throw new Error(`Validation: Service key already exists: ${serviceKey}`);
+    mcpError(`Validation: Service key already exists: ${serviceKey}`);
+  }
+}
+
+async function ensureUniqueTransformationPressureKey(
+  ctx: any,
+  mapId: Id<"transformationMaps">,
+  pressureKey: string,
+  excludePressureId?: Id<"transformationPressures">
+) {
+  const existing = await ctx.db
+    .query("transformationPressures")
+    .withIndex("by_map_key", (q: any) => q.eq("mapId", mapId).eq("key", pressureKey))
+    .first();
+
+  if (existing && existing._id !== excludePressureId) {
+    mcpError(`Validation: Pressure key already exists: ${pressureKey}`);
+  }
+}
+
+async function ensureUniqueTransformationObjectiveKey(
+  ctx: any,
+  mapId: Id<"transformationMaps">,
+  objectiveKey: string,
+  excludeObjectiveId?: Id<"transformationObjectives">
+) {
+  const existing = await ctx.db
+    .query("transformationObjectives")
+    .withIndex("by_map_key", (q: any) => q.eq("mapId", mapId).eq("key", objectiveKey))
+    .first();
+
+  if (existing && existing._id !== excludeObjectiveId) {
+    mcpError(`Validation: Objective key already exists: ${objectiveKey}`);
   }
 }
 
@@ -147,9 +184,31 @@ async function getTransformationDepartmentByKey(ctx: any, mapId: Id<"transformat
     .withIndex("by_map_key", (q: any) => q.eq("mapId", mapId).eq("key", departmentKey))
     .first();
   if (!department) {
-    throw new Error("NotFound: Department not found");
+    mcpError("NotFound: Department not found");
   }
   return department;
+}
+
+async function getTransformationPressureByKey(ctx: any, mapId: Id<"transformationMaps">, pressureKey: string) {
+  const pressure = await ctx.db
+    .query("transformationPressures")
+    .withIndex("by_map_key", (q: any) => q.eq("mapId", mapId).eq("key", pressureKey))
+    .first();
+  if (!pressure) {
+    mcpError("NotFound: Pressure not found");
+  }
+  return pressure;
+}
+
+async function getTransformationObjectiveByKey(ctx: any, mapId: Id<"transformationMaps">, objectiveKey: string) {
+  const objective = await ctx.db
+    .query("transformationObjectives")
+    .withIndex("by_map_key", (q: any) => q.eq("mapId", mapId).eq("key", objectiveKey))
+    .first();
+  if (!objective) {
+    mcpError("NotFound: Objective not found");
+  }
+  return objective;
 }
 
 async function getTransformationServiceByKey(ctx: any, mapId: Id<"transformationMaps">, serviceKey: string) {
@@ -158,9 +217,42 @@ async function getTransformationServiceByKey(ctx: any, mapId: Id<"transformation
     .withIndex("by_map_key", (q: any) => q.eq("mapId", mapId).eq("key", serviceKey))
     .first();
   if (!service) {
-    throw new Error("NotFound: Service not found");
+    mcpError("NotFound: Service not found");
   }
   return service;
+}
+
+async function syncTransformationDepartmentMandates(
+  ctx: any,
+  mapId: Id<"transformationMaps">,
+  departmentKey: string,
+  actor: string,
+  now: number
+) {
+  const [department, objectives] = await Promise.all([
+    ctx.db
+      .query("transformationDepartments")
+      .withIndex("by_map_key", (q: any) => q.eq("mapId", mapId).eq("key", departmentKey))
+      .first(),
+    ctx.db
+      .query("transformationObjectives")
+      .withIndex("by_map_department", (q: any) => q.eq("mapId", mapId).eq("departmentKey", departmentKey))
+      .collect(),
+  ]);
+
+  if (!department) {
+    return;
+  }
+
+  const titles = [...objectives]
+    .sort((left: any, right: any) => left.order - right.order)
+    .map((objective: any) => objective.title);
+
+  await ctx.db.patch(department._id, {
+    improvementMandates: titles,
+    updatedBy: actor,
+    updatedAt: now,
+  });
 }
 
 function normalizeUpdateAgentOperation(op: any, existingFieldValues: Record<string, unknown>) {
@@ -201,10 +293,10 @@ async function getValidTokenByHash(ctx: any, tokenPrefix: string, tokenHash: str
 async function requireToken(ctx: any, tokenPrefix: string, tokenHash: string, requiredScope?: string) {
   const token = await getValidTokenByHash(ctx, tokenPrefix, tokenHash);
   if (!token) {
-    throw new Error("Auth: Invalid service token");
+    mcpError("Auth: Invalid service token");
   }
   if (requiredScope && !token.scopes.includes(requiredScope)) {
-    throw new Error(`Auth: Missing required scope ${requiredScope}`);
+    mcpError(`Auth: Missing required scope ${requiredScope}`);
   }
   return token;
 }
@@ -504,7 +596,7 @@ export const applyCanvasChanges = mutation({
         summary.push("created agent");
       } else if (op.type === "update_agent") {
         const agent = byId.get(op.agentId as Id<"agents">);
-        if (!agent) throw new Error("Validation: agentId not in canvas");
+        if (!agent) mcpError("Validation: agentId not in canvas");
         const normalized = normalizeUpdateAgentOperation(op, agent.fieldValues ?? {});
         if (normalized.name !== undefined) validateAgentName(normalized.name);
         if (normalized.phase !== undefined) validatePhase(normalized.phase);
@@ -518,7 +610,7 @@ export const applyCanvasChanges = mutation({
           }).filter(([, value]) => value !== undefined)
         );
         if (Object.keys(definedUpdates).length === 0) {
-          throw new Error("Validation: update_agent requires at least one field to update");
+          mcpError("Validation: update_agent requires at least one field to update");
         }
         if (!isDryRun) {
           await recordHistory(ctx, agent._id, actor, CHANGE_TYPE.UPDATE, getAgentSnapshot(agent));
@@ -539,7 +631,7 @@ export const applyCanvasChanges = mutation({
         summary.push("updated agent");
       } else if (op.type === "move_agent") {
         const agent = byId.get(op.agentId as Id<"agents">);
-        if (!agent) throw new Error("Validation: agentId not in canvas");
+        if (!agent) mcpError("Validation: agentId not in canvas");
         validatePhase(op.phase);
         if (!isDryRun) {
           await ctx.db.patch(op.agentId, { phase: op.phase, agentOrder: op.agentOrder, updatedBy: actor, updatedAt: now });
@@ -548,7 +640,7 @@ export const applyCanvasChanges = mutation({
         summary.push("moved agent");
       } else if (op.type === "delete_agent") {
         const agent = byId.get(op.agentId as Id<"agents">);
-        if (!agent) throw new Error("Validation: agentId not in canvas");
+        if (!agent) mcpError("Validation: agentId not in canvas");
         if (!isDryRun) {
           await recordHistory(ctx, agent._id, actor, CHANGE_TYPE.DELETE, getAgentSnapshot(agent));
           await ctx.db.patch(op.agentId, { deletedAt: now, updatedBy: actor, updatedAt: now });
@@ -556,7 +648,7 @@ export const applyCanvasChanges = mutation({
         byId.delete(agent._id);
         summary.push("deleted agent");
       } else {
-        throw new Error(`Validation: Unsupported operation ${op.type}`);
+        mcpError(`Validation: Unsupported operation ${op.type}`);
       }
     }
 
@@ -617,7 +709,7 @@ export const createTransformationMap = mutation({
     const token = await requireToken(ctx, tokenPrefix, tokenHash, "transformation:write");
     const normalizedSlug = normalizeSlug(slug ?? title);
     if (!normalizedSlug) {
-      throw new Error("Validation: slug is required");
+      mcpError("Validation: slug is required");
     }
     await ensureUniqueTransformationMapSlug(ctx, token.workosOrgId, normalizedSlug);
     const now = Date.now();
@@ -643,6 +735,36 @@ export const createTransformationMap = mutation({
       nextData: { title, slug: normalizedSlug, description, status: "draft" },
     });
     return { mapId, slug: normalizedSlug, title, updatedAt: now };
+  },
+});
+
+export const deleteTransformationMap = mutation({
+  args: {
+    tokenPrefix: v.string(),
+    tokenHash: v.string(),
+    mapId: v.optional(v.id("transformationMaps")),
+    mapSlug: v.optional(v.string()),
+  },
+  handler: async (ctx, { tokenPrefix, tokenHash, mapId, mapSlug }) => {
+    const token = await requireToken(ctx, tokenPrefix, tokenHash, "transformation:write");
+    if (!mapId && !mapSlug) {
+      mcpError("Validation: mapId or mapSlug is required");
+    }
+
+    const map = await resolveTransformationMap(ctx, token.workosOrgId, mapId, mapSlug);
+    const actor = `mcp_token:${token._id}`;
+    const deletedCounts = await deleteTransformationMapCascade(ctx, {
+      map,
+      changedBy: actor,
+    });
+
+    return {
+      ok: true,
+      mapId: map._id,
+      slug: map.slug,
+      title: map.title,
+      deletedCounts,
+    };
   },
 });
 
@@ -781,7 +903,7 @@ export const applyTransformationMapChanges = mutation({
           slug: mapState.slug,
         };
         const nextSlug = op.slug !== undefined ? normalizeSlug(op.slug) : mapState.slug;
-        if (!nextSlug) throw new Error("Validation: slug is required");
+        if (!nextSlug) mcpError("Validation: slug is required");
         if (nextSlug !== mapState.slug) {
           await ensureUniqueTransformationMapSlug(ctx, token.workosOrgId, nextSlug, mapState._id);
         }
@@ -815,12 +937,12 @@ export const applyTransformationMapChanges = mutation({
         };
         summary.push("updated map");
       } else if (op.type === "create_department") {
-        if (!op.key || !op.name) throw new Error("Validation: create_department requires key and name");
+        if (!op.key || !op.name) mcpError("Validation: create_department requires key and name");
         const existing = await ctx.db
           .query("transformationDepartments")
           .withIndex("by_map_key", (q) => q.eq("mapId", map._id).eq("key", op.key))
           .first();
-        if (existing) throw new Error(`Validation: Department key already exists: ${op.key}`);
+        if (existing) mcpError(`Validation: Department key already exists: ${op.key}`);
         if (!isDryRun) {
           await ctx.db.insert("transformationDepartments", {
             mapId: map._id,
@@ -891,7 +1013,7 @@ export const applyTransformationMapChanges = mutation({
         }
         summary.push("updated department");
       } else if (op.type === "reorder_departments") {
-        if (!Array.isArray(op.departmentKeys)) throw new Error("Validation: reorder_departments requires departmentKeys");
+        if (!Array.isArray(op.departmentKeys)) mcpError("Validation: reorder_departments requires departmentKeys");
         if (!isDryRun) {
           for (const [index, departmentKey] of op.departmentKeys.entries()) {
             const department = await getTransformationDepartmentByKey(ctx, map._id, departmentKey);
@@ -909,9 +1031,267 @@ export const applyTransformationMapChanges = mutation({
           }
         }
         summary.push("reordered departments");
+      } else if (op.type === "create_pressure") {
+        if (!op.key || !op.pressureType || !op.title) {
+          mcpError("Validation: create_pressure requires key, pressureType, and title");
+        }
+        if (op.pressureType !== "external" && op.pressureType !== "internal") {
+          mcpError("Validation: create_pressure pressureType must be external or internal");
+        }
+        await ensureUniqueTransformationPressureKey(ctx, map._id, op.key);
+        if (!isDryRun) {
+          await ctx.db.insert("transformationPressures", {
+            mapId: map._id,
+            key: op.key,
+            order: op.order ?? now,
+            type: op.pressureType,
+            title: op.title,
+            description: op.description ?? "",
+            evidence: op.evidence ?? [],
+            artifactStatus: "reviewed",
+            sourceType: "system",
+            sourceRef: "mcp.apply_transformation_map_changes",
+            createdBy: actor,
+            updatedBy: actor,
+            createdAt: now,
+            updatedAt: now,
+          });
+          await recordTransformationHistory(ctx, {
+            workosOrgId: token.workosOrgId,
+            mapId: map._id,
+            entityType: "pressure",
+            entityId: op.key,
+            changedBy: actor,
+            changeType: "create",
+            nextData: {
+              key: op.key,
+              order: op.order ?? now,
+              type: op.pressureType,
+              title: op.title,
+              description: op.description ?? "",
+              evidence: op.evidence ?? [],
+            },
+          });
+        }
+        summary.push("created pressure");
+      } else if (op.type === "update_pressure") {
+        if (!op.pressureKey) {
+          mcpError("Validation: update_pressure requires pressureKey");
+        }
+        const pressure = await getTransformationPressureByKey(ctx, map._id, op.pressureKey);
+        if (op.pressureType !== undefined && op.pressureType !== "external" && op.pressureType !== "internal") {
+          mcpError("Validation: update_pressure pressureType must be external or internal");
+        }
+        const previousData = {
+          type: pressure.type,
+          title: pressure.title,
+          description: pressure.description,
+          evidence: pressure.evidence,
+          order: pressure.order,
+        };
+        const nextData = {
+          type: op.pressureType ?? pressure.type,
+          title: op.title ?? pressure.title,
+          description: op.description ?? pressure.description,
+          evidence: op.evidence ?? pressure.evidence,
+          order: op.order ?? pressure.order,
+        };
+        if (!isDryRun) {
+          await ctx.db.patch(pressure._id, {
+            ...nextData,
+            updatedBy: actor,
+            updatedAt: now,
+          });
+          await recordTransformationHistory(ctx, {
+            workosOrgId: token.workosOrgId,
+            mapId: map._id,
+            entityType: "pressure",
+            entityId: pressure.key,
+            changedBy: actor,
+            changeType: "update",
+            previousData,
+            nextData,
+          });
+        }
+        summary.push("updated pressure");
+      } else if (op.type === "delete_pressure") {
+        if (!op.pressureKey) {
+          mcpError("Validation: delete_pressure requires pressureKey");
+        }
+        const pressure = await getTransformationPressureByKey(ctx, map._id, op.pressureKey);
+        const objectives = await ctx.db
+          .query("transformationObjectives")
+          .withIndex("by_map", (q: any) => q.eq("mapId", map._id))
+          .collect();
+        if (!isDryRun) {
+          for (const objective of objectives) {
+            if (!objective.linkedPressureKeys.includes(op.pressureKey)) {
+              continue;
+            }
+            const nextLinkedPressureKeys = objective.linkedPressureKeys.filter((key: string) => key !== op.pressureKey);
+            await ctx.db.patch(objective._id, {
+              linkedPressureKeys: nextLinkedPressureKeys,
+              updatedBy: actor,
+              updatedAt: now,
+            });
+            await recordTransformationHistory(ctx, {
+              workosOrgId: token.workosOrgId,
+              mapId: map._id,
+              entityType: "objective",
+              entityId: objective.key,
+              changedBy: actor,
+              changeType: "update",
+              previousData: { linkedPressureKeys: objective.linkedPressureKeys },
+              nextData: { linkedPressureKeys: nextLinkedPressureKeys },
+            });
+          }
+          await ctx.db.delete(pressure._id);
+          await recordTransformationHistory(ctx, {
+            workosOrgId: token.workosOrgId,
+            mapId: map._id,
+            entityType: "pressure",
+            entityId: pressure.key,
+            changedBy: actor,
+            changeType: "delete",
+            previousData: {
+              type: pressure.type,
+              title: pressure.title,
+              description: pressure.description,
+              evidence: pressure.evidence,
+              order: pressure.order,
+            },
+          });
+        }
+        summary.push("deleted pressure");
+      } else if (op.type === "create_objective") {
+        if (!op.key || !op.scope || !op.title || !op.description) {
+          mcpError("Validation: create_objective requires key, scope, title, and description");
+        }
+        if (op.scope !== "enterprise" && op.scope !== "department") {
+          mcpError("Validation: create_objective scope must be enterprise or department");
+        }
+        if (op.scope === "department") {
+          if (!op.departmentKey) {
+            mcpError("Validation: create_objective requires departmentKey when scope is department");
+          }
+          await getTransformationDepartmentByKey(ctx, map._id, op.departmentKey);
+        }
+        await ensureUniqueTransformationObjectiveKey(ctx, map._id, op.key);
+        if (!isDryRun) {
+          await ctx.db.insert("transformationObjectives", {
+            mapId: map._id,
+            key: op.key,
+            order: op.order ?? now,
+            scope: op.scope,
+            departmentKey: op.scope === "department" ? op.departmentKey : undefined,
+            title: op.title,
+            description: op.description,
+            linkedPressureKeys: op.linkedPressureKeys ?? [],
+            artifactStatus: "reviewed",
+            sourceType: "system",
+            sourceRef: "mcp.apply_transformation_map_changes",
+            createdBy: actor,
+            updatedBy: actor,
+            createdAt: now,
+            updatedAt: now,
+          });
+          if (op.scope === "department" && op.departmentKey) {
+            await syncTransformationDepartmentMandates(ctx, map._id, op.departmentKey, actor, now);
+          }
+          await recordTransformationHistory(ctx, {
+            workosOrgId: token.workosOrgId,
+            mapId: map._id,
+            entityType: "objective",
+            entityId: op.key,
+            changedBy: actor,
+            changeType: "create",
+            nextData: {
+              key: op.key,
+              order: op.order ?? now,
+              scope: op.scope,
+              departmentKey: op.scope === "department" ? op.departmentKey : undefined,
+              title: op.title,
+              description: op.description,
+              linkedPressureKeys: op.linkedPressureKeys ?? [],
+            },
+          });
+        }
+        summary.push("created objective");
+      } else if (op.type === "update_objective") {
+        if (!op.objectiveKey) {
+          mcpError("Validation: update_objective requires objectiveKey");
+        }
+        const objective = await getTransformationObjectiveByKey(ctx, map._id, op.objectiveKey);
+        if (op.scope !== undefined && op.scope !== objective.scope) {
+          mcpError("Validation: update_objective does not support changing scope");
+        }
+        if (op.departmentKey !== undefined && op.departmentKey !== objective.departmentKey) {
+          mcpError("Validation: update_objective does not support changing departmentKey");
+        }
+        const previousData = {
+          title: objective.title,
+          description: objective.description,
+          linkedPressureKeys: objective.linkedPressureKeys,
+          order: objective.order,
+        };
+        const nextData = {
+          title: op.title ?? objective.title,
+          description: op.description ?? objective.description,
+          linkedPressureKeys: op.linkedPressureKeys ?? objective.linkedPressureKeys,
+          order: op.order ?? objective.order,
+        };
+        if (!isDryRun) {
+          await ctx.db.patch(objective._id, {
+            ...nextData,
+            updatedBy: actor,
+            updatedAt: now,
+          });
+          if (objective.scope === "department" && objective.departmentKey) {
+            await syncTransformationDepartmentMandates(ctx, map._id, objective.departmentKey, actor, now);
+          }
+          await recordTransformationHistory(ctx, {
+            workosOrgId: token.workosOrgId,
+            mapId: map._id,
+            entityType: "objective",
+            entityId: objective.key,
+            changedBy: actor,
+            changeType: "update",
+            previousData,
+            nextData,
+          });
+        }
+        summary.push("updated objective");
+      } else if (op.type === "delete_objective") {
+        if (!op.objectiveKey) {
+          mcpError("Validation: delete_objective requires objectiveKey");
+        }
+        const objective = await getTransformationObjectiveByKey(ctx, map._id, op.objectiveKey);
+        if (!isDryRun) {
+          await ctx.db.delete(objective._id);
+          if (objective.scope === "department" && objective.departmentKey) {
+            await syncTransformationDepartmentMandates(ctx, map._id, objective.departmentKey, actor, now);
+          }
+          await recordTransformationHistory(ctx, {
+            workosOrgId: token.workosOrgId,
+            mapId: map._id,
+            entityType: "objective",
+            entityId: objective.key,
+            changedBy: actor,
+            changeType: "delete",
+            previousData: {
+              scope: objective.scope,
+              departmentKey: objective.departmentKey,
+              title: objective.title,
+              description: objective.description,
+              linkedPressureKeys: objective.linkedPressureKeys,
+              order: objective.order,
+            },
+          });
+        }
+        summary.push("deleted objective");
       } else if (op.type === "create_service") {
         if (!op.key || !op.departmentKey || !op.name) {
-          throw new Error("Validation: create_service requires key, departmentKey, and name");
+          mcpError("Validation: create_service requires key, departmentKey, and name");
         }
         await getTransformationDepartmentByKey(ctx, map._id, op.departmentKey);
         await ensureUniqueTransformationServiceKey(ctx, map._id, op.key);
@@ -1013,7 +1393,7 @@ export const applyTransformationMapChanges = mutation({
         summary.push("updated service");
       } else if (op.type === "reorder_services") {
         if (!op.departmentKey || !Array.isArray(op.serviceKeys)) {
-          throw new Error("Validation: reorder_services requires departmentKey and serviceKeys");
+          mcpError("Validation: reorder_services requires departmentKey and serviceKeys");
         }
         await getTransformationDepartmentByKey(ctx, map._id, op.departmentKey);
         if (!isDryRun) {
@@ -1040,7 +1420,7 @@ export const applyTransformationMapChanges = mutation({
         }
         summary.push("reordered services");
       } else {
-        throw new Error(`Validation: Unsupported operation ${op.type}`);
+        mcpError(`Validation: Unsupported operation ${op.type}`);
       }
     }
 
@@ -1080,14 +1460,14 @@ export const applyTransformationDepartmentAnalysis = mutation({
     const seenObjectiveKeys = new Set<string>();
     for (const objective of args.payload.improvementMandates) {
       if (seenObjectiveKeys.has(objective.key)) {
-        throw new Error(`Validation: Duplicate improvement mandate key in payload: ${objective.key}`);
+        mcpError(`Validation: Duplicate improvement mandate key in payload: ${objective.key}`);
       }
       seenObjectiveKeys.add(objective.key);
     }
     const seenServiceKeys = new Set<string>();
     for (const service of args.payload.services) {
       if (seenServiceKeys.has(service.key)) {
-        throw new Error(`Validation: Duplicate service key in payload: ${service.key}`);
+        mcpError(`Validation: Duplicate service key in payload: ${service.key}`);
       }
       seenServiceKeys.add(service.key);
     }
@@ -1297,7 +1677,7 @@ export const setTransformationReviewStatus = mutation({
       .withIndex("by_service", (q) => q.eq("serviceId", service._id))
       .first();
     if (!analysis) {
-      throw new Error("NotFound: Service analysis not found");
+      mcpError("NotFound: Service analysis not found");
     }
 
     const actor = `mcp_token:${token._id}`;
