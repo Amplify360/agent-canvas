@@ -34,7 +34,23 @@ pnpm test:e2e
 
 # Everything
 pnpm test:all
+
+# MCP server smoke test (requires running app + service token)
+MCP_TOKEN=mcp_xxx pnpm test:mcp
 ```
+
+### MCP Smoke Test
+
+The MCP smoke client validates the server handshake and a real tool invocation.
+
+Prerequisites:
+
+- Next.js app is running (`pnpm dev`)
+- Valid MCP service token from **MCP Access** in the app
+
+Optional environment variables:
+
+- `MCP_SERVER_URL` (defaults to `http://localhost:3000/api/mcp`)
 
 ## Test Structure
 
