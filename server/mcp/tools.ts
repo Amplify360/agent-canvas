@@ -756,6 +756,25 @@ export const MCP_TOOLS = [
     },
   },
   {
+    name: "delete_transformation_map",
+    description: [
+      `${transformationModelDescription}`,
+      "Deletes one Transformation Map and all of its child pressures, objectives, departments, services, and service analyses.",
+      "Provide `mapId` or `mapSlug`. If both are supplied, `mapId` is used first.",
+      "This tool has no dry-run mode; successful calls delete the map immediately.",
+      "Minimal valid example:",
+      '{"mapSlug":"operating-model-2026"}',
+    ].join("\n"),
+    inputSchema: {
+      type: "object",
+      properties: {
+        mapId: { type: "string", description: "Optional map id to delete." },
+        mapSlug: { type: "string", description: "Optional map slug to delete." },
+      },
+      additionalProperties: false,
+    },
+  },
+  {
     name: "apply_transformation_map_changes",
     description: [
       `${transformationModelDescription}`,
@@ -1062,6 +1081,16 @@ export async function executeTool(convex: ConvexHttpClient, auth: AuthContext, n
       title: args.title,
       slug: args.slug,
       description: args.description,
+    });
+  }
+
+  if (name === "delete_transformation_map") {
+    requireScope(auth, "transformation:write");
+    return convex.mutation((api as any).mcp.deleteTransformationMap, {
+      tokenPrefix: auth.tokenPrefix,
+      tokenHash: auth.tokenHash,
+      mapId: args.mapId,
+      mapSlug: args.mapSlug,
     });
   }
 

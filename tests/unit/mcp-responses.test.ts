@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildToolCallErrorResult, shouldExposeToolCallErrorResult } from "@/server/mcp/responses";
+import { buildToolCallErrorResult, getMcpErrorMessage, shouldExposeToolCallErrorResult } from "@/server/mcp/responses";
 
 describe("mcp responses", () => {
   it("formats tool call failures as MCP tool results", () => {
@@ -19,5 +19,13 @@ describe("mcp responses", () => {
     expect(shouldExposeToolCallErrorResult("NotFound: Service not found", -32000)).toBe(true);
     expect(shouldExposeToolCallErrorResult("Auth: Invalid service token", -32000)).toBe(false);
     expect(shouldExposeToolCallErrorResult("Unknown tool: test", -32000)).toBe(false);
+  });
+
+  it("prefers Convex error data over generic server-error messages", () => {
+    const error = Object.assign(new Error("[Request ID: abc] Server Error"), {
+      data: "NotFound: Transformation Map not found",
+    });
+
+    expect(getMcpErrorMessage(error)).toBe("NotFound: Transformation Map not found");
   });
 });

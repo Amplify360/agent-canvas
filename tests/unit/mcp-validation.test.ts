@@ -97,4 +97,12 @@ describe("mcp tool argument validation", () => {
       new McpInvalidParamsError("Validation: Unknown field operations[0].departmentKey")
     );
   });
+
+  it("accepts delete_transformation_map with a slug", () => {
+    expect(() =>
+      validateToolArguments("delete_transformation_map", {
+        mapSlug: "operating-model-2026",
+      })
+    ).not.toThrow();
+  });
 });

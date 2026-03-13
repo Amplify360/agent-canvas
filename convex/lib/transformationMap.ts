@@ -402,6 +402,144 @@ export async function recordTransformationHistory(
   });
 }
 
+export async function deleteTransformationMapCascade(
+  ctx: MutationCtx,
+  args: {
+    map: Doc<"transformationMaps">;
+    changedBy: string;
+    deletedAt?: number;
+  }
+) {
+  const deletedAt = args.deletedAt ?? Date.now();
+  const children = await listMapChildren(ctx, args.map._id);
+
+  for (const analysis of children.analyses) {
+    await ctx.db.delete(analysis._id);
+    const service = children.services.find((entry) => `${entry._id}` === `${analysis.serviceId}`);
+    await recordTransformationHistory(ctx, {
+      workosOrgId: args.map.workosOrgId,
+      mapId: args.map._id,
+      entityType: "service_analysis",
+      entityId: service?.key ?? `${analysis.serviceId}`,
+      changedBy: args.changedBy,
+      changeType: "delete",
+      previousData: {
+        reviewStatus: analysis.reviewStatus,
+        idealFlowSteps: analysis.idealFlowSteps,
+        currentFlowSteps: analysis.currentFlowSteps,
+        deviations: analysis.deviations,
+        initiatives: analysis.initiatives,
+      },
+    });
+  }
+
+  for (const service of children.services) {
+    await ctx.db.delete(service._id);
+    await recordTransformationHistory(ctx, {
+      workosOrgId: args.map.workosOrgId,
+      mapId: args.map._id,
+      entityType: "service",
+      entityId: service.key,
+      changedBy: args.changedBy,
+      changeType: "delete",
+      previousData: {
+        departmentKey: service.departmentKey,
+        name: service.name,
+        purpose: service.purpose,
+        customer: service.customer,
+        trigger: service.trigger,
+        outcome: service.outcome,
+        constraints: service.constraints,
+        status: service.status,
+        effectivenessMetric: service.effectivenessMetric,
+        efficiencyMetric: service.efficiencyMetric,
+      },
+    });
+  }
+
+  for (const objective of children.objectives) {
+    await ctx.db.delete(objective._id);
+    await recordTransformationHistory(ctx, {
+      workosOrgId: args.map.workosOrgId,
+      mapId: args.map._id,
+      entityType: "objective",
+      entityId: objective.key,
+      changedBy: args.changedBy,
+      changeType: "delete",
+      previousData: {
+        scope: objective.scope,
+        departmentKey: objective.departmentKey,
+        title: objective.title,
+        description: objective.description,
+        linkedPressureKeys: objective.linkedPressureKeys,
+      },
+    });
+  }
+
+  for (const department of children.departments) {
+    await ctx.db.delete(department._id);
+    await recordTransformationHistory(ctx, {
+      workosOrgId: args.map.workosOrgId,
+      mapId: args.map._id,
+      entityType: "department",
+      entityId: department.key,
+      changedBy: args.changedBy,
+      changeType: "delete",
+      previousData: {
+        name: department.name,
+        description: department.description,
+        keyIssues: department.keyIssues,
+        improvementMandates: department.improvementMandates,
+      },
+    });
+  }
+
+  for (const pressure of children.pressures) {
+    await ctx.db.delete(pressure._id);
+    await recordTransformationHistory(ctx, {
+      workosOrgId: args.map.workosOrgId,
+      mapId: args.map._id,
+      entityType: "pressure",
+      entityId: pressure.key,
+      changedBy: args.changedBy,
+      changeType: "delete",
+      previousData: {
+        type: pressure.type,
+        title: pressure.title,
+        description: pressure.description,
+        evidence: pressure.evidence,
+      },
+    });
+  }
+
+  await ctx.db.delete(args.map._id);
+
+  await recordTransformationHistory(ctx, {
+    workosOrgId: args.map.workosOrgId,
+    mapId: args.map._id,
+    entityType: "map",
+    entityId: `${args.map._id}`,
+    changedBy: args.changedBy,
+    changeType: "delete",
+    previousData: {
+      title: args.map.title,
+      slug: args.map.slug,
+      description: args.map.description,
+      status: args.map.status,
+      updatedAt: args.map.updatedAt,
+      deletedAt,
+    },
+  });
+
+  return {
+    analyses: children.analyses.length,
+    services: children.services.length,
+    objectives: children.objectives.length,
+    departments: children.departments.length,
+    pressures: children.pressures.length,
+  };
+}
+
 export async function listMapChildren(ctx: QueryCtx | MutationCtx, mapId: Id<"transformationMaps">) {
   const [pressures, objectives, departments, services, analyses] = await Promise.all([
     ctx.db.query("transformationPressures").withIndex("by_map", (q) => q.eq("mapId", mapId)).collect(),
