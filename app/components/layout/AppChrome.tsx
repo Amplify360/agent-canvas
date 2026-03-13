@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { Suspense, useEffect, useState } from 'react';
 import { Sidebar } from './Sidebar';
 import { LoadingOverlay } from '../ui/LoadingOverlay';
 import { ToastContainer } from '../ui/Toast';
@@ -30,7 +30,9 @@ export function AppChrome({ children }: AppChromeProps) {
   return (
     <>
       <ConnectionRecoveryBanner />
-      <Sidebar />
+      <Suspense fallback={null}>
+        <Sidebar />
+      </Suspense>
       <div
         className={`main-wrapper ${effectiveSidebarCollapsed ? 'sidebar-collapsed' : ''}`}
         style={

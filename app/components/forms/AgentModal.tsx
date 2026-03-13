@@ -16,8 +16,21 @@ import { validateAgentForm } from '@/utils/validation';
 import { getAvailableTools, getToolDisplay, DEFAULT_PHASE } from '@/utils/config';
 import { AGENT_STATUS, AGENT_STATUS_OPTIONS, AgentStatus } from '@/types/validationConstants';
 import { buildAgentMutationInput, getAgentCoreFields } from '@/utils/agentModel';
+import { STORAGE_KEYS } from '@/constants/storageKeys';
+import {
+  AGENT_ASSIST_FIELD_CONFIG,
+  AGENT_ASSIST_MODEL_FALLBACK,
+  DEFAULT_AGENT_GLOBAL_ASSIST_PROMPT,
+  type AgentAssistFormData,
+  buildAgentAssistFormData,
+  applyAgentAssistPatch,
+  type AgentAssistField,
+  type AgentAssistRequest,
+} from '@/agents/aiAssist';
+import { FormAssistPanel } from '@/components/ai/FormAssistPanel';
 import { Icon } from '@/components/ui/Icon';
 import { Tooltip } from '@/components/ui/Tooltip';
+import { useStructuredFormAssist } from '@/hooks/useStructuredFormAssist';
 import { api } from '../../../convex/_generated/api';
 
 interface AgentModalProps {
@@ -93,7 +106,46 @@ export function AgentModal({ isOpen, onClose, agent, defaults }: AgentModalProps
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [newJourneyStep, setNewJourneyStep] = useState('');
+  const availableTools = getAvailableTools();
+  const availableToolOptions = availableTools.map((tool) => ({
+    id: tool,
+    label: getToolDisplay(tool).label,
+  }));
+  const agentAssistContext = {
+    current: buildAgentAssistFormData(formData),
+    availableTools: availableToolOptions,
+    availableStatuses: AGENT_STATUS_OPTIONS,
+    existingCategories,
+  };
+  const agentAssist = useStructuredFormAssist<
+    AgentAssistFormData,
+    AgentAssistField,
+    AgentAssistRequest
+  >({
+    storageKey: STORAGE_KEYS.AGENT_ASSIST_PROMPT,
+    defaultPrompt: DEFAULT_AGENT_GLOBAL_ASSIST_PROMPT,
+    modelFallback: AGENT_ASSIST_MODEL_FALLBACK,
+    current: agentAssistContext.current,
+    fields: AGENT_ASSIST_FIELD_CONFIG,
+    buildRequest: (notes, promptOverride) => ({
+      promptOverride,
+      notes,
+      context: agentAssistContext,
+    }),
+    onApplyPatch: (patch) => {
+      setFormData((current) => ({
+        ...current,
+        ...applyAgentAssistPatch(buildAgentAssistFormData(current), patch),
+      }));
+    },
+    requestEndpoint: '/api/agents/assist',
+    transcribeEndpoint: '/api/ai/transcribe',
+    onToast: showToast,
+    enabled: isOpen,
+  });
+  const { resetAssistState } = agentAssist;
 
   // Load agent data when editing
   useEffect(() => {
@@ -121,7 +173,8 @@ export function AgentModal({ isOpen, onClose, agent, defaults }: AgentModalProps
       setErrors({});
     }
     setNewJourneyStep('');
-  }, [agent, defaults, isOpen]);
+    resetAssistState();
+  }, [agent, defaults, isOpen, resetAssistState]);
 
   const validateField = (field: string, value: string) => {
     const testData = { ...formData, [field]: value };
@@ -151,22 +204,27 @@ export function AgentModal({ isOpen, onClose, agent, defaults }: AgentModalProps
       return;
     }
 
-    await executeOperation(
-      async () => {
-        const mutationInput = buildAgentMutationInput(formData);
-        if (agent) {
-          await updateAgent(agent._id, mutationInput);
-        } else {
-          await createAgent(mutationInput);
+    setIsSubmitting(true);
+    try {
+      await executeOperation(
+        async () => {
+          const mutationInput = buildAgentMutationInput(formData);
+          if (agent) {
+            await updateAgent(agent._id, mutationInput);
+          } else {
+            await createAgent(mutationInput);
+          }
+        },
+        {
+          loadingMessage: agent ? 'Updating agent...' : 'Creating agent...',
+          successMessage: agent ? 'Agent updated successfully' : 'Agent created successfully',
+          errorMessage: 'Failed to save agent',
+          onSuccess: onClose,
         }
-      },
-      {
-        loadingMessage: agent ? 'Updating agent...' : 'Creating agent...',
-        successMessage: agent ? 'Agent updated successfully' : 'Agent created successfully',
-        errorMessage: 'Failed to save agent',
-        onSuccess: onClose,
-      }
-    );
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleToolToggle = (tool: string) => {
@@ -206,7 +264,7 @@ export function AgentModal({ isOpen, onClose, agent, defaults }: AgentModalProps
     }));
   };
 
-  const availableTools = getAvailableTools();
+  const isAiBusy = agentAssist.isAiBusy || isSubmitting;
 
   const getInputClassName = (field: string, baseClass: string = 'form-input') => {
     return errors[field] ? `${baseClass} ${baseClass}--error` : baseClass;
@@ -215,6 +273,35 @@ export function AgentModal({ isOpen, onClose, agent, defaults }: AgentModalProps
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={agent ? 'Edit Agent' : 'New Agent'} size="large" closeOnOverlayClick={false}>
       <form onSubmit={handleSubmit} className="agent-form">
+        <FormAssistPanel
+          modelFallback={agentAssist.modelFallback}
+          prompt={agentAssist.prompt}
+          onPromptChange={agentAssist.setPrompt}
+          onResetPrompt={agentAssist.resetPrompt}
+          isAssistOpen={agentAssist.isAssistOpen}
+          onToggleOpen={() => agentAssist.setIsAssistOpen(!agentAssist.isAssistOpen)}
+          isAdvancedPromptOpen={agentAssist.isAdvancedPromptOpen}
+          onToggleAdvanced={() => agentAssist.setIsAdvancedPromptOpen(!agentAssist.isAdvancedPromptOpen)}
+          assistNotes={agentAssist.assistNotes}
+          onNotesChange={agentAssist.setAssistNotes}
+          fillEmptyOnly={agentAssist.fillEmptyOnly}
+          onFillEmptyOnlyChange={agentAssist.setFillEmptyOnly}
+          assistError={agentAssist.assistError}
+          isGeneratingAssist={agentAssist.isGeneratingAssist}
+          isRecording={agentAssist.isRecording}
+          isTranscribing={agentAssist.isTranscribing}
+          isAiBusy={isAiBusy}
+          onToggleRecording={agentAssist.toggleRecording}
+          onGenerateAssist={agentAssist.generateAssist}
+          assistResult={agentAssist.assistResult}
+          assistDiff={agentAssist.assistDiff}
+          selectedPatchFields={agentAssist.selectedPatchFields}
+          onSelectionChange={(field, checked) =>
+            agentAssist.setSelectedPatchFields((current) => ({ ...current, [field]: checked }))
+          }
+          onApplySelected={agentAssist.applySelectedPatch}
+          onDismiss={agentAssist.dismissAssist}
+        />
         {/* Basic Info Section */}
         <FormSection title="Basic Info">
           <div className="form-group">

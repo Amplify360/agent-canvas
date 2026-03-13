@@ -7543,6 +7543,47 @@ body.is-resizing-sidebar .main-wrapper {
     gap: var(--space-2);
 }
 
+.strategy-ai-assist__status {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: var(--space-3);
+    align-items: start;
+    padding: var(--space-3);
+    border: 1px solid color-mix(in srgb, var(--accent-primary), transparent 70%);
+    border-radius: var(--radius-lg);
+    background: color-mix(in srgb, var(--accent-primary), transparent 94%);
+    color: var(--text-primary);
+}
+
+.strategy-ai-assist__status strong {
+    display: block;
+    margin-bottom: var(--space-1);
+    font-size: var(--text-sm);
+}
+
+.strategy-ai-assist__status p {
+    margin: 0;
+}
+
+.strategy-ai-assist__notes-shell {
+    position: relative;
+}
+
+.strategy-ai-assist__notes-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    border-radius: var(--radius-lg);
+    background: color-mix(in srgb, var(--bg-primary), transparent 16%);
+    color: var(--text-primary);
+    font-weight: var(--font-weight-medium);
+    backdrop-filter: blur(1px);
+    pointer-events: none;
+}
+
 .strategy-ai-assist__advanced {
     display: flex;
     flex-direction: column;

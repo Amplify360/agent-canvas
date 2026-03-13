@@ -5,14 +5,31 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
+import { FormAssistPanel } from '@/components/ai/FormAssistPanel';
+import type { StructuredAssistFieldConfig } from '@/ai/formAssist';
+import { STORAGE_KEYS } from '@/constants/storageKeys';
+import { useAppState } from '@/contexts/AppStateContext';
 import { Modal } from '../ui/Modal';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCanvas } from '@/contexts/CanvasContext';
 import { useMutation } from '@/hooks/useConvex';
+import { useStructuredFormAssist } from '@/hooks/useStructuredFormAssist';
 import { useAsyncOperation } from '@/hooks/useAsyncOperation';
 import { Icon } from '@/components/ui/Icon';
 import { prepareYamlImport, extractTitleFromYaml } from '@/utils/yaml';
+import {
+  buildImportYamlAssistContext,
+  DEFAULT_IMPORT_YAML_ASSIST_PROMPT,
+  IMPORT_YAML_ASSIST_MODEL_FALLBACK,
+  type ImportYamlAssistFormData,
+  type ImportYamlAssistRequest,
+} from '@/canvas/yamlAssist';
 import { api } from '../../../convex/_generated/api';
+
+const IMPORT_YAML_FIELDS: ReadonlyArray<StructuredAssistFieldConfig<ImportYamlAssistFormData, keyof ImportYamlAssistFormData & string>> = [
+  { key: 'customTitle', label: 'Canvas Title' },
+  { key: 'yamlText', label: 'YAML', formatValue: (value) => (value as string).trim() || 'Empty' },
+];
 
 interface ImportYamlModalProps {
   isOpen: boolean;
@@ -21,6 +38,7 @@ interface ImportYamlModalProps {
 }
 
 export function ImportYamlModal({ isOpen, onClose, onSuccess }: ImportYamlModalProps) {
+  const { showToast } = useAppState();
   const { currentOrgId } = useAuth();
   const { canvases, setCurrentCanvasId } = useCanvas();
   const executeOperation = useAsyncOperation();
@@ -66,6 +84,45 @@ export function ImportYamlModal({ isOpen, onClose, onSuccess }: ImportYamlModalP
       setIsLoading(false);
     }
   };
+
+  const importFormData: ImportYamlAssistFormData = {
+    customTitle,
+    yamlText,
+  };
+  const yamlAssist = useStructuredFormAssist<
+    ImportYamlAssistFormData,
+    keyof ImportYamlAssistFormData & string,
+    ImportYamlAssistRequest
+  >({
+    storageKey: STORAGE_KEYS.IMPORT_YAML_ASSIST_PROMPT,
+    defaultPrompt: DEFAULT_IMPORT_YAML_ASSIST_PROMPT,
+    modelFallback: IMPORT_YAML_ASSIST_MODEL_FALLBACK,
+    current: importFormData,
+    fields: IMPORT_YAML_FIELDS,
+    buildRequest: (notes, promptOverride) => ({
+      promptOverride,
+      notes,
+      context: buildImportYamlAssistContext(importFormData),
+    }),
+    onApplyPatch: (patch) => {
+      if (patch.yamlText !== undefined) {
+        setYamlText(patch.yamlText);
+        const extractedTitle = extractTitleFromYaml(patch.yamlText);
+        if (extractedTitle) {
+          setSuggestedTitle(extractedTitle);
+          if (!customTitle.trim()) {
+            setCustomTitle(extractedTitle);
+          }
+        }
+      }
+      if (patch.customTitle !== undefined) {
+        setCustomTitle(patch.customTitle);
+      }
+    },
+    requestEndpoint: '/api/canvas/yaml-assist',
+    onToast: showToast,
+    enabled: isOpen,
+  });
 
   const handleImport = async () => {
     if (!yamlText) {
@@ -144,6 +201,35 @@ export function ImportYamlModal({ isOpen, onClose, onSuccess }: ImportYamlModalP
   return (
     <Modal isOpen={isOpen} onClose={handleClose} title="Import from YAML" closeOnOverlayClick={false}>
       <div className="modal__body">
+        <FormAssistPanel
+          modelFallback={yamlAssist.modelFallback}
+          prompt={yamlAssist.prompt}
+          onPromptChange={yamlAssist.setPrompt}
+          onResetPrompt={yamlAssist.resetPrompt}
+          isAssistOpen={yamlAssist.isAssistOpen}
+          onToggleOpen={() => yamlAssist.setIsAssistOpen(!yamlAssist.isAssistOpen)}
+          isAdvancedPromptOpen={yamlAssist.isAdvancedPromptOpen}
+          onToggleAdvanced={() => yamlAssist.setIsAdvancedPromptOpen(!yamlAssist.isAdvancedPromptOpen)}
+          assistNotes={yamlAssist.assistNotes}
+          onNotesChange={yamlAssist.setAssistNotes}
+          fillEmptyOnly={yamlAssist.fillEmptyOnly}
+          onFillEmptyOnlyChange={yamlAssist.setFillEmptyOnly}
+          assistError={yamlAssist.assistError}
+          isGeneratingAssist={yamlAssist.isGeneratingAssist}
+          isRecording={yamlAssist.isRecording}
+          isTranscribing={yamlAssist.isTranscribing}
+          isAiBusy={yamlAssist.isAiBusy || isLoading}
+          onToggleRecording={yamlAssist.toggleRecording}
+          onGenerateAssist={yamlAssist.generateAssist}
+          assistResult={yamlAssist.assistResult}
+          assistDiff={yamlAssist.assistDiff}
+          selectedPatchFields={yamlAssist.selectedPatchFields}
+          onSelectionChange={(field, checked) =>
+            yamlAssist.setSelectedPatchFields((current) => ({ ...current, [field]: checked }))
+          }
+          onApplySelected={yamlAssist.applySelectedPatch}
+          onDismiss={yamlAssist.dismissAssist}
+        />
         {/* File Input */}
         <div className="form-group">
           <label className="form-label">YAML File</label>
@@ -192,6 +278,19 @@ export function ImportYamlModal({ isOpen, onClose, onSuccess }: ImportYamlModalP
             />
           </div>
         )}
+
+        <div className="form-group">
+          <label htmlFor="yaml-text" className="form-label">YAML</label>
+          <textarea
+            id="yaml-text"
+            className="form-textarea"
+            value={yamlText}
+            onChange={(event) => setYamlText(event.target.value)}
+            placeholder="Paste YAML here, load a file, or generate it with AI Assist."
+            rows={14}
+            disabled={isLoading}
+          />
+        </div>
 
         {/* Error Message */}
         {error && (
